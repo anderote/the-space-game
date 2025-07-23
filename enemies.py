@@ -118,15 +118,25 @@ class Enemy:
         pygame.draw.polygon(surface, (255, 0, 0), points)
         pygame.draw.polygon(surface, (0, 0, 0), points, max(1, int(2 * camera.zoom)))
         
-        # Health bar if damaged
+        # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
             bar_width = 20 * camera.zoom
             bar_height = 4 * camera.zoom
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 8 * camera.zoom
-            pygame.draw.rect(surface, (200, 0, 0), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(surface, (0, 200, 0), (bar_x, bar_y, bar_width * health_ratio, bar_height))
+            
+            # Create semi-transparent health bar
+            health_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
+            health_surface.fill((200, 0, 0, 127))  # Red background with 50% alpha
+            surface.blit(health_surface, (bar_x, bar_y))
+            
+            # Only create green surface if there's actual health to show
+            green_width = max(1, int(bar_width * health_ratio))
+            if green_width > 0:
+                green_surface = pygame.Surface((green_width, bar_height), pygame.SRCALPHA)
+                green_surface.fill((0, 200, 0, 127))  # Green with 50% alpha
+                surface.blit(green_surface, (bar_x, bar_y))
 
 class Mothership(Enemy):
     def __init__(self, x, y, health):
@@ -221,15 +231,25 @@ class Mothership(Enemy):
         pygame.draw.polygon(surface, (0, 255, 0), points)
         pygame.draw.polygon(surface, (0, 100, 0), points, max(1, int(2 * camera.zoom)))
         
-        # Health bar if damaged
+        # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
             bar_width = 30 * camera.zoom  # Wider health bar
             bar_height = 6 * camera.zoom  # Taller health bar
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 12 * camera.zoom
-            pygame.draw.rect(surface, (200, 0, 0), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(surface, (0, 200, 0), (bar_x, bar_y, bar_width * health_ratio, bar_height))
+            
+            # Create semi-transparent health bar
+            health_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
+            health_surface.fill((200, 0, 0, 127))  # Red background with 50% alpha
+            surface.blit(health_surface, (bar_x, bar_y))
+            
+            # Only create green surface if there's actual health to show
+            green_width = max(1, int(bar_width * health_ratio))
+            if green_width > 0:
+                green_surface = pygame.Surface((green_width, bar_height), pygame.SRCALPHA)
+                green_surface.fill((0, 200, 0, 127))  # Green with 50% alpha
+                surface.blit(green_surface, (bar_x, bar_y))
 
 class MothershipMissile:
     def __init__(self, x, y, target, damage):
@@ -240,11 +260,9 @@ class MothershipMissile:
         self.speed = MISSILE_SPEED
         self.alive = True
         self.splash_radius = MISSILE_SPLASH_RADIUS
-        self.angle = 0  # Track movement angle for rotation
         self.flash_timer = 0  # For flashing effect
         
-    # Class variable for missile image (will be set from main.py)
-    missile_image = None
+    # Using simple particle effects instead of images
     
     def update(self):
         if not self.target or not hasattr(self.target, 'x'):
@@ -254,8 +272,6 @@ class MothershipMissile:
         dy = self.target.y - self.y
         dist = math.hypot(dx, dy)
         
-        # Calculate angle for image rotation
-        self.angle = math.atan2(dy, dx)
         self.flash_timer += 1  # Increment flash timer
         
         if dist < self.speed:

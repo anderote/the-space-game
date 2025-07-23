@@ -31,7 +31,7 @@ class DamageNumber:
         alpha = int(255 * (self.lifetime / self.max_lifetime))
         
         # Create a surface with per-pixel alpha for the text
-        font = pygame.font.SysFont("Arial", max(16, int(20 * camera.zoom)))
+        font = pygame.font.SysFont("Arial", max(12, int(16 * camera.zoom)))  # Smaller font
         text_surface = font.render(f"+{int(self.amount)}" if self.amount > 0 else f"{int(self.amount)}", True, self.color[:3])
         
         # Create a new surface with alpha
@@ -134,6 +134,6 @@ class Asteroid:
         
         # Show mineral amount when clicked or zoomed in close
         if self.show_resources or zoom > 1.2:
-            font = pygame.font.SysFont("Arial", max(12, int(18 * zoom)))
+            font = pygame.font.SysFont("Arial", max(10, int(14 * zoom)))  # Smaller font
             text = font.render(str(int(self.minerals)), True, (200, 200, 0))
             surface.blit(text, (screen_x - text.get_width()//2, screen_y - text.get_height()//2)) 

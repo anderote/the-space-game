@@ -14,7 +14,7 @@ WORLD_HEIGHT = int(SCREEN_HEIGHT * 3 * 1.15)  # Increased by 15%
 # Camera settings
 CAMERA_SPEED = 10
 ZOOM_MIN = 0.5
-ZOOM_MAX = 3.0  # Increased from 2.0
+ZOOM_MAX = 5.0  # Increased for full map view
 ZOOM_SPEED = 0.1
 
 # Colors
@@ -63,20 +63,20 @@ MINER_RATE = 3.0  # minerals per level per zap
 MINER_ZAP_INTERVAL = 180  # frames (~3 sec at 60fps)
 MINER_ZAP_ENERGY_COST = 5
 BATTERY_STORAGE = 100  # per level
-TURRET_DAMAGE = 10  # per level
-TURRET_RANGE = 350  # base range
-TURRET_COOLDOWN = 120  # base cooldown in frames (50% slower firing rate)
+TURRET_DAMAGE = 12  # per level
+TURRET_RANGE = 400  # base range
+TURRET_COOLDOWN = 168  # base cooldown in frames (40% slower than previous, was 120)
 TURRET_ENERGY_COST = 2  # energy per shot
 TURRET_MINERAL_COST = 1  # minerals per shot
-LASER_DAMAGE = 0.2  # per level per frame
-LASER_COST = 0.1  # energy per level per frame
-LASER_RANGE = 200  # base range
-SUPERLASER_DAMAGE = 0.8  # per level per frame - much higher damage
-SUPERLASER_COST = 0.5  # energy per level per frame - much higher cost
+LASER_DAMAGE = 0.35  # per level per frame
+LASER_COST = 0.18  # energy per level per frame
+LASER_RANGE = 220  # base range
+SUPERLASER_DAMAGE = 0.95  # per level per frame - much higher damage
+SUPERLASER_COST = 1.2  # energy per level per frame - much higher cost
 SUPERLASER_RANGE = 600  # much longer range
-REPAIR_RATE = 0.05  # per level per frame
-REPAIR_ENERGY_COST = 0.05  # energy per frame
-REPAIR_RANGE = 100  # base range
+REPAIR_RATE = 0.15  # per level per frame
+REPAIR_ENERGY_COST = 0.25  # energy per frame
+REPAIR_RANGE = 250  # base range
 CONVERTER_ENERGY_COST = 100
 CONVERTER_MINERAL_RATE = 5  # per level
 CONVERTER_INTERVAL = 600  # frames (10 sec)
@@ -114,10 +114,10 @@ FORMATION_SIZE_THRESHOLD = 15  # Start using formations when wave has this many 
 MAX_FORMATIONS = 4  # Maximum number of formations per wave
 
 # Combat configuration
-MISSILE_SPEED = 5
-MISSILE_SIZE = 4  # Reduced from 6 (smaller projectiles)
+MISSILE_SPEED = 3  # Reduced by 40% (was 5)
+MISSILE_SIZE = 2.4  # Reduced by 60% (was 4)
 MISSILE_RANGE = 300
-MISSILE_SPLASH_RADIUS = 40
+MISSILE_SPLASH_RADIUS = 48  # Increased by 20% (was 40)
 XP_PER_KILL = 20
 XP_TO_LEVEL_BASE = 600  # Increased by 6x (was 100)
 TURRET_XP_MODIFIER = 0.7  # 30% slower XP gain for turrets

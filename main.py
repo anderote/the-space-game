@@ -6,7 +6,7 @@ import sys
 from settings import *
 from resources import ResourceManager
 from asteroids import Asteroid, DamageNumber
-from buildings import Solar, Connector, Battery, Miner, Turret, Laser, Repair, Converter, Building
+from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Building
 from power import PowerGrid
 from enemies import WaveManager, MothershipMissile
 import random
@@ -20,6 +20,9 @@ pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Space Game Clone")
 clock = pygame.time.Clock()
+
+# Initialize pygame_gui manager
+ui_manager = pygame_gui.UIManager((SCREEN_WIDTH, SCREEN_HEIGHT), theme_path=None)
 
 # Load asteroid images
 try:
@@ -37,10 +40,13 @@ except pygame.error as e:
     asteroid_medium_2_image = pygame.Surface((60, 60))
     asteroid_medium_2_image.fill((120, 120, 120))
 
-# Updated font sizes with lighter weight
-font = pygame.font.SysFont(FONT_FAMILY, FONT_SIZE_LARGE)
-hud_font = pygame.font.SysFont(FONT_FAMILY, FONT_SIZE_MEDIUM)
-small_font = pygame.font.SysFont(FONT_FAMILY, FONT_SIZE_SMALL)
+# Enhanced fonts with much larger sizes for better UI readability
+# Use Arial explicitly since it's widely available and clean
+font = pygame.font.SysFont("Arial", 22, bold=False)           # Main text - much larger
+hud_font = pygame.font.SysFont("Arial", 18, bold=False)       # HUD elements - larger  
+small_font = pygame.font.SysFont("Arial", 14, bold=False)     # Small text - larger
+title_font = pygame.font.SysFont("Arial", 28, bold=True)      # Titles - much larger
+large_font = pygame.font.SysFont("Arial", 24, bold=True)      # Large UI elements
 
 # Set asteroid images
 from asteroids import Asteroid
@@ -98,59 +104,52 @@ BASE_POS = (WORLD_WIDTH // 2, WORLD_HEIGHT // 2)
 
 def spawn_asteroids():
     asteroids = []
-    # Random number of clumps between 6-12
-    num_clumps = random.randint(ASTEROID_CLUMPS_MIN, ASTEROID_CLUMPS_MAX)
-
-    # Always spawn 2 clusters near base
-    base_clusters = []
-    for i in range(2):
-        angle = i * np.pi + random.uniform(-0.5, 0.5)  # Opposite sides of base
-        distance = random.randint(150, 250)  # Close to base
-        cx = BASE_POS[0] + distance * np.cos(angle)
-        cy = BASE_POS[1] + distance * np.sin(angle)
-        # Keep within bounds
-        cx = max(ASTEROID_MIN_DIST, min(WORLD_WIDTH - ASTEROID_MIN_DIST, cx))
-        cy = max(ASTEROID_MIN_DIST, min(WORLD_HEIGHT - ASTEROID_MIN_DIST, cy))
-        base_clusters.append((cx, cy))
-
-    # Add remaining clusters randomly
-    remaining_clusters = num_clumps - 2
-    for _ in range(remaining_clusters):
-        cx = random.randint(ASTEROID_MIN_DIST, WORLD_WIDTH - ASTEROID_MIN_DIST)
-        cy = random.randint(ASTEROID_MIN_DIST, WORLD_HEIGHT - ASTEROID_MIN_DIST)
-        base_clusters.append((cx, cy))
-
-    # Generate asteroids in clusters
-    for cx, cy in base_clusters:
-        for _ in range(ASTEROIDS_PER_CLUMP):
-            # Try multiple times to find a position that doesn't collide with base
-            for attempt in range(10):
-                offset_x = random.gauss(0, 80)
-                offset_y = random.gauss(0, 80)
-                asteroid_x = cx + offset_x
-                asteroid_y = cy + offset_y
-                
-                # Check distance from base
-                distance_from_base = ((asteroid_x - BASE_POS[0]) ** 2 + (asteroid_y - BASE_POS[1]) ** 2) ** 0.5
-                if distance_from_base > (BASE_RADIUS + 50):  # 50 pixel buffer from base
-                    asteroids.append(Asteroid(asteroid_x, asteroid_y))
-                    break
-
-    # Fill up to at least 15 asteroids
-    while len(asteroids) < 15:
-        cx, cy = random.choice(base_clusters)
-        # Try multiple times to find a position that doesn't collide with base
-        for attempt in range(10):
-            offset_x = random.gauss(0, 80)
-            offset_y = random.gauss(0, 80)
-            asteroid_x = cx + offset_x
-            asteroid_y = cy + offset_y
+    
+    # Create asteroid network centered around base with connected chains
+    # Start with clusters in 8 directions around base (reduced density)
+    base_distance = 200  # Starting distance from base
+    chain_length = 2     # Reduced from 4 - fewer clusters per chain
+    num_chains = 6       # Reduced from 8 - fewer chains
+    
+    for chain in range(num_chains):
+        # Calculate direction for this chain
+        base_angle = (chain / num_chains) * 2 * np.pi
+        
+        # Create clusters along this chain
+        for cluster_idx in range(chain_length):
+            # Distance increases as we go further from base
+            distance = base_distance + (cluster_idx * 150)
             
-            # Check distance from base
-            distance_from_base = ((asteroid_x - BASE_POS[0]) ** 2 + (asteroid_y - BASE_POS[1]) ** 2) ** 0.5
-            if distance_from_base > (BASE_RADIUS + 50):  # 50 pixel buffer from base
-                asteroids.append(Asteroid(asteroid_x, asteroid_y))
-                break
+            # Add some random variation to angle and distance
+            angle_variation = random.uniform(-0.3, 0.3)
+            distance_variation = random.uniform(-50, 50)
+            
+            angle = base_angle + angle_variation
+            actual_distance = distance + distance_variation
+            
+            # Calculate cluster center
+            cx = BASE_POS[0] + actual_distance * np.cos(angle)
+            cy = BASE_POS[1] + actual_distance * np.sin(angle)
+            
+            # Keep within world bounds
+            cx = max(ASTEROID_MIN_DIST, min(WORLD_WIDTH - ASTEROID_MIN_DIST, cx))
+            cy = max(ASTEROID_MIN_DIST, min(WORLD_HEIGHT - ASTEROID_MIN_DIST, cy))
+            
+            # Generate 2-3 asteroids per cluster (50% reduction)
+            asteroids_per_cluster = random.randint(2, 3)
+            for _ in range(asteroids_per_cluster):
+                for attempt in range(10):
+                    # Smaller cluster spread for tighter networks
+                    offset_x = random.gauss(0, 60)
+                    offset_y = random.gauss(0, 60)
+                    asteroid_x = cx + offset_x
+                    asteroid_y = cy + offset_y
+                    
+                    # Check distance from base
+                    distance_from_base = ((asteroid_x - BASE_POS[0]) ** 2 + (asteroid_y - BASE_POS[1]) ** 2) ** 0.5
+                    if distance_from_base > (BASE_RADIUS + 80):  # 80 pixel buffer from base
+                        asteroids.append(Asteroid(asteroid_x, asteroid_y))
+                        break
 
     return asteroids
 
@@ -196,35 +195,75 @@ def draw_base(surface, pos, radius, health, max_health, camera):
     pygame.draw.rect(surface, RED, (screen_x - bar_width/2, screen_y - screen_radius - 15*camera.zoom, bar_width, 8*camera.zoom))
     pygame.draw.rect(surface, GREEN, (screen_x - bar_width/2, screen_y - screen_radius - 15*camera.zoom, bar_width * health_ratio, 8*camera.zoom))
 
-def draw_controls_ui(surface):
-    # Controls bar background
-    pygame.draw.rect(surface, (40, 40, 40), (0, 80, SCREEN_WIDTH, 50))  # Smaller height
-    pygame.draw.rect(surface, (80, 80, 80), (0, 80, SCREEN_WIDTH, 2))
-
-    # Building controls
-    controls = [
-        ('S - Solar', 'solar', BUILD_COSTS['solar']),
-        ('C - Connector', 'connector', BUILD_COSTS['connector']),
-        ('B - Battery', 'battery', BUILD_COSTS['battery']),
-        ('M - Miner', 'miner', BUILD_COSTS['miner']),
-        ('T - Turret', 'turret', BUILD_COSTS['turret']),
-        ('L - Laser', 'laser', BUILD_COSTS['laser']),
-        ('R - Repair', 'repair', BUILD_COSTS['repair']),
-        ('V - Converter', 'converter', BUILD_COSTS['converter'])
+def draw_modern_building_panel(surface):
+    """Draw a modern vertical building panel on the right side"""
+    panel_width = 200
+    panel_x = SCREEN_WIDTH - panel_width
+    panel_height = SCREEN_HEIGHT
+    
+    # Semi-transparent dark background
+    panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+    panel_surface.fill((20, 25, 35, 220))  # Dark blue-gray with transparency
+    
+    # Gradient border effect
+    pygame.draw.rect(panel_surface, (60, 80, 120), (0, 0, panel_width, panel_height), 3)
+    pygame.draw.rect(panel_surface, (40, 60, 100), (3, 3, panel_width-6, panel_height-6), 1)
+    
+    # Title
+    title_text = title_font.render("BUILDINGS", True, (200, 220, 255))
+    title_x = (panel_width - title_text.get_width()) // 2
+    panel_surface.blit(title_text, (title_x, 20))
+    
+    # Building buttons
+    building_types = [
+        ('Solar', 'solar', BUILD_COSTS['solar'], 'S'),
+        ('Connector', 'connector', BUILD_COSTS['connector'], 'C'),
+        ('Battery', 'battery', BUILD_COSTS['battery'], 'B'),
+        ('Miner', 'miner', BUILD_COSTS['miner'], 'M'),
+        ('Turret', 'turret', BUILD_COSTS['turret'], 'T'),
+        ('Laser', 'laser', BUILD_COSTS['laser'], 'L'),
+        ('SuperLaser', 'superlaser', BUILD_COSTS['superlaser'], 'K'),
+        ('Repair', 'repair', BUILD_COSTS['repair'], 'R'),
+        ('Converter', 'converter', BUILD_COSTS['converter'], 'V')
     ]
-
-    x_start = 10
-    for i, (text, build_type, cost) in enumerate(controls):
-        x = x_start + i * 190
-        # Highlight if selected
+    
+    button_height = 50
+    button_margin = 8
+    start_y = 60
+    
+    for i, (name, build_type, cost, hotkey) in enumerate(building_types):
+        button_y = start_y + i * (button_height + button_margin)
+        button_rect = pygame.Rect(10, button_y, panel_width - 20, button_height)
+        
+        # Button background - highlight if selected
         if selected_build == build_type:
-            pygame.draw.rect(surface, (100, 100, 150), (x - 5, 82, 185, 46))
-
-        # Text (smaller)
-        control_text = small_font.render(text, True, WHITE)
-        cost_text = small_font.render(f"Cost: {cost}", True, YELLOW)
-        surface.blit(control_text, (x, 85))
-        surface.blit(cost_text, (x, 105))
+            button_color = (80, 120, 160)  # Bright blue when selected
+            border_color = (120, 160, 200)
+        elif resources.minerals >= cost:
+            button_color = (50, 70, 90)   # Available
+            border_color = (70, 90, 120)
+        else:
+            button_color = (30, 35, 45)   # Not affordable
+            border_color = (50, 55, 65)
+        
+        pygame.draw.rect(panel_surface, button_color, button_rect)
+        pygame.draw.rect(panel_surface, border_color, button_rect, 2)
+        
+        # Hotkey indicator
+        hotkey_text = small_font.render(hotkey, True, (255, 255, 100))
+        panel_surface.blit(hotkey_text, (15, button_y + 5))
+        
+        # Building name
+        name_color = (255, 255, 255) if resources.minerals >= cost else (150, 150, 150)
+        name_text = font.render(name, True, name_color)
+        panel_surface.blit(name_text, (35, button_y + 8))
+        
+        # Cost
+        cost_color = (255, 255, 100) if resources.minerals >= cost else (200, 150, 150)
+        cost_text = small_font.render(f"Cost: {cost}", True, cost_color)
+        panel_surface.blit(cost_text, (35, button_y + 28))
+    
+    surface.blit(panel_surface, (panel_x, 0))
 
 def draw_range_indicator(surface, world_x, world_y, range_val, camera, color=(255, 255, 255, 100)):
     screen_x, screen_y = camera.world_to_screen(world_x, world_y)
@@ -233,6 +272,123 @@ def draw_range_indicator(surface, world_x, world_y, range_val, camera, color=(25
     # Draw range circle
     if screen_range > 5:  # Only draw if visible
         pygame.draw.circle(surface, color[:3], (int(screen_x), int(screen_y)), int(screen_range), 2)
+
+def draw_minimap(surface, camera, asteroids, enemies, base_pos):
+    """Draw a minimap in the top-left corner showing the full world"""
+    # Minimap dimensions - moved to lower left
+    minimap_size = 200
+    minimap_x = 20
+    minimap_y = SCREEN_HEIGHT - minimap_size - 20
+    
+    # Create minimap surface with border
+    minimap_surface = pygame.Surface((minimap_size, minimap_size), pygame.SRCALPHA)
+    minimap_surface.fill((0, 0, 0, 180))  # Semi-transparent black background
+    pygame.draw.rect(minimap_surface, (100, 100, 100), (0, 0, minimap_size, minimap_size), 2)  # Border
+    
+    # Scale factors to fit world into minimap
+    scale_x = minimap_size / WORLD_WIDTH
+    scale_y = minimap_size / WORLD_HEIGHT
+    
+    # Draw asteroids as gray dots
+    for asteroid in asteroids:
+        mini_x = int(asteroid.x * scale_x)
+        mini_y = int(asteroid.y * scale_y)
+        if 0 <= mini_x < minimap_size and 0 <= mini_y < minimap_size:
+            pygame.draw.circle(minimap_surface, (150, 150, 150), (mini_x, mini_y), 2)
+    
+    # Draw base as blue circle
+    base_mini_x = int(base_pos[0] * scale_x)
+    base_mini_y = int(base_pos[1] * scale_y)
+    pygame.draw.circle(minimap_surface, (100, 150, 255), (base_mini_x, base_mini_y), 4)
+    
+    # Draw enemies as red dots
+    for enemy in enemies:
+        enemy_mini_x = int(enemy.x * scale_x)
+        enemy_mini_y = int(enemy.y * scale_y)
+        if 0 <= enemy_mini_x < minimap_size and 0 <= enemy_mini_y < minimap_size:
+            color = (255, 100, 100) if not hasattr(enemy, 'is_mothership') else (255, 0, 0)
+            size = 2 if not hasattr(enemy, 'is_mothership') else 3
+            pygame.draw.circle(minimap_surface, color, (enemy_mini_x, enemy_mini_y), size)
+    
+    # Draw camera view indicator (white rectangle)
+    # Calculate camera view bounds
+    view_width = SCREEN_WIDTH / camera.zoom
+    view_height = SCREEN_HEIGHT / camera.zoom
+    view_left = camera.x - view_width / 2
+    view_top = camera.y - view_height / 2
+    
+    # Convert to minimap coordinates
+    view_mini_x = int(view_left * scale_x)
+    view_mini_y = int(view_top * scale_y)
+    view_mini_w = int(view_width * scale_x)
+    view_mini_h = int(view_height * scale_y)
+    
+    # Clamp to minimap bounds
+    view_mini_x = max(0, min(minimap_size - 1, view_mini_x))
+    view_mini_y = max(0, min(minimap_size - 1, view_mini_y))
+    view_mini_w = max(1, min(minimap_size - view_mini_x, view_mini_w))
+    view_mini_h = max(1, min(minimap_size - view_mini_y, view_mini_h))
+    
+    pygame.draw.rect(minimap_surface, (255, 255, 255), (view_mini_x, view_mini_y, view_mini_w, view_mini_h), 1)
+    
+    # Blit minimap to main surface
+    surface.blit(minimap_surface, (minimap_x, minimap_y))
+
+def draw_background_stars(surface, camera):
+    """Draw parallax background stars with 3 layers"""
+    # Draw deep stars (move at 0.1x camera speed - barely moving)
+    for star_x, star_y, brightness, size in background_stars_deep:
+        # Apply minimal parallax offset
+        parallax_x = star_x - (camera.x * 0.1)
+        parallax_y = star_y - (camera.y * 0.1)
+        
+        # Wrap around world
+        parallax_x = parallax_x % WORLD_WIDTH
+        parallax_y = parallax_y % WORLD_HEIGHT
+        
+        # Convert to screen coordinates
+        screen_x, screen_y = camera.world_to_screen(parallax_x, parallax_y)
+        
+        # Draw if on screen
+        if -50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50:
+            color = (brightness, brightness, brightness)
+            pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), size)
+    
+    # Draw far stars (move at 0.3x camera speed)
+    for star_x, star_y, brightness, size in background_stars_far:
+        # Apply parallax offset
+        parallax_x = star_x - (camera.x * 0.3)
+        parallax_y = star_y - (camera.y * 0.3)
+        
+        # Wrap around world
+        parallax_x = parallax_x % WORLD_WIDTH
+        parallax_y = parallax_y % WORLD_HEIGHT
+        
+        # Convert to screen coordinates
+        screen_x, screen_y = camera.world_to_screen(parallax_x, parallax_y)
+        
+        # Draw if on screen
+        if -50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50:
+            color = (brightness, brightness, brightness)
+            pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), size)
+    
+    # Draw near stars (move at 0.6x camera speed)
+    for star_x, star_y, brightness, size in background_stars_near:
+        # Apply parallax offset
+        parallax_x = star_x - (camera.x * 0.6)
+        parallax_y = star_y - (camera.y * 0.6)
+        
+        # Wrap around world
+        parallax_x = parallax_x % WORLD_WIDTH
+        parallax_y = parallax_y % WORLD_HEIGHT
+        
+        # Convert to screen coordinates
+        screen_x, screen_y = camera.world_to_screen(parallax_x, parallax_y)
+        
+        # Draw if on screen
+        if -50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50:
+            color = (brightness, brightness, brightness)
+            pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), size)
 
 def draw_game_menu(surface):
     # Semi-transparent overlay
@@ -253,13 +409,13 @@ def draw_game_menu(surface):
     surface.blit(title_text, (menu_x + (menu_width - title_text.get_width()) // 2, menu_y + 50))
 
     # Menu options
-    restart_text = hud_font.render("R - Restart Game", True, WHITE)
+    restart_text = font.render("R - Restart Game", True, WHITE)
     surface.blit(restart_text, (menu_x + 50, menu_y + 120))
 
-    resume_text = hud_font.render("ESC - Resume Game", True, WHITE)
+    resume_text = font.render("ESC - Resume Game", True, WHITE)
     surface.blit(resume_text, (menu_x + 50, menu_y + 160))
 
-    quit_text = hud_font.render("Q - Quit Game", True, WHITE)
+    quit_text = font.render("Q - Quit Game", True, WHITE)
     surface.blit(quit_text, (menu_x + 50, menu_y + 200))
 
 # Game state
@@ -272,22 +428,18 @@ class Missile:
         self.splash_radius = splash_radius
         self.speed = MISSILE_SPEED
         self.alive = True
-        self.angle = 0  # Track movement angle for rotation
         self.flash_timer = 0  # For flashing effect
         
-    # Class variable for missile image
-    missile_image = None
+    # Using simple particle effects instead of images
 
     def update(self):
         if not self.target or not hasattr(self.target, 'x'):
             self.alive = False
             return
-            dx = self.target.x - self.x
-            dy = self.target.y - self.y
-            dist = math.hypot(dx, dy)
+        dx = self.target.x - self.x
+        dy = self.target.y - self.y
+        dist = math.hypot(dx, dy)
         
-        # Calculate angle for image rotation (missile points toward target)
-        self.angle = math.atan2(dy, dx)
         self.flash_timer += 1  # Increment flash timer
         
         if dist < self.speed:
@@ -347,6 +499,7 @@ build_types = {
     'miner': Miner,
     'turret': Turret,
     'laser': Laser,
+    'superlaser': SuperLaser,
     'repair': Repair,
     'converter': Converter
 }
@@ -357,6 +510,7 @@ build_keys = {
     pygame.K_m: 'miner',
     pygame.K_t: 'turret',
     pygame.K_l: 'laser',
+    pygame.K_k: 'superlaser',  # K key for SuperLaser
     pygame.K_r: 'repair',
     pygame.K_v: 'converter'
 }
@@ -387,6 +541,44 @@ show_menu = False
 max_buildings_ever = 0
 score = 0
 high_score = 0
+
+# Game speed control
+game_speed = 1.0  # 1.0 = normal, 0.0 = paused, 2.0 = 2x speed, etc.
+speed_buttons = {
+    pygame.K_1: 0.0,  # Pause
+    pygame.K_2: 1.0,  # Normal speed
+    pygame.K_3: 2.0,  # 2x speed
+    pygame.K_4: 3.0   # 3x speed
+}
+
+# Generate background stars for parallax effect (3 layers)
+background_stars_deep = []   # Deepest layer (slowest)
+background_stars_far = []    # Far layer 
+background_stars_near = []   # Near layer (fastest)
+
+# Generate deep stars (tiny, very dim, barely move)
+for _ in range(300):  # 50% more than before (was 200)
+    x = random.randint(0, WORLD_WIDTH)
+    y = random.randint(0, WORLD_HEIGHT)
+    brightness = random.randint(30, 70)
+    size = 1
+    background_stars_deep.append((x, y, brightness, size))
+
+# Generate far stars (small, dim, move slowly)
+for _ in range(200):
+    x = random.randint(0, WORLD_WIDTH)
+    y = random.randint(0, WORLD_HEIGHT)
+    brightness = random.randint(50, 100)
+    size = 1
+    background_stars_far.append((x, y, brightness, size))
+
+# Generate near stars (larger, brighter, move faster)  
+for _ in range(100):
+    x = random.randint(0, WORLD_WIDTH)
+    y = random.randint(0, WORLD_HEIGHT)
+    brightness = random.randint(100, 200)
+    size = random.randint(1, 2)
+    background_stars_near.append((x, y, brightness, size))
 
 def reset_game():
     global buildings, asteroids, wave_manager, base_health, resources, missiles, particles, damage_numbers, selected_building, selected_build, game_over, max_buildings_ever, score, powerups, camera, kill_count, global_mining_clock, mothership_missiles
@@ -447,6 +639,8 @@ while running:
             else:
                 if event.key in build_keys:
                     selected_build = build_keys[event.key]
+                if event.key in speed_buttons:
+                    game_speed = speed_buttons[event.key]
                 if event.key == pygame.K_u and selected_building:
                     cost = selected_building.upgrade_cost(BUILD_COSTS[selected_building.type])
                     if resources.minerals >= cost and selected_building.level < MAX_LEVEL:
@@ -469,6 +663,35 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if show_menu:
                 continue
+            
+            # Check building panel clicks
+            mx, my = pygame.mouse.get_pos()
+            panel_x = SCREEN_WIDTH - 200
+            if mx >= panel_x and not paused and not game_over:
+                # Check which building button was clicked
+                building_types = [
+                    ('Solar', 'solar', BUILD_COSTS['solar'], 'S'),
+                    ('Connector', 'connector', BUILD_COSTS['connector'], 'C'),
+                    ('Battery', 'battery', BUILD_COSTS['battery'], 'B'),
+                    ('Miner', 'miner', BUILD_COSTS['miner'], 'M'),
+                    ('Turret', 'turret', BUILD_COSTS['turret'], 'T'),
+                    ('Laser', 'laser', BUILD_COSTS['laser'], 'L'),
+                    ('SuperLaser', 'superlaser', BUILD_COSTS['superlaser'], 'K'),
+                    ('Repair', 'repair', BUILD_COSTS['repair'], 'R'),
+                    ('Converter', 'converter', BUILD_COSTS['converter'], 'V')
+                ]
+                
+                button_height = 50
+                button_margin = 8
+                start_y = 60
+                
+                for i, (name, build_type, cost, hotkey) in enumerate(building_types):
+                    button_y = start_y + i * (button_height + button_margin)
+                    if button_y <= my <= button_y + button_height and resources.minerals >= cost:
+                        selected_build = build_type
+                        break
+                continue
+            
             if selected_build and not paused and not game_over:
                 mx, my = pygame.mouse.get_pos()
                 world_x, world_y = camera.screen_to_world(mx, my)
@@ -485,13 +708,8 @@ while running:
                                 building_collision = True
                                 break
                         
-                        # Check for collisions with asteroids (70% smaller zone)
+                        # Asteroid collision detection removed - buildings can be placed on asteroids
                         asteroid_collision = False
-                        for asteroid in asteroids:
-                            distance = ((world_x - asteroid.x) ** 2 + (world_y - asteroid.y) ** 2) ** 0.5
-                            if distance < (new_building.radius + asteroid.radius + 0.6):  # 70% smaller buffer
-                                asteroid_collision = True
-                                break
                         
                         # Check collision with base
                         base_distance = ((world_x - BASE_POS[0]) ** 2 + (world_y - BASE_POS[1]) ** 2) ** 0.5
@@ -509,7 +727,7 @@ while running:
                 selected_building = None
 
                 # Check buildings first
-        for b in buildings:
+                for b in buildings:
                     if (b.x - world_x) ** 2 + (b.y - world_y) ** 2 < (b.radius * 2) ** 2:
                         selected_building = b
                         break
@@ -533,96 +751,125 @@ while running:
                     reset_game()
 
     if not paused and not game_over and not show_menu:
-        # Update camera
-        camera.update(keys)
-
-        # Update power grid
-        power_grid.buildings = buildings
-        power_grid.update()
-        # Set selected status
-        for b in buildings:
-            b.selected = (b is selected_building)
-        # Update enemy waves
-        wave_manager.update(buildings)
-        wave_manager.update_enemies(buildings)
-
-        # Mothership missile attacks
-        for enemy in wave_manager.enemies:
-            if hasattr(enemy, 'is_mothership') and enemy.is_mothership:
-                if enemy.fire_missile():
-                    # Find target for missile
-                    if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
-                        target = type('obj', (object,), {'x': BASE_POS[0], 'y': BASE_POS[1]})()
-            else:
-                        target = enemy.target
-                    mothership_missiles.append(MothershipMissile(enemy.x, enemy.y, target, MOTHERSHIP_MISSILE_DAMAGE))
-
-        # Update mothership missiles
-        for m in mothership_missiles[:]:
-            m.update()
-            if not m.alive:
-                # Splash damage to buildings
-                for b in buildings:
-                    if (b.x - m.x) ** 2 + (b.y - m.y) ** 2 < m.splash_radius ** 2:
-                        b.health -= m.damage
-                        damage_numbers.append(DamageNumber(b.x, b.y - 15, -m.damage, (255, 0, 0)))
-                # Damage to base
-                if (BASE_POS[0] - m.x) ** 2 + (BASE_POS[1] - m.y) ** 2 < m.splash_radius ** 2:
-                    base_health -= m.damage
-                    damage_numbers.append(DamageNumber(BASE_POS[0], BASE_POS[1] - 20, -m.damage, (255, 0, 0)))
-                # Explosion particles
-                for _ in range(15):
-                    particles.append(Particle(m.x, m.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-4,4), random.uniform(-4,4), random.randint(20,40), random.randint(3,6)))
-                mothership_missiles.remove(m)
+        # Skip updates if paused (speed = 0)
+        if game_speed == 0:
+            pass  # Game is paused, skip all updates
         else:
-                # Remove if out of bounds
-                if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
+            # Update camera
+            camera.update(keys)
+        
+        # Apply game speed by running updates multiple times for speed boost
+        for _ in range(int(game_speed)):
+            # Update power grid
+            power_grid.buildings = buildings
+            power_grid.update()
+            # Set selected status
+            for b in buildings:
+                b.selected = (b is selected_building)
+            # Update enemy waves
+            wave_manager.update(buildings)
+            wave_manager.update_enemies(buildings)
+
+            # Mothership missile attacks
+            for enemy in wave_manager.enemies:
+                if hasattr(enemy, 'is_mothership') and enemy.is_mothership:
+                    if enemy.fire_missile():
+                        # Find target for missile
+                        if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
+                            target = type('obj', (object,), {'x': BASE_POS[0], 'y': BASE_POS[1]})()
+                        else:
+                            target = enemy.target
+                        mothership_missiles.append(MothershipMissile(enemy.x, enemy.y, target, MOTHERSHIP_MISSILE_DAMAGE))
+
+            # Update mothership missiles
+            for m in mothership_missiles[:]:
+                m.update()
+                if not m.alive:
+                    # Splash damage to buildings
+                    for b in buildings:
+                        if (b.x - m.x) ** 2 + (b.y - m.y) ** 2 < m.splash_radius ** 2:
+                            b.health -= m.damage
+                            damage_numbers.append(DamageNumber(b.x, b.y - 15, -m.damage, (255, 0, 0)))
+                    # Damage to base
+                    if (BASE_POS[0] - m.x) ** 2 + (BASE_POS[1] - m.y) ** 2 < m.splash_radius ** 2:
+                        base_health -= m.damage
+                        damage_numbers.append(DamageNumber(BASE_POS[0], BASE_POS[1] - 20, -m.damage, (255, 0, 0)))
+                    # Explosion particles
+                    for _ in range(15):
+                        particles.append(Particle(m.x, m.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-4,4), random.uniform(-4,4), random.randint(20,40), random.randint(3,6)))
                     mothership_missiles.remove(m)
+                else:
+                    # Remove if out of bounds
+                    if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
+                        mothership_missiles.remove(m)
 
-        # Enemy attacks
-        enemy_lasers.clear()
-        for enemy in wave_manager.enemies:
-            # Target info
-            if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
-                tx, ty = BASE_POS
-                t_radius = BASE_RADIUS
-            else:
-                tx, ty = enemy.target.x, enemy.target.y
-                t_radius = enemy.target.radius
-            dist = ((enemy.x - tx) ** 2 + (enemy.y - ty) ** 2) ** 0.5
-            # Laser attack
-            if dist < ENEMY_LASER_RANGE:
-                # Store laser for drawing
-                enemy_lasers.append((enemy.x, enemy.y, tx, ty))
-                # Damage
+            # Enemy attacks
+            enemy_lasers.clear()
+            for enemy in wave_manager.enemies:
+                # Target info
                 if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
-                    base_health -= ENEMY_LASER_DAMAGE
-                    base_health = max(base_health, 0)
+                    tx, ty = BASE_POS
+                    t_radius = BASE_RADIUS
                 else:
-                    enemy.target.health -= ENEMY_LASER_DAMAGE
-            # Contact damage
-            if dist < enemy.radius + t_radius:
-                if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
-                    base_health -= ENEMY_CONTACT_DAMAGE
-                    base_health = max(base_health, 0)
-                else:
-                    enemy.target.health -= ENEMY_CONTACT_DAMAGE
+                    tx, ty = enemy.target.x, enemy.target.y
+                    t_radius = enemy.target.radius
+                dist = ((enemy.x - tx) ** 2 + (enemy.y - ty) ** 2) ** 0.5
+                # Laser attack
+                if dist < ENEMY_LASER_RANGE:
+                    # Store laser for drawing
+                    enemy_lasers.append((enemy.x, enemy.y, tx, ty))
+                    # Damage
+                    if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
+                        base_health -= ENEMY_LASER_DAMAGE
+                        base_health = max(base_health, 0)
+                    else:
+                        enemy.target.health -= ENEMY_LASER_DAMAGE
+                # Contact damage
+                if dist < enemy.radius + t_radius:
+                    if isinstance(enemy.target, dict) and enemy.target['type'] == 'base':
+                        base_health -= ENEMY_CONTACT_DAMAGE
+                        base_health = max(base_health, 0)
+                    else:
+                        enemy.target.health -= ENEMY_CONTACT_DAMAGE
 
-        # Powerup effects
-        enemy_speed_mult = 0.5 if powerups['slow_time']['active'] else 1
-        mining_mult = 2 if powerups['speed_mining']['active'] else 1
-        shooting_mult = 0.5 if powerups['speed_shooting']['active'] else 1
+            # Powerup effects
+            enemy_speed_mult = 0.5 if powerups['slow_time']['active'] else 1
+            mining_mult = 2 if powerups['speed_mining']['active'] else 1
+            shooting_mult = 0.5 if powerups['speed_shooting']['active'] else 1
 
-        # Turrets fire missiles
-        for b in buildings:
-            if (b.type == 'turret' and b.powered and
-                resources.energy >= TURRET_ENERGY_COST and
-                resources.minerals >= TURRET_MINERAL_COST):
-                if not hasattr(b, 'cooldown_timer'):
-                    b.cooldown_timer = 0
-                if b.cooldown_timer > 0:
-                    b.cooldown_timer -= 1
+            # Turrets fire missiles
+            for b in buildings:
+                if (b.type == 'turret' and b.powered and
+                    resources.energy >= TURRET_ENERGY_COST and
+                    resources.minerals >= TURRET_MINERAL_COST):
+                    if not hasattr(b, 'cooldown_timer'):
+                        b.cooldown_timer = 0
+                    if b.cooldown_timer > 0:
+                        b.cooldown_timer -= 1
+                    else:
+                        # Find nearest enemy in range
+                        nearest = None
+                        min_dist = float('inf')
+                        for e in wave_manager.enemies:
+                            d = (b.x - e.x) ** 2 + (b.y - e.y) ** 2
+                            if d < b.fire_range ** 2 and d < min_dist:
+                                nearest = e
+                                min_dist = d
+                        if nearest:
+                            missiles.append(Missile(b.x, b.y, nearest, b.damage))
+                            resources.spend_energy(TURRET_ENERGY_COST)
+                            resources.spend_minerals(TURRET_MINERAL_COST)
+                            b.cooldown_timer = int(b.cooldown_time * shooting_mult)
+            # Lasers and SuperLasers deal continuous damage
+            for b in buildings:
+                if b.type == 'laser':
+                    laser_cost = LASER_COST * b.level
+                elif b.type == 'superlaser':
+                    laser_cost = SUPERLASER_COST * b.level
                 else:
+                    continue
+                    
+                if b.powered and resources.energy >= laser_cost:
                     # Find nearest enemy in range
                     nearest = None
                     min_dist = float('inf')
@@ -632,268 +879,249 @@ while running:
                             nearest = e
                             min_dist = d
                     if nearest:
-                        missiles.append(Missile(b.x, b.y, nearest, b.damage))
-                        resources.spend_energy(TURRET_ENERGY_COST)
-                        resources.spend_minerals(TURRET_MINERAL_COST)
-                        b.cooldown_timer = int(b.cooldown_time * shooting_mult)
-        # Lasers deal continuous damage
-        for b in buildings:
-            laser_cost = LASER_COST * b.level
-            if b.type == 'laser' and b.powered and resources.energy >= laser_cost:
-                # Find nearest enemy in range
-                nearest = None
-                min_dist = float('inf')
-                for e in wave_manager.enemies:
-                    d = (b.x - e.x) ** 2 + (b.y - e.y) ** 2
-                    if d < b.fire_range ** 2 and d < min_dist:
-                        nearest = e
-                        min_dist = d
-                if nearest:
-                    damage_dealt = b.damage_per_frame * (2 if powerups['speed_shooting']['active'] else 1)
-                    resources.spend_energy(laser_cost)
-                    nearest.health -= damage_dealt
+                        damage_dealt = b.damage_per_frame * (2 if powerups['speed_shooting']['active'] else 1)
+                        resources.spend_energy(laser_cost)
+                        nearest.health -= damage_dealt
 
-                    # Add damage counter at enemy location
-                    damage_numbers.append(DamageNumber(nearest.x, nearest.y - 15, -damage_dealt, (255, 100, 100)))
+                        # Damage counters removed for laser attacks (too spammy)
 
-                    # Store laser for visual drawing (will be drawn in render section)
-                    if not hasattr(b, 'laser_target'):
-                        b.laser_target = None
-                    b.laser_target = nearest
+                        # Store laser for visual drawing (will be drawn in render section)
+                        if not hasattr(b, 'laser_target'):
+                            b.laser_target = None
+                        b.laser_target = nearest
 
-                    # Laser particles at enemy location
-                    for _ in range(2):
-                        particles.append(Particle(nearest.x + random.uniform(-8, 8), nearest.y + random.uniform(-8, 8), CYAN, random.uniform(-1,1), random.uniform(-1,1), 10, 2))
-                else:
-                    if hasattr(b, 'laser_target'):
-                        b.laser_target = None
-        # Update missiles
-        for m in missiles[:]:
-            m.update()
-            if not m.alive:
-                # Splash damage
-                for e in wave_manager.enemies:
-                    if (e.x - m.x) ** 2 + (e.y - m.y) ** 2 < m.splash_radius ** 2:
-                        e.health -= m.damage
-
-                        # Add damage counter at enemy location
-                        damage_numbers.append(DamageNumber(e.x, e.y - 15, -m.damage, (255, 150, 0)))
-
-                        # XP gain for turret (reduced rate)
-                        for b in buildings:
-                            if b.type == 'turret' and hasattr(b, 'cooldown_timer'):
-                                if hasattr(b, 'xp'):
-                                    b.gain_xp(XP_PER_KILL * TURRET_XP_MODIFIER)
-                        if e.health <= 0:
-                            # Score, minerals, particles
-                            score += SCORE_PER_KILL
-                            kill_count += 1  # Increment kill counter
-                            resources.add_minerals(MINERALS_PER_KILL)
-                            for _ in range(20):
-                                particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
-                missiles.remove(m)
-            else:
-                # Remove if out of bounds
-                if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
-                missiles.remove(m)
-        # Remove dead enemies
-        for e in wave_manager.enemies[:]:
-            if e.health <= 0:
-                score += SCORE_PER_KILL
-                kill_count += 1  # Increment kill counter for all enemy deaths
-                resources.add_minerals(MINERALS_PER_KILL)
-                for _ in range(20):
-                    particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
-                wave_manager.enemies.remove(e)
-        # Score for wave
-        if not wave_manager.wave_active and not wave_manager.enemies:
-            score += SCORE_PER_WAVE * (wave_manager.wave-1)
-        # Update particles
-        for p in particles[:]:
-            p.update()
-            if p.lifetime <= 0:
-                particles.remove(p)
-
-        # Update damage numbers
-        for dn in damage_numbers[:]:
-            dn.update()
-            if dn.lifetime <= 0:
-                damage_numbers.remove(dn)
-        # Remove destroyed buildings
-        buildings[:] = [b for b in buildings if b.health > 0]
-        # Energy production from solars
-        prod = sum(b.prod_rate for b in buildings if b.type == 'solar' and b.powered)
-        resources.add_energy(prod)
-        # Max energy from batteries
-        resources.max_energy = BASE_MAX_ENERGY + sum(b.storage for b in buildings if b.type == 'battery' and b.powered)
-        # Synchronized Mining System
-        global_mining_clock += 1
-        if global_mining_clock >= MINING_CLOCK_INTERVAL:
-            global_mining_clock = 0  # Reset clock
-
-            # Track which asteroids are being mined and by how many miners
-            asteroid_miners = {}  # asteroid -> list of miners
-            asteroid_total_mined = {}  # asteroid -> total amount mined
-
-            # First pass: identify all miner-asteroid relationships
-            for b in buildings:
-                if b.type == 'miner' and b.powered and resources.energy >= MINER_ZAP_ENERGY_COST:
-                    # Find asteroids in range
-                    nearby_asteroids = []
-                    for a in asteroids:
-                        d = (b.x - a.x) ** 2 + (b.y - a.y) ** 2
-                        if d < MINER_RANGE ** 2 and a.minerals > 0:
-                            nearby_asteroids.append((d, a))
-
-                    # Sort by distance and take up to 3
-                    nearby_asteroids.sort(key=lambda x: x[0])
-                    target_asteroids = [a for _, a in nearby_asteroids[:MINER_MAX_TARGETS]]
-
-                    # Register this miner for each target asteroid
-                    for asteroid in target_asteroids:
-                        if asteroid not in asteroid_miners:
-                            asteroid_miners[asteroid] = []
-                            asteroid_total_mined[asteroid] = 0
-                        asteroid_miners[asteroid].append(b)
-
-            # Second pass: calculate mining amounts and apply effects
-            miners_that_worked = []  # Changed from set to list
-            for asteroid, miners in asteroid_miners.items():
-                if asteroid.minerals <= 0:
-                    continue
-
-                total_mined_from_asteroid = 0
-                for miner in miners:
-                    # Determine mining rate based on how many asteroids this miner targets
-                    miner_target_count = sum(1 for a in asteroid_miners.keys() if miner in asteroid_miners[a])
-                    if miner_target_count == 1:
-                        mining_rate = MINING_RATE_SINGLE * miner.level * mining_mult
+                        # Laser particles at enemy location
+                        for _ in range(2):
+                            particles.append(Particle(nearest.x + random.uniform(-8, 8), nearest.y + random.uniform(-8, 8), CYAN, random.uniform(-1,1), random.uniform(-1,1), 10, 2))
                     else:
-                        mining_rate = MINING_RATE_MULTI * miner.level * mining_mult
+                        if hasattr(b, 'laser_target'):
+                            b.laser_target = None
+            # Update missiles
+            for m in missiles[:]:
+                m.update()
+                if not m.alive:
+                    # Splash damage
+                    for e in wave_manager.enemies:
+                        if (e.x - m.x) ** 2 + (e.y - m.y) ** 2 < m.splash_radius ** 2:
+                            e.health -= m.damage
 
-                    # Mine from this asteroid
-                    mine_amount = min(mining_rate, asteroid.minerals - total_mined_from_asteroid)
-                    if mine_amount > 0:
-                        resources.add_minerals(mine_amount)
-                        total_mined_from_asteroid += mine_amount
-                        if miner not in miners_that_worked:  # Avoid duplicates
-                            miners_that_worked.append(miner)
+                            # Add damage counter at enemy location
+                            damage_numbers.append(DamageNumber(e.x, e.y - 15, -m.damage, (255, 150, 0)))
 
-                        # Create particle effects from miner
-                        for _ in range(2):  # Fewer particles per miner
-                            angle = random.uniform(0, 2 * math.pi)
-                            speed = random.uniform(1, 3)
-                            particles.append(Particle(
-                                miner.x + random.uniform(-5, 5),
-                                miner.y + random.uniform(-5, 5),
-                                GREEN,
-                                speed * math.cos(angle),
-                                speed * math.sin(angle),
-                                15,
-                                random.randint(2, 4)
-                            ))
-
-                # Update asteroid minerals and create single damage counter
-                if total_mined_from_asteroid > 0:
-                    asteroid.minerals -= total_mined_from_asteroid
-                    damage_numbers.append(DamageNumber(asteroid.x, asteroid.y - 20, total_mined_from_asteroid))
-
-            # Consume energy from miners that worked
-            for miner in miners_that_worked:
-                resources.spend_energy(MINER_ZAP_ENERGY_COST)
-        # Repair nodes
-        for b in buildings:
-            if b.type == 'repair' and b.powered and resources.energy >= REPAIR_ENERGY_COST:
-                repair_used = False
-                for other in buildings:
-                    if other != b and (b.x - other.x) ** 2 + (b.y - other.y) ** 2 < b.heal_range ** 2 and other.health < other.max_health:
-                        other.health = min(other.health + b.heal_rate, other.max_health)
-                        repair_used = True
-                if (b.x - BASE_POS[0]) ** 2 + (b.y - BASE_POS[1]) ** 2 < b.heal_range ** 2 and base_health < BASE_HEALTH:
-                    base_health = min(base_health + b.heal_rate, BASE_HEALTH)
-                    repair_used = True
-                if repair_used:
-                    resources.spend_energy(REPAIR_ENERGY_COST)
-        # Converter logic
-        for b in buildings:
-            if b.type == 'converter' and b.powered:
-                if not hasattr(b, 'convert_timer'):
-                    b.convert_timer = b.conversion_interval
-                b.convert_timer -= 1
-                if b.convert_timer <= 0 and resources.energy >= b.energy_cost:
-                    resources.spend_energy(b.energy_cost)
-                    resources.add_minerals(b.conversion_rate)
-                    b.convert_timer = b.conversion_interval
-                    # Visual effect
-                    for _ in range(5):
-                        particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
-        # Remove depleted asteroids
-        asteroids[:] = [a for a in asteroids if a.minerals > 0]
-        max_buildings_ever = max(max_buildings_ever, len(buildings))
-        # Game over conditions
-        if base_health <= 0 or (len(buildings) == 0 and max_buildings_ever > 0):
-            game_over = True
-            high_score = max(high_score, score)
-        # Update missiles
-        for m in missiles[:]:
-            m.update()
-            if not m.alive:
-                # Splash damage
-                for e in wave_manager.enemies:
-                    if (e.x - m.x) ** 2 + (e.y - m.y) ** 2 < m.splash_radius ** 2:
-                        e.health -= m.damage
-                        # XP gain for turret
-                        for b in buildings:
-                            if b.type == 'turret' and hasattr(b, 'cooldown_timer'):
-                                if hasattr(b, 'xp'):
-                                    b.gain_xp(XP_PER_KILL)
-                        if e.health <= 0:
-                            # Score, minerals, particles
-                            score += SCORE_PER_KILL
-                            resources.add_minerals(MINERALS_PER_KILL)
-                            for _ in range(20):
-                                particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
-                missiles.remove(m)
-            else:
-                # Remove if out of bounds
-                if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
+                            # XP gain for turret (reduced rate)
+                            for b in buildings:
+                                if b.type == 'turret' and hasattr(b, 'cooldown_timer'):
+                                    if hasattr(b, 'xp'):
+                                        b.gain_xp(XP_PER_KILL * TURRET_XP_MODIFIER)
+                            if e.health <= 0:
+                                # Score, minerals, particles
+                                score += SCORE_PER_KILL
+                                kill_count += 1  # Increment kill counter
+                                resources.add_minerals(MINERALS_PER_KILL)
+                                for _ in range(20):
+                                    particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
                     missiles.remove(m)
-        # Converter logic
-        for b in buildings:
-            if b.type == 'converter' and b.powered:
-                if not hasattr(b, 'convert_timer'):
-                    b.convert_timer = b.conversion_interval
-                b.convert_timer -= 1
-                if b.convert_timer <= 0 and resources.energy >= b.energy_cost:
-                    resources.spend_energy(b.energy_cost)
-                    resources.add_minerals(b.conversion_rate)
-                    b.convert_timer = b.conversion_interval
-                    # Visual effect
-                    for _ in range(5):
-                        particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
-        # Remove depleted asteroids
-        asteroids[:] = [a for a in asteroids if a.minerals > 0]
-        max_buildings_ever = max(max_buildings_ever, len(buildings))
-        # Game over conditions
-        if base_health <= 0 or (len(buildings) == 0 and max_buildings_ever > 0):
-            game_over = True
-            high_score = max(high_score, score)
+                else:
+                    # Remove if out of bounds
+                    if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
+                        missiles.remove(m)
+            # Remove dead enemies
+            for e in wave_manager.enemies[:]:
+                if e.health <= 0:
+                    score += SCORE_PER_KILL
+                    kill_count += 1  # Increment kill counter for all enemy deaths
+                    resources.add_minerals(MINERALS_PER_KILL)
+                    for _ in range(20):
+                        particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
+                    wave_manager.enemies.remove(e)
+            # Score for wave
+            if not wave_manager.wave_active and not wave_manager.enemies:
+                score += SCORE_PER_WAVE * (wave_manager.wave-1)
+            # Update particles
+            for p in particles[:]:
+                p.update()
+                if p.lifetime <= 0:
+                    particles.remove(p)
+
+            # Update damage numbers
+            for dn in damage_numbers[:]:
+                dn.update()
+                if dn.lifetime <= 0:
+                    damage_numbers.remove(dn)
+            # Remove destroyed buildings
+            buildings[:] = [b for b in buildings if b.health > 0]
+            # Energy production from solars
+            prod = sum(b.prod_rate for b in buildings if b.type == 'solar' and b.powered)
+            resources.add_energy(prod)
+            # Max energy from batteries
+            resources.max_energy = BASE_MAX_ENERGY + sum(b.storage for b in buildings if b.type == 'battery' and b.powered)
+            # Synchronized Mining System
+            global_mining_clock += 1
+            if global_mining_clock >= MINING_CLOCK_INTERVAL:
+                global_mining_clock = 0  # Reset clock
+
+                # Track which asteroids are being mined and by how many miners
+                asteroid_miners = {}  # asteroid -> list of miners
+                asteroid_total_mined = {}  # asteroid -> total amount mined
+
+                # First pass: identify all miner-asteroid relationships
+                for b in buildings:
+                    if b.type == 'miner' and b.powered and resources.energy >= MINER_ZAP_ENERGY_COST:
+                        # Find asteroids in range
+                        nearby_asteroids = []
+                        for a in asteroids:
+                            d = (b.x - a.x) ** 2 + (b.y - a.y) ** 2
+                            if d < MINER_RANGE ** 2 and a.minerals > 0:
+                                nearby_asteroids.append((d, a))
+
+                        # Sort by distance and take up to 3
+                        nearby_asteroids.sort(key=lambda x: x[0])
+                        target_asteroids = [a for _, a in nearby_asteroids[:MINER_MAX_TARGETS]]
+
+                        # Register this miner for each target asteroid
+                        for asteroid in target_asteroids:
+                            if asteroid not in asteroid_miners:
+                                asteroid_miners[asteroid] = []
+                                asteroid_total_mined[asteroid] = 0
+                            asteroid_miners[asteroid].append(b)
+
+                # Second pass: calculate mining amounts and apply effects
+                miners_that_worked = []  # Changed from set to list
+                for asteroid, miners in asteroid_miners.items():
+                    if asteroid.minerals <= 0:
+                        continue
+
+                    total_mined_from_asteroid = 0
+                    for miner in miners:
+                        # Determine mining rate based on how many asteroids this miner targets
+                        miner_target_count = sum(1 for a in asteroid_miners.keys() if miner in asteroid_miners[a])
+                        if miner_target_count == 1:
+                            mining_rate = MINING_RATE_SINGLE * miner.level * mining_mult
+                        else:
+                            mining_rate = MINING_RATE_MULTI * miner.level * mining_mult
+
+                        # Mine from this asteroid
+                        mine_amount = min(mining_rate, asteroid.minerals - total_mined_from_asteroid)
+                        if mine_amount > 0:
+                            resources.add_minerals(mine_amount)
+                            total_mined_from_asteroid += mine_amount
+                            if miner not in miners_that_worked:  # Avoid duplicates
+                                miners_that_worked.append(miner)
+
+                            # Create particle effects from miner
+                            for _ in range(2):  # Fewer particles per miner
+                                angle = random.uniform(0, 2 * math.pi)
+                                speed = random.uniform(1, 3)
+                                particles.append(Particle(
+                                    miner.x + random.uniform(-5, 5),
+                                    miner.y + random.uniform(-5, 5),
+                                    GREEN,
+                                    speed * math.cos(angle),
+                                    speed * math.sin(angle),
+                                    15,
+                                    random.randint(2, 4)
+                                ))
+
+                    # Update asteroid minerals and create single damage counter
+                    if total_mined_from_asteroid > 0:
+                        asteroid.minerals -= total_mined_from_asteroid
+                        damage_numbers.append(DamageNumber(asteroid.x, asteroid.y - 20, total_mined_from_asteroid))
+
+                # Consume energy from miners that worked
+                for miner in miners_that_worked:
+                    resources.spend_energy(MINER_ZAP_ENERGY_COST)
+            # Repair nodes
+            for b in buildings:
+                if b.type == 'repair' and b.powered and resources.energy >= REPAIR_ENERGY_COST:
+                    repair_used = False
+                    for other in buildings:
+                        if other != b and (b.x - other.x) ** 2 + (b.y - other.y) ** 2 < b.heal_range ** 2 and other.health < other.max_health:
+                            other.health = min(other.health + b.heal_rate, other.max_health)
+                            repair_used = True
+                    if (b.x - BASE_POS[0]) ** 2 + (b.y - BASE_POS[1]) ** 2 < b.heal_range ** 2 and base_health < BASE_HEALTH:
+                        base_health = min(base_health + b.heal_rate, BASE_HEALTH)
+                        repair_used = True
+                    if repair_used:
+                        resources.spend_energy(REPAIR_ENERGY_COST)
+            # Converter logic
+            for b in buildings:
+                if b.type == 'converter' and b.powered:
+                    if not hasattr(b, 'convert_timer'):
+                        b.convert_timer = b.conversion_interval
+                    b.convert_timer -= 1
+                    if b.convert_timer <= 0 and resources.energy >= b.energy_cost:
+                        resources.spend_energy(b.energy_cost)
+                        resources.add_minerals(b.conversion_rate)
+                        b.convert_timer = b.conversion_interval
+                        # Visual effect
+                        for _ in range(5):
+                            particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
+            # Remove depleted asteroids
+            asteroids[:] = [a for a in asteroids if a.minerals > 0]
+            max_buildings_ever = max(max_buildings_ever, len(buildings))
+            # Game over conditions
+            if base_health <= 0 or (len(buildings) == 0 and max_buildings_ever > 0):
+                game_over = True
+                high_score = max(high_score, score)
+            # Update missiles
+            for m in missiles[:]:
+                m.update()
+                if not m.alive:
+                    # Splash damage
+                    for e in wave_manager.enemies:
+                        if (e.x - m.x) ** 2 + (e.y - m.y) ** 2 < m.splash_radius ** 2:
+                            e.health -= m.damage
+                            # XP gain for turret
+                            for b in buildings:
+                                if b.type == 'turret' and hasattr(b, 'cooldown_timer'):
+                                    if hasattr(b, 'xp'):
+                                        b.gain_xp(XP_PER_KILL)
+                            if e.health <= 0:
+                                # Score, minerals, particles
+                                score += SCORE_PER_KILL
+                                resources.add_minerals(MINERALS_PER_KILL)
+                                for _ in range(20):
+                                    particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
+                    missiles.remove(m)
+                else:
+                    # Remove if out of bounds
+                    if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
+                        missiles.remove(m)
+            # Converter logic
+            for b in buildings:
+                if b.type == 'converter' and b.powered:
+                    if not hasattr(b, 'convert_timer'):
+                        b.convert_timer = b.conversion_interval
+                    b.convert_timer -= 1
+                    if b.convert_timer <= 0 and resources.energy >= b.energy_cost:
+                        resources.spend_energy(b.energy_cost)
+                        resources.add_minerals(b.conversion_rate)
+                        b.convert_timer = b.conversion_interval
+                        # Visual effect
+                        for _ in range(5):
+                            particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
+            # Remove depleted asteroids
+            asteroids[:] = [a for a in asteroids if a.minerals > 0]
+            max_buildings_ever = max(max_buildings_ever, len(buildings))
+            # Game over conditions
+            if base_health <= 0 or (len(buildings) == 0 and max_buildings_ever > 0):
+                game_over = True
+                high_score = max(high_score, score)
 
     # Powerup timers
-        for pu in powerups.values():
+    for pu in powerups.values():
         if pu['active']:
             pu['timer'] -= 1
             if pu['timer'] <= 0:
                 pu['active'] = False
 
     # Drawing
-    screen.fill((10, 10, 30))  # Dark space background
+    screen.fill((5, 5, 15))  # Darker space background for better star visibility
+    
+    # Draw background stars with parallax effect
+    draw_background_stars(screen, camera)
 
-    # Draw asteroids first (bottom layer)
-    for asteroid in asteroids:
-        asteroid.draw(screen, camera.x, camera.y, camera.zoom)
-
-    # Draw power connections with glow effect
+    # Draw power connections first (bottom layer, beneath asteroids)
     glow_time = pygame.time.get_ticks() / 1000.0  # Time-based glow
     for x1, y1, x2, y2 in power_grid.get_connections():
         screen_x1, screen_y1 = camera.world_to_screen(x1, y1)
@@ -906,8 +1134,6 @@ while running:
         base_color = (180, 90, 20)  # Darker orange
         glow_color = (int(255 * glow_intensity), int(140 * glow_intensity), int(40 * glow_intensity))
         
-        line_width = max(1, int(3 * camera.zoom))
-        
         # Make lines thinner
         line_width = max(1, int(2 * camera.zoom))  # Reduced from 3
         
@@ -916,6 +1142,10 @@ while running:
         pygame.draw.line(screen, base_color, (screen_x1, screen_y1), (screen_x2, screen_y2), line_width)
         # Thin white center line
         pygame.draw.line(screen, (255, 255, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(1 * camera.zoom)))
+
+    # Draw asteroids on top of power connections
+    for asteroid in asteroids:
+        asteroid.draw(screen, camera.x, camera.y, camera.zoom)
 
     # Draw base
     draw_base(screen, BASE_POS, BASE_RADIUS, base_health, BASE_HEALTH, camera)
@@ -930,18 +1160,28 @@ while running:
             draw_range_indicator(screen, selected_building.x, selected_building.y, selected_building.fire_range, camera, (255, 0, 0, 100))
         elif selected_building.type == 'laser':
             draw_range_indicator(screen, selected_building.x, selected_building.y, selected_building.fire_range, camera, (100, 200, 255, 100))
+        elif selected_building.type == 'superlaser':
+            draw_range_indicator(screen, selected_building.x, selected_building.y, selected_building.fire_range, camera, (255, 100, 255, 100))
         elif selected_building.type == 'repair':
             draw_range_indicator(screen, selected_building.x, selected_building.y, selected_building.heal_range, camera, (0, 255, 255, 100))
         elif selected_building.type == 'miner':
             draw_range_indicator(screen, selected_building.x, selected_building.y, MINER_RANGE, camera, (0, 255, 0, 100))
 
-    # Draw laser beams from laser turrets
+    # Draw laser beams from laser turrets and superlasers
     for building in buildings:
-        if building.type == 'laser' and hasattr(building, 'laser_target') and building.laser_target:
+        if (building.type == 'laser' or building.type == 'superlaser') and hasattr(building, 'laser_target') and building.laser_target:
             screen_x1, screen_y1 = camera.world_to_screen(building.x, building.y)
             screen_x2, screen_y2 = camera.world_to_screen(building.laser_target.x, building.laser_target.y)
-            pygame.draw.line(screen, WHITE, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(5 * camera.zoom)))
-            pygame.draw.line(screen, CYAN, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
+            
+            if building.type == 'superlaser':
+                # Thicker, more intense purple beam for SuperLaser
+                pygame.draw.line(screen, (255, 255, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(2, int(6 * camera.zoom)))
+                pygame.draw.line(screen, (255, 100, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(4 * camera.zoom)))
+                pygame.draw.line(screen, (255, 200, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
+            else:
+                # Regular laser beam
+                pygame.draw.line(screen, WHITE, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(5 * camera.zoom)))
+                pygame.draw.line(screen, CYAN, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
 
     # Draw range indicator when placing building
     if selected_build:
@@ -953,6 +1193,8 @@ while running:
             draw_range_indicator(screen, world_x, world_y, REPAIR_RANGE, camera, (0, 255, 255, 100))
         elif selected_build == 'laser':
             draw_range_indicator(screen, world_x, world_y, LASER_RANGE, camera, (100, 200, 255, 100))
+        elif selected_build == 'superlaser':
+            draw_range_indicator(screen, world_x, world_y, SUPERLASER_RANGE, camera, (255, 100, 255, 100))
         elif selected_build == 'connector':
             draw_range_indicator(screen, world_x, world_y, POWER_RANGE, camera, (255, 255, 0, 100))
         elif selected_build == 'miner':
@@ -980,7 +1222,7 @@ while running:
             particles.append(Particle(perimeter_x + random.uniform(-10, 10), perimeter_y + random.uniform(-10, 10), (255,100,100), random.uniform(-1,1), random.uniform(-1,1), 8, 2))
 
     # Draw missiles
-        for m in missiles:
+    for m in missiles:
         m.draw(screen, camera)
 
     # Draw mothership missiles
@@ -995,31 +1237,80 @@ while running:
     for dn in damage_numbers:
         dn.draw(screen, camera)
 
-    # UI elements drawn on top
-    title_text = small_font.render("Space Game Clone", True, WHITE)
-    screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 15))
+    # Draw minimap in top-left corner
+    draw_minimap(screen, camera, asteroids, wave_manager.enemies, BASE_POS)
 
-    # Draw controls UI on top
-    draw_controls_ui(screen)
+    # Enhanced modern UI header
+    # Dark header bar
+    header_surface = pygame.Surface((SCREEN_WIDTH - 200, 40), pygame.SRCALPHA)  # Exclude right panel
+    header_surface.fill((15, 20, 30, 200))
+    pygame.draw.rect(header_surface, (60, 80, 120), (0, 0, SCREEN_WIDTH - 200, 40), 2)
+    screen.blit(header_surface, (0, 0))
+    
+    # Modern title with glow effect
+    title_text = title_font.render("SPACE COLONY DEFENSE", True, (200, 220, 255))
+    title_x = (SCREEN_WIDTH - 200 - title_text.get_width()) // 2
+    screen.blit(title_text, (title_x, 10))
 
-    # HUD: Minerals, Energy, Wave, Score, High Score, Kill Count (smaller)
-    pygame.draw.rect(screen, (30, 30, 30), (10, 10, 600, 50))
-    minerals_text = small_font.render(f"Minerals: {int(resources.minerals)}", True, YELLOW)
-    energy_text = small_font.render(f"Energy: {int(resources.energy)} / {int(resources.max_energy)}", True, CYAN)
-    wave_text = small_font.render(f"Wave: {wave_manager.wave}", True, RED)
-    score_text = small_font.render(f"Score: {score}", True, WHITE)
-    high_score_text = small_font.render(f"High: {high_score}", True, WHITE)
-    kill_text = small_font.render(f"Kills: {kill_count}", True, (255, 100, 100))
-    screen.blit(minerals_text, (15, 15))
-    screen.blit(energy_text, (15, 35))
-    screen.blit(wave_text, (150, 15))
-    screen.blit(score_text, (220, 15))
-    screen.blit(high_score_text, (320, 15))
-    screen.blit(kill_text, (SCREEN_WIDTH - kill_text.get_width() - 10, 15))
+    # Draw modern building panel on the right
+    draw_modern_building_panel(screen)
 
-    # Camera controls hint
-    camera_text = small_font.render("Arrows: Pan | Scroll: Zoom", True, WHITE)
-    screen.blit(camera_text, (SCREEN_WIDTH - camera_text.get_width() - 10, 35))
+    # Modern HUD with styled panels
+    
+    # Resource panel
+    resource_panel = pygame.Surface((350, 35), pygame.SRCALPHA)
+    resource_panel.fill((20, 25, 35, 180))
+    pygame.draw.rect(resource_panel, (60, 80, 120), (0, 0, 350, 35), 2)
+    
+    minerals_text = font.render(f"⛏ {int(resources.minerals)}", True, (255, 215, 0))
+    energy_text = font.render(f"⚡ {int(resources.energy)}/{int(resources.max_energy)}", True, (100, 200, 255))
+    resource_panel.blit(minerals_text, (10, 8))
+    resource_panel.blit(energy_text, (120, 8))
+    
+    # Energy bar
+    energy_ratio = resources.energy / resources.max_energy
+    energy_bar_width = 100
+    energy_bar_x = 250
+    pygame.draw.rect(resource_panel, (50, 50, 50), (energy_bar_x, 12, energy_bar_width, 8))
+    pygame.draw.rect(resource_panel, (100, 200, 255), (energy_bar_x, 12, energy_bar_width * energy_ratio, 8))
+    
+    screen.blit(resource_panel, (10, 45))
+    
+    # Stats panel
+    stats_panel = pygame.Surface((300, 35), pygame.SRCALPHA)
+    stats_panel.fill((20, 25, 35, 180))
+    pygame.draw.rect(stats_panel, (60, 80, 120), (0, 0, 300, 35), 2)
+    
+    wave_text = font.render(f"Wave {wave_manager.wave}", True, (255, 100, 100))
+    score_text = font.render(f"Score: {score}", True, (200, 220, 255))
+    kill_text = font.render(f"Kills: {kill_count}", True, (255, 150, 100))
+    
+    stats_panel.blit(wave_text, (10, 8))
+    stats_panel.blit(score_text, (100, 8))
+    stats_panel.blit(kill_text, (200, 8))
+    
+    screen.blit(stats_panel, (SCREEN_WIDTH - 510, 45))
+
+    # Modern controls panel at bottom
+    controls_panel = pygame.Surface((SCREEN_WIDTH - 200, 60), pygame.SRCALPHA)
+    controls_panel.fill((20, 25, 35, 180))
+    pygame.draw.rect(controls_panel, (60, 80, 120), (0, 0, SCREEN_WIDTH - 200, 60), 2)
+    
+    # Controls text - using larger font for better readability
+    camera_text = hud_font.render("🎯 Arrows: Pan | Scroll: Zoom", True, (200, 220, 255))
+    speed_text = hud_font.render("⏯ Speed: 1-Pause 2-Normal 3-2x 4-3x", True, (200, 220, 255))
+    
+    controls_panel.blit(camera_text, (10, 8))
+    controls_panel.blit(speed_text, (10, 28))
+    
+    # Current speed indicator - using larger font
+    if game_speed == 0:
+        speed_indicator = hud_font.render("⏸ PAUSED", True, (255, 255, 100))
+    else:
+        speed_indicator = hud_font.render(f"▶ {game_speed:.0f}x SPEED", True, (100, 255, 100))
+    controls_panel.blit(speed_indicator, (SCREEN_WIDTH - 350, 18))
+    
+    screen.blit(controls_panel, (0, SCREEN_HEIGHT - 60))
 
     # Show selected build type
     if selected_build:
@@ -1032,7 +1323,7 @@ while running:
         screen.blit(next_wave_text, (SCREEN_WIDTH // 2 - next_wave_text.get_width() // 2, 220))
 
     # Show selected building stats in bottom left panel
-        if selected_building:
+    if selected_building:
         panel_width = 250
         panel_height = 150
         panel_x = 10
@@ -1126,9 +1417,9 @@ while running:
         screen.blit(go_text, (SCREEN_WIDTH // 2 - go_text.get_width() // 2, SCREEN_HEIGHT // 2 - 40))
         restart_rect = pygame.Rect(SCREEN_WIDTH // 2 - 80, SCREEN_HEIGHT // 2 + 40, 160, 50)
         pygame.draw.rect(screen, (100, 100, 100), restart_rect)
-        restart_text = hud_font.render("Restart", True, WHITE)
+        restart_text = font.render("Restart", True, WHITE)
         screen.blit(restart_text, (restart_rect.x + 30, restart_rect.y + 12))
-        hs_text = hud_font.render(f"High Score: {high_score}", True, WHITE)
+        hs_text = font.render(f"High Score: {high_score}", True, WHITE)
         screen.blit(hs_text, (SCREEN_WIDTH // 2 - hs_text.get_width() // 2, SCREEN_HEIGHT // 2 + 100))
 
     # Game menu (drawn on top of everything)

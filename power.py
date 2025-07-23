@@ -26,6 +26,7 @@ class PowerGrid:
                     if dist2 < self.power_range ** 2:
                         graph[i].append(j)
                         graph[j].append(i)
+                        # Store building objects, not indices
                         self.connections.append((connector, ob))
         
         # Power propagation using indices

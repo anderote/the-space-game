@@ -191,10 +191,25 @@ class Building:
             # Selection indicators removed
         
         # Health bar
-        health_ratio = self.health / self.max_health
-        bar_width = screen_radius * 2
-        pygame.draw.rect(surface, (200, 0, 0), (screen_x - bar_width/2, screen_y - screen_radius - 10*zoom, bar_width, 5*zoom))
-        pygame.draw.rect(surface, (0, 200, 0), (screen_x - bar_width/2, screen_y - screen_radius - 10*zoom, bar_width * health_ratio, 5*zoom))
+        # Health bar only if damaged (50% opacity)
+        if self.health < self.max_health:
+            health_ratio = self.health / self.max_health
+            bar_width = screen_radius * 2
+            bar_height = 5 * zoom
+            bar_x = screen_x - bar_width/2
+            bar_y = screen_y - screen_radius - 10*zoom
+            
+            # Create semi-transparent health bar
+            health_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
+            health_surface.fill((200, 0, 0, 127))  # Red background with 50% alpha
+            surface.blit(health_surface, (bar_x, bar_y))
+            
+            # Only create green surface if there's actual health to show
+            green_width = max(1, int(bar_width * health_ratio))
+            if green_width > 0:
+                green_surface = pygame.Surface((green_width, bar_height), pygame.SRCALPHA)
+                green_surface.fill((0, 200, 0, 127))  # Green with 50% alpha
+                surface.blit(green_surface, (bar_x, bar_y))
         # Level text removed - stats will be shown in bottom left panel when selected
 
     def upgrade_cost(self, base_cost):
