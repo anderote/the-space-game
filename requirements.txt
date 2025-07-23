@@ -1,0 +1,6 @@
+pygame>=2.0.0
+numpy
+noise
+pytest
+black
+flake8 
