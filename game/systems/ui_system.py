@@ -107,6 +107,19 @@ class UISystem(System):
         self.render_system.screen.blit(power_text, (panel_x + 10, y_offset))
         y_offset += line_height + 5
         
+        # Disabled status and toggle button
+        if hasattr(building, 'disabled'):
+            status_text = "🔴 Disabled" if building.disabled else "🟢 Enabled"
+            status_color = (255, 100, 100) if building.disabled else (100, 255, 100)
+            status_display = self.render_system.small_font.render(status_text, True, status_color)
+            self.render_system.screen.blit(status_display, (panel_x + 10, y_offset))
+            
+            # Toggle button
+            toggle_text = "D - Enable" if building.disabled else "D - Disable"
+            toggle_display = self.render_system.small_font.render(toggle_text, True, (200, 200, 255))
+            self.render_system.screen.blit(toggle_display, (panel_x + 10, y_offset + 15))
+            y_offset += line_height * 2 + 5
+        
         # Building-specific stats
         self._draw_building_specific_stats(building, panel_x + 10, y_offset, line_height)
         
@@ -220,15 +233,23 @@ class UISystem(System):
         restart_x = (SCREEN_WIDTH - restart_text.get_width()) // 2
         self.render_system.screen.blit(restart_text, (restart_x, 450))
     
-    def draw_hud(self, resources, wave_manager, score, kill_count, selected_building, energy_ratio):
+    def draw_hud(self, resources, wave_manager, score, kill_count, selected_building, energy_ratio, energy_production=0.0, solar_count=0, solar_levels=0):
         """Draw the main game HUD."""
-        # Resource panel with glass effect
-        self.render_system.draw_glass_panel(10, 45, 350, 35, alpha=160)
+        # Resource panel with glass effect (made wider for enhanced energy display)
+        self.render_system.draw_glass_panel(10, 45, 380, 35, alpha=160)
         
         minerals_text = self.render_system.font.render(f"⛏ {int(resources.minerals)}", True, (255, 215, 0))
         energy_text = self.render_system.font.render(f"⚡ {int(resources.energy)}/{int(resources.max_energy)}", True, (100, 200, 255))
+        # Enhanced energy production display with solar panel details
+        if solar_count > 0:
+            avg_level = solar_levels / solar_count if solar_count > 0 else 0
+            energy_prod_text = self.render_system.small_font.render(f"⚡/s: {energy_production:.1f} ({solar_count}☀ L{avg_level:.1f})", True, (150, 255, 150))
+        else:
+            energy_prod_text = self.render_system.small_font.render(f"⚡/s: {energy_production:.1f} (No solar panels)", True, (255, 100, 100))
+        
         self.render_system.screen.blit(minerals_text, (20, 53))
         self.render_system.screen.blit(energy_text, (130, 53))
+        self.render_system.screen.blit(energy_prod_text, (20, 67))
         
         # Enhanced energy bar with gradient
         energy_bar_width = 100
@@ -247,11 +268,38 @@ class UISystem(System):
         self.render_system.screen.blit(score_text, (stats_x + 100, 53))
         self.render_system.screen.blit(kill_text, (stats_x + 200, 53))
         
+        # Draw next wave preview
+        try:
+            next_wave_num, ship_counts = wave_manager.get_next_wave_preview()
+            if not wave_manager.wave_active and ship_counts:
+                # Wave preview panel
+                preview_y = 85
+                preview_width = 250
+                preview_height = min(120, 25 + len(ship_counts) * 15)
+                self.render_system.draw_glass_panel(stats_x, preview_y, preview_width, preview_height, alpha=140)
+                
+                preview_title = self.render_system.small_font.render(f"Next Wave {next_wave_num}:", True, (255, 255, 150))
+                self.render_system.screen.blit(preview_title, (stats_x + 10, preview_y + 5))
+                
+                y_offset = preview_y + 20
+                for ship_type, count in ship_counts.items():
+                    if count > 0:
+                        preview_text = self.render_system.small_font.render(f"  {ship_type}: {count}", True, (200, 200, 200))
+                        self.render_system.screen.blit(preview_text, (stats_x + 10, y_offset))
+                        y_offset += 12
+                        
+                # Show 'n' key hint
+                skip_hint = self.render_system.small_font.render("Press 'N' to start wave", True, (150, 255, 150))
+                self.render_system.screen.blit(skip_hint, (stats_x + 10, y_offset + 5))
+        except Exception as e:
+            # Fallback if preview fails
+            pass
+        
         # Controls panel at bottom with glass effect
         controls_width = SCREEN_WIDTH - 200
         self.render_system.draw_glass_panel(0, SCREEN_HEIGHT - 60, controls_width, 60, alpha=160)
         
-        camera_text = self.render_system.hud_font.render("🎯 Arrows: Pan | Scroll: Zoom | ESC: Cancel Selection", True, (200, 220, 255))
+        camera_text = self.render_system.hud_font.render("🎯 Arrows: Pan | Scroll: Zoom | ESC: Cancel | N: Next Wave", True, (200, 220, 255))
         speed_text = self.render_system.hud_font.render("⏯ Speed: 1-0.5x 2-1x 3-2x 4-3x | Space: Pause", True, (200, 220, 255))
         
         self.render_system.screen.blit(camera_text, (10, SCREEN_HEIGHT - 52))
@@ -286,7 +334,8 @@ class UISystem(System):
             ('SuperLaser', 'superlaser', BUILD_COSTS['superlaser'], 'K'),
             ('Repair', 'repair', BUILD_COSTS['repair'], 'R'),
             ('Converter', 'converter', BUILD_COSTS['converter'], 'V'),
-            ('Hangar', 'hangar', BUILD_COSTS['hangar'], 'H')
+            ('Hangar', 'hangar', BUILD_COSTS['hangar'], 'H'),
+            ('Missile', 'missile_launcher', BUILD_COSTS['missile_launcher'], 'G')
         ]
         
         button_height = 50

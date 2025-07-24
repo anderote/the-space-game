@@ -13,7 +13,7 @@ from game.utils.math_utils import distance_squared
 from settings import *
 from resources import ResourceManager
 from asteroids import Asteroid, DamageNumber
-from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Hangar, Building, FriendlyShip
+from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Hangar, MissileLauncher, Building, FriendlyShip
 from power import PowerGrid
 from enemies import WaveManager, MothershipMissile, LargeShip, KamikazeShip
 
@@ -24,36 +24,7 @@ except NameError:
     MINING_RATE_SINGLE = 3.0
 
 
-class Particle:
-    """Particle for visual effects."""
-    def __init__(self, x, y, vx, vy, color, lifetime, size=2):
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.original_color = color
-        self.color = color
-        self.lifetime = lifetime
-        self.max_lifetime = lifetime
-        self.size = size
-    
-    def update(self):
-        self.x += self.vx
-        self.y += self.vy
-        self.lifetime -= 1
-        # Fade out over time
-        fade_ratio = self.lifetime / self.max_lifetime
-        self.color = (
-            int(self.original_color[0] * fade_ratio),
-            int(self.original_color[1] * fade_ratio), 
-            int(self.original_color[2] * fade_ratio)
-        )
-    
-    def draw(self, surface, camera):
-        if self.lifetime > 0:
-            screen_x, screen_y = camera.world_to_screen(self.x, self.y)
-            if -50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50:
-                pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), int(self.size))
+
 
 
 class LaserBeam:
@@ -212,6 +183,72 @@ class Missile:
         pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), size)
 
 
+class HeavyMissile:
+    """Heavy missile with splash damage."""
+    def __init__(self, x, y, target_x, target_y, damage, splash_damage, splash_radius):
+        self.x = x
+        self.y = y
+        self.target_x = target_x
+        self.target_y = target_y
+        self.damage = damage
+        self.splash_damage = splash_damage
+        self.splash_radius = splash_radius
+        self.speed = MISSILE_SPEED * 0.8  # Slower than regular missiles
+        self.alive = True
+        self.flash_timer = 0
+        
+    def update(self, game_logic):
+        dx = self.target_x - self.x
+        dy = self.target_y - self.y
+        dist = math.hypot(dx, dy)
+        
+        self.flash_timer += 1
+        
+        if dist < self.speed:
+            # Explode at target location
+            self.x, self.y = self.target_x, self.target_y
+            self.alive = False
+            
+            # Deal splash damage to all enemies in radius
+            for enemy in game_logic.wave_manager.enemies:
+                enemy_dist = math.hypot(enemy.x - self.x, enemy.y - self.y)
+                if enemy_dist <= self.splash_radius:
+                    # Direct hit does full damage, splash does splash_damage
+                    damage_to_deal = self.damage if enemy_dist < 10 else self.splash_damage
+                    enemy.health -= damage_to_deal
+            
+            # Add explosion effects
+            if game_logic.particle_system:
+                game_logic.particle_system.add_explosion(self.x, self.y, intensity=1.5)
+            game_logic.add_particles(self.x, self.y, 25, (255, 150, 0), speed_range=(2, 6), lifetime_range=(20, 40))
+            
+        else:
+            self.x += (dx / dist) * self.speed
+            self.y += (dy / dist) * self.speed
+            # Add bigger trail particles
+            if random.random() < 0.5:
+                game_logic.add_particles(self.x, self.y, 2, (255, 180, 0), speed_range=(0.3, 1.0), lifetime_range=(12, 20))
+    
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        
+        if not (-50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50):
+            return
+        
+        # Draw heavy missile as a larger glowing circle
+        base_color = (255, 150, 0)  # Orange-yellow
+        if self.flash_timer % 8 < 4:  # Flash effect
+            color = (255, 255, 100)  # Bright yellow
+        else:
+            color = base_color
+        
+        size = max(2, int(MISSILE_SIZE * camera.zoom * 1.5))  # 50% larger than regular missiles
+        pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), size)
+        # Add outer glow
+        if size > 2:
+            pygame.draw.circle(surface, (255, 200, 100, 100), (int(screen_x), int(screen_y)), size + 2, 1)
+
+
 class GameLogicSystem(System):
     """Main game logic system that manages all gameplay mechanics."""
     
@@ -238,6 +275,11 @@ class GameLogicSystem(System):
         self.power_grid = None
         self.wave_manager = None
         
+        # Energy production tracking
+        self.current_energy_production = 0.0
+        self.solar_panel_count = 0
+        self.solar_panel_levels = 0
+        
         # Game state
         self.base_health = BASE_HEALTH
         self.base_pos = (WORLD_WIDTH // 2, WORLD_HEIGHT // 2)
@@ -260,7 +302,8 @@ class GameLogicSystem(System):
             'superlaser': SuperLaser,
             'repair': Repair,
             'converter': Converter,
-            'hangar': Hangar
+            'hangar': Hangar,
+            'missile_launcher': MissileLauncher
         }
     
     def initialize(self):
@@ -335,13 +378,12 @@ class GameLogicSystem(System):
         
         # Update wave manager
         self.wave_manager.update(self.buildings)
-        self.wave_manager.update_enemies(self.buildings)
+        self.wave_manager.update_enemies(self.buildings, self.friendly_ships)
         
         # Update missiles
         self._update_missiles()
         
-        # Update particles and effects
-        self._update_particles()
+        # Particle updates now handled by ParticleSystem
         self._update_mining_lasers()
         self._update_laser_beams()
         self._update_damage_numbers()
@@ -426,14 +468,18 @@ class GameLogicSystem(System):
     
     def add_particles(self, x, y, count, color, speed_range=(1, 3), lifetime_range=(30, 60)):
         """Add particles at a position with random velocities."""
-        for _ in range(count):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(*speed_range)
-            vx = math.cos(angle) * speed
-            vy = math.sin(angle) * speed
-            lifetime = random.randint(*lifetime_range)
-            size = random.uniform(1, 3)
-            self.particles.append(Particle(x, y, vx, vy, color, lifetime, size))
+        if self.particle_system:
+            self.particle_system.add_particles(x, y, count, color, speed_range, lifetime_range)
+        else:
+            # Fallback to old system if particle system not available
+            for _ in range(count):
+                angle = random.uniform(0, 2 * math.pi)
+                speed = random.uniform(*speed_range)
+                vx = math.cos(angle) * speed
+                vy = math.sin(angle) * speed
+                lifetime = random.randint(*lifetime_range)
+                size = random.uniform(1, 3)
+                self.particles.append(Particle(x, y, vx, vy, color, lifetime, size))
     
     def _handle_building_event(self, event):
         """Handle building-related events."""
@@ -448,12 +494,18 @@ class GameLogicSystem(System):
             # Play cancel sound
             if self.audio_system:
                 self.audio_system.play_ui_sound('button_click', 0.5)
+        elif data['type'] == 'skip_wave':
+            # Force the next wave to start immediately
+            if self.wave_manager.can_start_next_wave:
+                self.wave_manager.force_next_wave()
         elif data['type'] == 'select_at':
             self._select_building_at(data['x'], data['y'])
         elif data['type'] == 'upgrade' and data.get('building'):
             self._upgrade_building(data['building'])
         elif data['type'] == 'sell' and data.get('building'):
             self._sell_building(data['building'])
+        elif data['type'] == 'toggle_disabled' and data.get('building'):
+            self._toggle_building_disabled(data['building'])
     
     def _place_building(self, build_type, x, y):
         """Place a building at the specified location."""
@@ -570,6 +622,13 @@ class GameLogicSystem(System):
             
             print(f"💰 Sold {building.type} for {sell_price} minerals")
     
+    def _toggle_building_disabled(self, building):
+        """Toggle the disabled state of a building."""
+        if hasattr(building, 'disabled'):
+            building.disabled = not building.disabled
+            status = "disabled" if building.disabled else "enabled"
+            print(f"🔄 {building.type.title()} {status}")
+    
     def _update_missiles(self):
         """Update all missiles."""
         for m in self.missiles[:]:
@@ -610,12 +669,7 @@ class GameLogicSystem(System):
                     else:
                         self.add_particles(enemy.x, enemy.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
     
-    def _update_particles(self):
-        """Update all particles."""
-        for p in self.particles[:]:
-            p.update()
-            if p.lifetime <= 0:
-                self.particles.remove(p)
+
     
     def _update_mining_lasers(self):
         """Update mining laser effects."""
@@ -643,7 +697,7 @@ class GameLogicSystem(System):
             self.global_mining_clock = 0
             
             # Mining logic (simplified version)
-            for miner in [b for b in self.buildings if b.type == 'miner' and b.powered]:
+            for miner in [b for b in self.buildings if b.type == 'miner' and b.powered and not b.disabled]:
                 if self.resources.energy >= MINER_ZAP_ENERGY_COST:
                     # Find nearby asteroids
                     nearby_asteroids = []
@@ -673,19 +727,23 @@ class GameLogicSystem(System):
                                 self.resources.add_minerals(mine_amount)
                                 asteroid.minerals -= mine_amount
                                 
-                                # Visual effects
-                                self.add_particles(miner.x, miner.y, 3, (0, 255, 0), speed_range=(1, 3), lifetime_range=(12, 20))
-                                self.add_particles(asteroid.x, asteroid.y, 2, (100, 200, 100), speed_range=(0.5, 2), lifetime_range=(10, 18))
-                                self.add_particles(laser.target_x, laser.target_y, 5, (255, 255, 100), speed_range=(2, 4), lifetime_range=(20, 30))
+                                # Minimal visual effects - just a few sparks at the laser hit point
+                                if random.random() < 0.3:  # Only 30% chance for particles
+                                    self.add_particles(laser.target_x, laser.target_y, 2, (255, 255, 100), speed_range=(1, 2), lifetime_range=(8, 12))
                                 
-                                # Damage number
-                                self.damage_numbers.append(DamageNumber(asteroid.x, asteroid.y - 20, mine_amount))
+                                # No damage numbers for mining
     
     def _update_building_systems(self):
         """Update building systems like repair and energy production."""
         # Energy production with visual effects
         energy_producing_buildings = [b for b in self.buildings if b.type == 'solar' and b.powered]
         energy_prod = sum(b.prod_rate for b in energy_producing_buildings)
+        self.current_energy_production = energy_prod * 60  # Convert to per-second rate
+        
+        # Store detailed solar panel information for UI
+        self.solar_panel_count = len(energy_producing_buildings)
+        self.solar_panel_levels = sum(b.level for b in energy_producing_buildings) if energy_producing_buildings else 0
+        
         self.resources.add_energy(energy_prod)
         
         # Add power pulse effects to producing solar panels
@@ -703,7 +761,7 @@ class GameLogicSystem(System):
         )
         
         # Repair system
-        for repair_building in [b for b in self.buildings if b.type == 'repair' and b.powered]:
+        for repair_building in [b for b in self.buildings if b.type == 'repair' and b.powered and not b.disabled]:
             if self.resources.energy >= REPAIR_ENERGY_COST:
                 repair_used = False
                 
@@ -734,10 +792,12 @@ class GameLogicSystem(System):
     def _update_combat_buildings(self):
         """Update turrets and lasers."""
         for building in self.buildings:
-            if building.type == 'turret' and building.powered:
+            if building.type == 'turret' and building.powered and not building.disabled:
                 self._update_turret(building)
-            elif building.type in ['laser', 'superlaser'] and building.powered:
+            elif building.type in ['laser', 'superlaser'] and building.powered and not building.disabled:
                 self._update_laser(building)
+            elif building.type == 'missile_launcher' and building.powered and not building.disabled:
+                self._update_missile_launcher(building)
     
     def _update_turret(self, turret):
         """Update turret behavior."""
@@ -802,9 +862,7 @@ class GameLogicSystem(System):
                 
                 self.laser_beams.append(laser_effect)
                 
-                # Play laser sound
-                if self.audio_system:
-                    self.audio_system.play_laser(0.7)
+                # Laser sound removed to prevent audio errors
                 
                 # Enhanced particle effects
                 if self.particle_system:
@@ -816,12 +874,44 @@ class GameLogicSystem(System):
                                      (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
                                      speed_range=(0.5, 1.5), lifetime_range=(10, 20))
     
+    def _update_missile_launcher(self, launcher):
+        """Update missile launcher behavior."""
+        import pygame
+        current_time = pygame.time.get_ticks()
+        
+        # Check if we can fire (cooldown and mineral cost)
+        if (current_time - launcher.last_shot_time > launcher.fire_cooldown and 
+            self.resources.minerals >= launcher.mineral_cost_per_shot):
+            
+            # Find target
+            target = None
+            min_distance = float('inf')
+            
+            for enemy in self.wave_manager.enemies:
+                distance = math.hypot(enemy.x - launcher.x, enemy.y - launcher.y)
+                if distance <= launcher.fire_range and distance < min_distance:
+                    min_distance = distance
+                    target = enemy
+            
+            if target:
+                # Spend minerals
+                self.resources.minerals -= launcher.mineral_cost_per_shot
+                
+                # Create heavy missile
+                self.missiles.append(HeavyMissile(launcher.x, launcher.y, target.x, target.y, launcher.damage, launcher.splash_damage, launcher.splash_radius))
+                launcher.last_shot_time = current_time
+                
+                # Missile launch sound removed to prevent audio errors
+                
+                # Add launch particles
+                self.add_particles(launcher.x, launcher.y, 8, (255, 200, 0), speed_range=(1, 3), lifetime_range=(15, 25))
+    
     def _update_hangars(self):
         """Update hangar systems and ship launching."""
         import pygame
         current_time = pygame.time.get_ticks()
         
-        for hangar in [b for b in self.buildings if b.type == 'hangar' and b.powered]:
+        for hangar in [b for b in self.buildings if b.type == 'hangar' and b.powered and not b.disabled]:
             if self.resources.energy >= HANGAR_ENERGY_COST:
                 self.resources.spend_energy(HANGAR_ENERGY_COST)
                 
@@ -1032,6 +1122,9 @@ class GameLogicSystem(System):
             elif self.selected_building.type == 'hangar':
                 render_system.draw_range_indicator(self.selected_building.x, self.selected_building.y, 
                                                  self.selected_building.ship_range, (120, 120, 255, 100))
+            elif self.selected_building.type == 'missile_launcher':
+                render_system.draw_range_indicator(self.selected_building.x, self.selected_building.y, 
+                                                 self.selected_building.fire_range, (255, 150, 0, 100))
         
         # Draw enemies
         for enemy in self.wave_manager.enemies:
@@ -1045,9 +1138,7 @@ class GameLogicSystem(System):
         for missile in self.missiles:
             missile.draw(render_system.screen, render_system.camera)
         
-        # Draw particles
-        for particle in self.particles:
-            particle.draw(render_system.screen, render_system.camera)
+        # Old particle drawing removed - now using ParticleSystem
         
         # Draw mining lasers
         for laser in self.mining_lasers:
@@ -1076,6 +1167,7 @@ class GameLogicSystem(System):
             'miner': (MINER_RANGE, (0, 255, 0, 100)),        # Green for miners
             'connector': (POWER_RANGE, (255, 255, 0, 100)),  # Yellow for connectors
             'hangar': (HANGAR_SHIP_RANGE, (120, 120, 255, 100)),  # Light blue for hangars
+            'missile_launcher': (500, (255, 150, 0, 100)),  # Orange for missile launchers
         }
         
         if build_type in building_ranges:

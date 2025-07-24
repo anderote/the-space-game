@@ -30,29 +30,39 @@ class Enemy:
     # Class variable for spaceship image (will be set from main.py)
     spaceship_image = None
 
-    def find_nearest_target(self, buildings, base_pos):
-        if buildings:
-            # Separate buildings into damage-dealing and non-damage-dealing
-            damage_buildings = [b for b in buildings if b.type in ['turret', 'laser']]
-            other_buildings = [b for b in buildings if b.type not in ['turret', 'laser']]
-            
-            # Prefer damage-dealing buildings if they exist
-            if damage_buildings:
-                self.target = min(damage_buildings, key=lambda b: (self.x - b.x) ** 2 + (self.y - b.y) ** 2)
-            else:
-                self.target = min(other_buildings, key=lambda b: (self.x - b.x) ** 2 + (self.y - b.y) ** 2)
+    def find_nearest_target(self, buildings, base_pos, friendly_ships=None):
+        if friendly_ships is None:
+            friendly_ships = []
+        
+        # Create list of all potential targets (buildings + friendly ships)
+        all_targets = []
+        
+        # Add buildings to targets
+        for building in buildings:
+            all_targets.append(building)
+        
+        # Add friendly ships to targets
+        for ship in friendly_ships:
+            all_targets.append(ship)
+        
+        if all_targets:
+            # Find the closest target regardless of type
+            self.target = min(all_targets, key=lambda t: (self.x - t.x) ** 2 + (self.y - t.y) ** 2)
         else:
             self.target = {'x': base_pos[0], 'y': base_pos[1], 'type': 'base'}
 
-    def update(self, buildings, base_pos):
+    def update(self, buildings, base_pos, friendly_ships=None):
+        if friendly_ships is None:
+            friendly_ships = []
+            
         # Check if current target still exists
         if self.target and not isinstance(self.target, dict):
-            if self.target not in buildings:
+            if self.target not in buildings and self.target not in friendly_ships:
                 self.target = None
         
         # Find new target if needed
         if not self.target:
-            self.find_nearest_target(buildings, base_pos)
+            self.find_nearest_target(buildings, base_pos, friendly_ships)
             
         if self.target:
             tx, ty = (self.target['x'], self.target['y']) if isinstance(self.target, dict) else (self.target.x, self.target.y)
@@ -89,7 +99,7 @@ class Enemy:
                 current_time = pygame.time.get_ticks()
                 laser_cooldown = 60  # 1 second at 60fps
                 laser_range = 120    # Shorter range than larger ships
-                laser_damage = 5    # Reduced by 50% (was 10)
+                laser_damage = 1.25    # Reduced by 60% (was 5)
                 
                 if current_time - self.last_shot_time > laser_cooldown:
                     # Check if target is within laser range (only fire when orbiting and close)
@@ -175,15 +185,18 @@ class Mothership(Enemy):
     # Class variable for mothership image (will be set from main.py)
     mothership_image = None
     
-    def update(self, buildings, base_pos):
+    def update(self, buildings, base_pos, friendly_ships=None):
+        if friendly_ships is None:
+            friendly_ships = []
+            
         # Check if current target still exists
         if self.target and not isinstance(self.target, dict):
-            if self.target not in buildings:
+            if self.target not in buildings and self.target not in friendly_ships:
                 self.target = None
         
         # Find new target if needed
         if not self.target:
-            self.find_nearest_target(buildings, base_pos)
+            self.find_nearest_target(buildings, base_pos, friendly_ships)
             
         if self.target:
             tx, ty = (self.target['x'], self.target['y']) if isinstance(self.target, dict) else (self.target.x, self.target.y)
@@ -382,38 +395,56 @@ class WaveManager:
             self.enemies_per_formation = total_enemies
 
     def calculate_wave_points(self):
-        """Calculate total points for this wave using exponential growth"""
+        """Calculate total points for this wave with minimum 10 fighters per wave"""
+        # Ensure we have enough points for minimum 10 fighters plus additional enemies
+        min_fighters = max(10, 10 + self.wave)  # At least 10, growing by 1 per wave
+        
         if self.wave <= 3:
-            # First 3 waves: only basic enemies (1 point each) - 3x larger starting size
-            base_points = (3 + self.wave) * 3  # Waves 1-3: 12,15,18 points (was 4,5,6)
-            return min(base_points, 24)
+            # Early waves: minimum fighters + some extra
+            return min_fighters + (self.wave * 2)
         else:
-            # Exponential growth after wave 3 - 30% slower growth
-            base_points = 24  # Starting from wave 4
-            growth_factor = 1.4 * 0.7  # 30% slower growth = 0.98
-            return int(base_points * (growth_factor ** (self.wave - 3)))
+            # Later waves: minimum fighters + scaling additional enemies
+            extra_points = int((self.wave - 3) * 3)  # More enemies in later waves
+            return min_fighters + extra_points
     
     def generate_enemy_composition(self):
         """Generate list of enemy types to spawn based on wave points"""
+        import math
         enemies_to_spawn = []
         remaining_points = self.wave_points
         
+        # Ensure at least 10 basic enemies per wave, growing over time
+        min_fighters = max(10, 10 + self.wave)  # Start with 10, add 1 per wave
+        
+        # Always add minimum fighter ships first
+        fighters_to_add = min(min_fighters, remaining_points)
+        for _ in range(fighters_to_add):
+            enemies_to_spawn.append("basic")
+            remaining_points -= 1
+        
         if self.wave <= 3:
-            # Waves 1-3: Only basic enemies
+            # Waves 1-3: Fill remaining with more basic enemies and some motherships
+            # Add a few motherships starting from wave 2
+            if self.wave >= 2:
+                motherships_to_add = min(2, remaining_points // 8)  # 1 mothership per 8 points
+                for _ in range(motherships_to_add):
+                    if remaining_points >= 8:
+                        enemies_to_spawn.append("mothership")
+                        remaining_points -= 8
+            
+            # Fill rest with basic enemies
             while remaining_points >= 1:
                 enemies_to_spawn.append("basic")
                 remaining_points -= 1
         else:
-            # Later waves: Balanced composition with 50% basic fighters minimum
-            total_basic_points = max(remaining_points // 2, remaining_points - 30)  # At least 50% basic
+            # Later waves: Add variety on top of guaranteed fighters
             
-            # Add basic fighters first (50% of total points)
-            basic_count = 0
-            while total_basic_points > 0 and remaining_points > 0:
-                enemies_to_spawn.append("basic")
-                remaining_points -= 1
-                total_basic_points -= 1
-                basic_count += 1
+            # Always add some motherships to later waves
+            motherships_to_add = min(3, max(1, remaining_points // 8))  # Scale with wave size
+            for _ in range(motherships_to_add):
+                if remaining_points >= 8:
+                    enemies_to_spawn.append("mothership")
+                    remaining_points -= 8
             
             # Fill remaining points with varied ship types
             ship_types = [
@@ -559,6 +590,47 @@ class WaveManager:
         """Manually start the next wave"""
         if self.can_start_next_wave:
             self.wait_timer = 0
+    
+    def get_next_wave_preview(self):
+        """Get preview of what the next wave will contain"""
+        if self.wave_active:
+            preview_wave = self.wave + 1
+        else:
+            preview_wave = self.wave
+        
+        # Temporarily calculate what the next wave would contain
+        temp_wave = self.wave
+        temp_points = self.wave_points
+        
+        # Set wave to preview wave for calculation
+        self.wave = preview_wave
+        preview_points = self.calculate_wave_points()
+        preview_composition = self.generate_enemy_composition()
+        
+        # Restore original values
+        self.wave = temp_wave
+        self.wave_points = temp_points
+        
+        # Count ship types
+        ship_counts = {}
+        for ship_type in preview_composition:
+            if ship_type == "basic":
+                ship_counts["Fighters"] = ship_counts.get("Fighters", 0) + 1
+            elif ship_type == "mothership":
+                ship_counts["Motherships"] = ship_counts.get("Motherships", 0) + 1
+            elif ship_type == "large":
+                ship_counts["Battleships"] = ship_counts.get("Battleships", 0) + 1
+            elif ship_type == "kamikaze":
+                ship_counts["Kamikaze"] = ship_counts.get("Kamikaze", 0) + 1
+            elif ship_type == "assault":
+                ship_counts["Assault"] = ship_counts.get("Assault", 0) + 1
+            elif ship_type == "stealth":
+                ship_counts["Stealth"] = ship_counts.get("Stealth", 0) + 1
+            elif ship_type == "cruiser":
+                ship_counts["Cruisers"] = ship_counts.get("Cruisers", 0) + 1
+
+        
+        return preview_wave, ship_counts
 
     def update(self, buildings):
         if not self.wave_active:
@@ -578,13 +650,12 @@ class WaveManager:
                     
                     if enemy_type == "basic":
                         health = ENEMY_HEALTH_BASE * self.wave
-                        if self.wave >= 3 and random.random() < MOTHERSHIP_SPAWN_CHANCE:
-                            # Spawn mothership with higher health
-                            mothership_health = health * MOTHERSHIP_HEALTH_MULTIPLIER
-                            self.enemies.append(Mothership(x, y, mothership_health))
-                        else:
-                            # Spawn regular enemy
-                            self.enemies.append(Enemy(x, y, health))
+                        # Always spawn regular enemy for "basic" type
+                        self.enemies.append(Enemy(x, y, health))
+                    elif enemy_type == "mothership":
+                        health = ENEMY_HEALTH_BASE * self.wave
+                        mothership_health = health * MOTHERSHIP_HEALTH_MULTIPLIER
+                        self.enemies.append(Mothership(x, y, mothership_health))
                     elif enemy_type == "large":
                         self.enemies.append(LargeShip(x, y))
                     elif enemy_type == "kamikaze":
@@ -604,9 +675,11 @@ class WaveManager:
                 self.wave += 1
                 self.wait_timer = WAVE_WAIT_TIME
 
-    def update_enemies(self, buildings):
+    def update_enemies(self, buildings, friendly_ships=None):
+        if friendly_ships is None:
+            friendly_ships = []
         for e in self.enemies:
-            e.update(buildings, self.base_pos)
+            e.update(buildings, self.base_pos, friendly_ships)
         self.enemies = [e for e in self.enemies if e.health > 0]
 
     def draw_enemies(self, surface, camera):
@@ -624,8 +697,8 @@ class LargeShip(Enemy):
         self.shot_cooldown = 90  # 1.5 seconds at 60fps
         self.points = 5  # Point value for wave generation
         
-    def update(self, buildings, base_pos):
-        super().update(buildings, base_pos)
+    def update(self, buildings, base_pos, friendly_ships=None):
+        super().update(buildings, base_pos, friendly_ships)
         # Check if we can shoot at buildings
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shot_cooldown:
@@ -678,10 +751,10 @@ class KamikazeShip(Enemy):
         self.points = 2  # Point value for wave generation
         self.has_exploded = False
         
-    def update(self, buildings, base_pos):
+    def update(self, buildings, base_pos, friendly_ships=None):
         # Move toward nearest target aggressively
         if not self.target:
-            self.find_nearest_target(buildings, base_pos)
+            self.find_nearest_target(buildings, base_pos, friendly_ships)
         
         if self.target:
             dx = self.target.x - self.x
@@ -730,8 +803,8 @@ class AssaultShip(Enemy):
         self.max_burst = 5  # Fire 5 shots per burst
         self.burst_pause = 120  # 2 second pause between bursts
         
-    def update(self, buildings, base_pos):
-        super().update(buildings, base_pos)
+    def update(self, buildings, base_pos, friendly_ships=None):
+        super().update(buildings, base_pos, friendly_ships)
         # Rapid fire machine gun behavior
         current_time = pygame.time.get_ticks()
         if current_time - self.last_shot_time > self.shot_cooldown:
@@ -807,8 +880,8 @@ class StealthShip(Enemy):
         self.cloak_duration = 120  # 2 seconds cloaked
         self.decloak_duration = 180  # 3 seconds visible
         
-    def update(self, buildings, base_pos):
-        super().update(buildings, base_pos)
+    def update(self, buildings, base_pos, friendly_ships=None):
+        super().update(buildings, base_pos, friendly_ships)
         
         # Stealth cloaking behavior
         self.stealth_timer += 1
@@ -877,8 +950,8 @@ class HeavyCruiser(Enemy):
         self.is_charging = False
         self.charge_start = 0
         
-    def update(self, buildings, base_pos):
-        super().update(buildings, base_pos)
+    def update(self, buildings, base_pos, friendly_ships=None):
+        super().update(buildings, base_pos, friendly_ships)
         # Heavy plasma cannon behavior
         current_time = pygame.time.get_ticks()
         

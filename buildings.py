@@ -35,6 +35,7 @@ class Building:
     health: float = 100
     max_health: float = 100
     powered: bool = False
+    disabled: bool = False  # Can be disabled to stop firing/operation
     xp: float = 0
     type: str = "building"
     selected: bool = False
@@ -64,7 +65,13 @@ class Building:
             screen_y < -screen_radius or screen_y > SCREEN_HEIGHT + screen_radius):
             return
         
-        color = self.color if self.powered else (100, 100, 100)
+        # Determine building color based on power and disabled state
+        if not self.powered:
+            color = (100, 100, 100)  # Dark gray for unpowered
+        elif getattr(self, 'disabled', False):
+            color = tuple(c // 2 for c in self.color)  # Dimmed color for disabled
+        else:
+            color = self.color  # Normal color for enabled and powered
         
         # Enhanced building drawing with 3D effects and animations
         import time
@@ -189,6 +196,18 @@ class Building:
             pygame.draw.rect(surface, (255, 255, 255, 100), (bar_x, bar_y, bar_width, bar_height//2))
             pygame.draw.rect(surface, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), 1)
         # Level text removed - stats will be shown in bottom left panel when selected
+        
+        # Disabled indicator - red X overlay
+        if getattr(self, 'disabled', False):
+            x_size = screen_radius * 0.8
+            x_thickness = max(2, int(3 * zoom))
+            # Draw red X
+            pygame.draw.line(surface, (255, 50, 50), 
+                           (screen_x - x_size, screen_y - x_size), 
+                           (screen_x + x_size, screen_y + x_size), x_thickness)
+            pygame.draw.line(surface, (255, 50, 50), 
+                           (screen_x + x_size, screen_y - x_size), 
+                           (screen_x - x_size, screen_y + x_size), x_thickness)
 
     def upgrade_cost(self, base_cost):
         return int(base_cost * (UPGRADE_COST_FACTOR ** (self.level - 1)))
@@ -461,7 +480,6 @@ class Hangar(Building):
         self.type = "hangar"
         self.launch_timer = 0
         self.deployed_ships = []  # List of friendly ships launched from this hangar
-        self.max_ships = 4  # Maximum number of ships this hangar can deploy
         self.regen_timer = 3000  # Timer for ship regeneration when destroyed
         
     @property
@@ -479,6 +497,32 @@ class Hangar(Building):
     @property
     def recall_range(self):
         return 600  # Range beyond which ships will return to hangar
+    
+    @property
+    def max_ships(self):
+        """Calculate max ships based on level: 1 + (level-1)//2, capped at 4"""
+        return min(4, 1 + (self.level - 1) // 2)
+
+
+class MissileLauncher(Building):
+    def __init__(self, x, y):
+        super().__init__(x, y, (200, 150, 50), 18)
+        self.type = "missile_launcher"
+        self.fire_range = 500
+        self.damage = 30
+        self.splash_damage = 15
+        self.splash_radius = 50
+        self.mineral_cost_per_shot = 20
+        self.fire_cooldown = 360  # 6 seconds at 60fps
+        self.last_shot_time = 0
+
+    @property
+    def build_cost(self):
+        return {"minerals": 300, "energy": 0}
+
+    @property
+    def sell_price(self):
+        return int(self.build_cost["minerals"] * 0.5)
 
 
 class FriendlyShip:
@@ -497,6 +541,7 @@ class FriendlyShip:
         self.target = None
         self.state = "seeking"  # "seeking", "attacking", "returning"
         self.size = 8
+        self.radius = 8  # Add radius for enemy targeting calculations
         # Circling behavior attributes
         self.orbit_angle = 0
         self.orbit_radius = 60
@@ -595,6 +640,8 @@ class FriendlyShip:
     def take_damage(self, damage):
         """Take damage from enemy attacks"""
         self.health -= damage
+        if self.health < 0:
+            self.health = 0
         
     def draw(self, surface, camera):
         """Draw the friendly ship"""

@@ -27,7 +27,8 @@ class InputSystem(System):
             pygame.K_k: 'superlaser',
             pygame.K_r: 'repair',
             pygame.K_v: 'converter',
-            pygame.K_h: 'hangar'
+            pygame.K_h: 'hangar',
+            pygame.K_g: 'missile_launcher'
         }
         
         self.selected_build = None
@@ -75,6 +76,11 @@ class InputSystem(System):
             if self.selected_building:
                 event_system.emit(EventType.BUILDING_PLACED, {'type': 'sell', 'building': self.selected_building})
         
+        # Toggle building disabled state
+        elif key == pygame.K_d:
+            if self.selected_building and hasattr(self.selected_building, 'disabled'):
+                event_system.emit(EventType.BUILDING_PLACED, {'type': 'toggle_disabled', 'building': self.selected_building})
+        
         # Game speed controls
         elif key == pygame.K_1:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'speed', 'value': 0.5})
@@ -98,6 +104,11 @@ class InputSystem(System):
             else:
                 # If no building selected, toggle menu
                 event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
+        
+        # Wave control
+        elif key == pygame.K_n:
+            event_system.emit(EventType.BUILDING_PLACED, {'type': 'skip_wave'})
+            print("⏭ Skipping to next wave...")
         
         # Menu and quit controls
         elif key == pygame.K_o:
