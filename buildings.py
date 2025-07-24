@@ -462,7 +462,7 @@ class Hangar(Building):
         self.launch_timer = 0
         self.deployed_ships = []  # List of friendly ships launched from this hangar
         self.max_ships = 4  # Maximum number of ships this hangar can deploy
-        self.regen_timer = 0  # Timer for ship regeneration when destroyed
+        self.regen_timer = 3000  # Timer for ship regeneration when destroyed
         
     @property
     def launch_cooldown(self):
@@ -489,7 +489,7 @@ class FriendlyShip:
         self.hangar = hangar  # Reference to parent hangar
         self.health = 30
         self.max_health = 30
-        self.speed = 2.0
+        self.speed = 1.7
         self.damage = 15
         self.fire_range = 80
         self.last_shot_time = 0

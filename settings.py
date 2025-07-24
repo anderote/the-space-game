@@ -36,11 +36,11 @@ FONT_WEIGHT = "light"  # Prefer light weight
 
 # Base configuration
 BASE_RADIUS = 40
-BASE_HEALTH = 200
+BASE_HEALTH = 450
 BASE_MAX_ENERGY = 100
 
 # Resource configuration
-STARTING_MINERALS = 500  # Decreased by 30% (was 1200)
+STARTING_MINERALS = 600  # Decreased by 30% (was 1200)
 STARTING_ENERGY = 50
 STARTING_MAX_ENERGY = 200
 

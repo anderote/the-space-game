@@ -14,6 +14,8 @@ from game.systems.render_system import RenderSystem
 from game.systems.ui_system import UISystem
 from game.systems.input_system import InputSystem
 from game.systems.game_logic_system import GameLogicSystem
+from game.systems.audio_system import AudioSystem
+from game.systems.particle_system import ParticleSystem
 from game.utils.camera import Camera
 from settings import *
 
@@ -38,6 +40,8 @@ class GameEngine:
         self.ui_system = None
         self.input_system = None
         self.game_logic_system = None
+        self.audio_system = None
+        self.particle_system = None
         
         # Game state
         self.running = True
@@ -48,7 +52,11 @@ class GameEngine:
         print("Initializing Space Game Clone...")
         
         # Create and add systems in priority order
-        self.game_logic_system = GameLogicSystem(self.camera)
+        # Audio and particles first (lowest priority - updated last)
+        self.audio_system = AudioSystem()
+        self.particle_system = ParticleSystem()
+        
+        self.game_logic_system = GameLogicSystem(self.camera, self.audio_system, self.particle_system)
         self.system_manager.add_system(self.game_logic_system, priority=5)
         
         self.input_system = InputSystem(self.camera)
@@ -78,7 +86,9 @@ class GameEngine:
             'game_logic': self.game_logic_system,
             'render': self.render_system,
             'ui': self.ui_system,
-            'input': self.input_system
+            'input': self.input_system,
+            'audio': self.audio_system,
+            'particles': self.particle_system
         }
         
         # Create states
@@ -105,6 +115,9 @@ class GameEngine:
             
             # Update current state
             self.state_manager.update(dt)
+            
+            # Update particle system
+            self.particle_system.update()
             
             # Update systems
             self.system_manager.update_all(dt)
@@ -149,6 +162,12 @@ class GameEngine:
             
             # Draw all game objects
             self.game_logic_system.draw_world_objects(self.render_system)
+            
+            # Draw particles
+            self.particle_system.draw(self.render_system.screen, 
+                                    self.render_system.camera.x, 
+                                    self.render_system.camera.y, 
+                                    self.render_system.camera.zoom)
             
             # Draw UI overlay
             energy_ratio = self.game_logic_system.resources.energy / self.game_logic_system.resources.max_energy
@@ -200,6 +219,10 @@ class GameEngine:
         
         # Shutdown systems
         self.system_manager.shutdown_all()
+        
+        # Shutdown audio system
+        if self.audio_system:
+            self.audio_system.shutdown()
         
         # Clear event system
         event_system.clear_handlers()

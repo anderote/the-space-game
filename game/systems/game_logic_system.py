@@ -215,9 +215,11 @@ class Missile:
 class GameLogicSystem(System):
     """Main game logic system that manages all gameplay mechanics."""
     
-    def __init__(self, camera):
+    def __init__(self, camera, audio_system=None, particle_system=None):
         super().__init__("GameLogicSystem")
         self.camera = camera
+        self.audio_system = audio_system
+        self.particle_system = particle_system
         
         # Game state
         self.resources = ResourceManager()
@@ -489,10 +491,27 @@ class GameLogicSystem(System):
             # Update power grid immediately after adding a building
             self.power_grid.buildings = self.buildings
             self.selected_build = None
+            
+            # Play construction sound
+            if self.audio_system:
+                self.audio_system.play_ui_sound('place_building', 0.7)
+            
+            # Add construction effects
+            if self.particle_system:
+                self.particle_system.add_building_construction(x, y)
+            else:
+                # Fallback construction particles
+                self.add_particles(x, y, 8, (100, 200, 255), speed_range=(1, 3), lifetime_range=(20, 40))
+            
             print(f"✅ Placed {build_type} at ({x:.0f}, {y:.0f})")
         else:
             # Refund cost
             self.resources.add_minerals(cost)
+            
+            # Play error sound
+            if self.audio_system:
+                self.audio_system.play_ui_sound('error', 0.5)
+            
             print(f"❌ Cannot place {build_type}: {conflict_reason}")
     
     def _select_building_at(self, x, y):
@@ -559,8 +578,16 @@ class GameLogicSystem(System):
     
     def _handle_missile_explosion(self, missile):
         """Handle missile explosion damage."""
-        # Explosion particles
-        self.add_particles(missile.x, missile.y, 15, (255, 150, 0), speed_range=(2, 5), lifetime_range=(20, 35))
+        # Play explosion sound
+        if self.audio_system:
+            self.audio_system.play_explosion(0.8)
+        
+        # Enhanced explosion effects
+        if self.particle_system:
+            self.particle_system.add_explosion(missile.x, missile.y, intensity=1.0)
+        else:
+            # Fallback explosion particles
+            self.add_particles(missile.x, missile.y, 15, (255, 150, 0), speed_range=(2, 5), lifetime_range=(20, 35))
         
         # Splash damage to enemies
         for enemy in self.wave_manager.enemies:
@@ -571,7 +598,12 @@ class GameLogicSystem(System):
                     self.score += SCORE_PER_KILL
                     self.kill_count += 1
                     self.resources.add_minerals(MINERALS_PER_KILL)
-                    self.add_particles(enemy.x, enemy.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
+                    
+                    # Enhanced death effects
+                    if self.particle_system:
+                        self.particle_system.add_explosion(enemy.x, enemy.y, intensity=0.7)
+                    else:
+                        self.add_particles(enemy.x, enemy.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
     
     def _update_particles(self):
         """Update all particles."""
@@ -646,9 +678,18 @@ class GameLogicSystem(System):
     
     def _update_building_systems(self):
         """Update building systems like repair and energy production."""
-        # Energy production
-        energy_prod = sum(b.prod_rate for b in self.buildings if b.type == 'solar' and b.powered)
+        # Energy production with visual effects
+        energy_producing_buildings = [b for b in self.buildings if b.type == 'solar' and b.powered]
+        energy_prod = sum(b.prod_rate for b in energy_producing_buildings)
         self.resources.add_energy(energy_prod)
+        
+        # Add power pulse effects to producing solar panels
+        if self.particle_system and energy_producing_buildings:
+            # Occasionally show power generation effects
+            import random
+            for solar in energy_producing_buildings:
+                if random.random() < 0.05:  # 5% chance per frame
+                    self.particle_system.add_power_pulse(solar.x, solar.y)
         
         # Max energy from batteries and solar
         self.resources.max_energy = BASE_MAX_ENERGY + sum(
@@ -719,6 +760,10 @@ class GameLogicSystem(System):
                 missile = Missile(turret.x, turret.y, target, TURRET_DAMAGE * turret.level)
                 self.missiles.append(missile)
                 
+                # Play missile launch sound
+                if self.audio_system:
+                    self.audio_system.play_sound('missile_launch', 0.6)
+                
                 turret.cooldown_timer = TURRET_COOLDOWN
     
     def _update_laser(self, laser_building):
@@ -752,10 +797,19 @@ class GameLogicSystem(System):
                 
                 self.laser_beams.append(laser_effect)
                 
-                # Impact particles
-                self.add_particles(target.x, target.y, 5, 
-                                 (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
-                                 speed_range=(0.5, 1.5), lifetime_range=(10, 20))
+                # Play laser sound
+                if self.audio_system:
+                    self.audio_system.play_laser(0.7)
+                
+                # Enhanced particle effects
+                if self.particle_system:
+                    laser_color = (0, 150, 255) if laser_building.type == 'laser' else (255, 50, 255)
+                    self.particle_system.add_laser_impact(target.x, target.y, laser_color)
+                else:
+                    # Fallback to old particles
+                    self.add_particles(target.x, target.y, 5, 
+                                     (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
+                                     speed_range=(0.5, 1.5), lifetime_range=(10, 20))
     
     def _update_hangars(self):
         """Update hangar systems and ship launching."""
@@ -841,9 +895,16 @@ class GameLogicSystem(System):
                     ship.hangar.deployed_ships.remove(ship)
                     
                 if ship.health <= 0:
-                    # Ship destroyed - add explosion particles
-                    self.add_particles(ship.x, ship.y, 12, (255, 100, 0), 
-                                     speed_range=(2, 5), lifetime_range=(20, 40))
+                    # Ship destroyed - add explosion effects
+                    if self.particle_system:
+                        self.particle_system.add_explosion(ship.x, ship.y, intensity=0.5)
+                    else:
+                        self.add_particles(ship.x, ship.y, 12, (255, 100, 0), 
+                                         speed_range=(2, 5), lifetime_range=(20, 40))
+                    
+                    # Play explosion sound for ship destruction
+                    if self.audio_system:
+                        self.audio_system.play_explosion(0.4)
                     
                     # Start regeneration timer if not already running
                     if ship.hangar.regen_timer <= 0:
