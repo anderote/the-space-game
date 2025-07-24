@@ -87,8 +87,7 @@ class GameEngine:
             'render': self.render_system,
             'ui': self.ui_system,
             'input': self.input_system,
-            'audio': self.audio_system,
-            'particles': self.particle_system
+            'audio': self.audio_system
         }
         
         # Create states
@@ -177,7 +176,10 @@ class GameEngine:
                 self.game_logic_system.score,
                 self.game_logic_system.kill_count,
                 self.game_logic_system.selected_building,
-                energy_ratio
+                energy_ratio,
+                self.game_logic_system.current_energy_production,
+                self.game_logic_system.solar_panel_count,
+                self.game_logic_system.solar_panel_levels
             )
             self.ui_system.draw_building_panel(
                 self.game_logic_system.selected_build,
@@ -197,7 +199,10 @@ class GameEngine:
                 self.game_logic_system.score,
                 self.game_logic_system.kill_count,
                 self.game_logic_system.selected_building,
-                energy_ratio
+                energy_ratio,
+                self.game_logic_system.current_energy_production,
+                self.game_logic_system.solar_panel_count,
+                self.game_logic_system.solar_panel_levels
             )
             self.ui_system.draw_building_panel(
                 self.game_logic_system.selected_build,

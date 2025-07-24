@@ -109,8 +109,9 @@ class Particle:
     
     def draw(self, surface: pygame.Surface, camera_x: float, camera_y: float, camera_zoom: float):
         """Draw the particle with various visual effects."""
-        screen_x = int((self.x - camera_x) * camera_zoom)
-        screen_y = int((self.y - camera_y) * camera_zoom)
+        # Use the same coordinate transformation as the camera system
+        screen_x = int((self.x - camera_x) * camera_zoom + surface.get_width() // 2)
+        screen_y = int((self.y - camera_y) * camera_zoom + surface.get_height() // 2)
         screen_size = max(1, int(self.size * camera_zoom))
         
         # Skip if off-screen (with margin)
@@ -351,7 +352,7 @@ class ParticleSystem:
             size_range=(2, 4)
         )
     
-    def update(self):
+    def update(self, dt=None):
         """Update all particles and remove dead ones."""
         self.particles = [p for p in self.particles if p.update()]
     

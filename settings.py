@@ -8,8 +8,8 @@ SCREEN_HEIGHT = 900
 FPS = 60
 
 # World settings (3x bigger than screen, increased by 15%)
-WORLD_WIDTH = int(SCREEN_WIDTH * 3 * 1.15)  # Increased by 15%
-WORLD_HEIGHT = int(SCREEN_HEIGHT * 3 * 1.15)  # Increased by 15%
+WORLD_WIDTH = int(SCREEN_WIDTH * 1.5)  # Reduced by 50% (was 3 * 1.15)
+WORLD_HEIGHT = int(SCREEN_HEIGHT * 1.5)  # Reduced by 50% (was 3 * 1.15)
 
 # Camera settings
 CAMERA_SPEED = 10
@@ -51,39 +51,40 @@ BUILD_COSTS = {
     'battery': 80,
     'miner': 100,
     'turret': 150,
-    'laser': 200,
+    'laser': 125,
     'superlaser': 500,  # New expensive long-range laser
     'repair': 120,
     'converter': 90,
-    'hangar': 250  # Hangar for friendly attack ships
+    'hangar': 250,  # Hangar for friendly attack ships
+    'missile_launcher': 300  # Heavy missile launcher
 }
 
 # Building stats
 SOLAR_ENERGY_RATE = 0.1  # per level per frame
-MINER_RATE = 3.0  # minerals per level per zap
-MINER_ZAP_INTERVAL = 180  # frames (~3 sec at 60fps)
-MINER_ZAP_ENERGY_COST = 5
+MINER_RATE = 2.3  # minerals per level per zap
+MINER_ZAP_INTERVAL = 240  # frames (~3 sec at 60fps)
+MINER_ZAP_ENERGY_COST = 6
 BATTERY_STORAGE = 120  # per level
-TURRET_DAMAGE = 10  # per level
+TURRET_DAMAGE = 15  # per level
 TURRET_RANGE = 350  # base range
-TURRET_COOLDOWN = 180  # base cooldown in frames (40% slower than previous, was 120)
+TURRET_COOLDOWN = 170  # base cooldown in frames (40% slower than previous, was 120)
 TURRET_ENERGY_COST = 4  # energy per shot
 TURRET_MINERAL_COST = 3  # minerals per shot
-LASER_DAMAGE = 0.35  # per level per frame
-LASER_COST = 0.18  # energy per level per frame
-LASER_RANGE = 220  # base range
-SUPERLASER_DAMAGE = 0.95  # per level per frame - much higher damage
+LASER_DAMAGE = 0.65  # per level per frame
+LASER_COST = 0.12  # energy per level per frame
+LASER_RANGE = 270  # base range
+SUPERLASER_DAMAGE = 6.5  # per level per frame - much higher damage
 SUPERLASER_COST = 1.2  # energy per level per frame - much higher cost
-SUPERLASER_RANGE = 600  # much longer range
+SUPERLASER_RANGE = 700  # much longer range
 REPAIR_RATE = 0.15  # per level per frame
-REPAIR_ENERGY_COST = 0.05  # energy per frame
-REPAIR_RANGE = 250  # base range
+REPAIR_ENERGY_COST = 0.15  # energy per frame
+REPAIR_RANGE = 275  # base range
 CONVERTER_ENERGY_COST = 100
 CONVERTER_MINERAL_RATE = 2  # minerals per conversion
 CONVERTER_INTERVAL = 120  # frames between conversions
 
 # Hangar stats
-HANGAR_ENERGY_COST = 0.5  # energy per frame to maintain
+HANGAR_ENERGY_COST = 0.025  # energy per frame to maintain
 HANGAR_LAUNCH_COOLDOWN = 300  # frames between ship launches (5 seconds)
 HANGAR_MAX_SHIPS = 4  # maximum ships per hangar
 HANGAR_SHIP_RANGE = 500  # range within which ships will engage
@@ -91,7 +92,7 @@ HANGAR_RECALL_RANGE = 600  # range beyond which ships return
 HANGAR_REGEN_COOLDOWN = 1200  # frames between ship regeneration (20 seconds)
 
 # Power grid
-POWER_RANGE = 150
+POWER_RANGE = 170
 MAX_CONNECTIONS = 6
 
 # Enemy configuration
@@ -99,8 +100,8 @@ ENEMY_SPAWN_BASE = 15  # Increased by 3x (was 5)
 ENEMY_SPEED = 0.7  # Reduced from 1.0
 ENEMY_HEALTH_BASE = 24  # per wave (increased by 20%)
 ENEMY_LASER_RANGE = 120  # Increased from 100
-ENEMY_LASER_DAMAGE = 0.1  # per frame
-ENEMY_LASER_WIDTH = 2  # thinner beam width
+ENEMY_LASER_DAMAGE = 0.025  # per frame
+ENEMY_LASER_WIDTH = 1.5  # thinner beam width
 ENEMY_CONTACT_DAMAGE = 10 / 60  # per frame
 ENEMY_ORBIT_RADIUS = 50
 ENEMY_ORBIT_SPEED = 0.05  # radians per frame
@@ -117,10 +118,10 @@ MOTHERSHIP_SPAWN_CHANCE = 0.15  # 15% chance per enemy to be mothership (for wav
 # Wave configuration
 WAVE_WAIT_TIME = 120  # frames between waves
 SPAWN_INTERVAL = 30  # frames between enemy spawns
-INITIAL_WAIT = 6600  # frames before first wave (110 seconds at 60fps) - added 30 seconds
-WAVE_GROWTH_FACTOR = 2.16  # Increased by 20% from 1.8 (faster wave growth)
-FORMATION_SIZE_THRESHOLD = 15  # Start using formations when wave has this many enemies
-MAX_FORMATIONS = 4  # Maximum number of formations per wave
+INITIAL_WAIT = 9600  # frames before first wave (60 seconds at 60fps)
+WAVE_GROWTH_FACTOR = 1.6  # Increased by 20% from 1.8 (faster wave growth)
+FORMATION_SIZE_THRESHOLD = 20  # Start using formations when wave has this many enemies
+MAX_FORMATIONS = 8 # Maximum number of formations per wave
 
 # Combat configuration
 MISSILE_SPEED = 1.5  # Reduced by 50% from 3 for more strategic gameplay
@@ -153,7 +154,7 @@ ASTEROID_MAX_RADIUS = 50
 
 # Mining configuration
 MINER_RANGE = 80  # range for mining asteroids
-MINER_MAX_TARGETS = 5  # maximum asteroids to mine simultaneously
+MINER_MAX_TARGETS = 6  # maximum asteroids to mine simultaneously
 MINING_CLOCK_INTERVAL = 180  # global mining clock interval (3 seconds at 60fps)
 MINING_RATE_SINGLE = 3.0  # mining rate when targeting single asteroid
 MINING_RATE_MULTI = 2.0   # mining rate per asteroid when targeting multiple

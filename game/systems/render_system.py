@@ -142,18 +142,18 @@ class RenderSystem(System):
         # Calculate gradient colors based on health ratio
         if health_ratio > 0.6:
             # Green to yellow
-            r = int(255 * (1 - health_ratio) * 2.5)
+            r = max(0, min(255, int(255 * (1 - health_ratio) * 2.5)))
             g = 255
             b = 0
         elif health_ratio > 0.3:
             # Yellow to orange  
             r = 255
-            g = int(255 * ((health_ratio - 0.3) / 0.3))
+            g = max(0, min(255, int(255 * ((health_ratio - 0.3) / 0.3))))
             b = 0
         else:
             # Orange to red
             r = 255
-            g = int(255 * (health_ratio / 0.3) * 0.5)
+            g = max(0, min(255, int(255 * (health_ratio / 0.3) * 0.5)))
             b = 0
         
         # Draw the health bar with gradient
@@ -235,7 +235,7 @@ class RenderSystem(System):
                                line_width)
     
     def draw_minimap(self, asteroids, buildings, enemies, base_pos, camera):
-        """Draw minimap in lower left corner."""
+        """Draw minimap in lower left corner, centered on player's view."""
         minimap_size = 150
         minimap_x = 10
         minimap_y = self.screen.get_height() - minimap_size - 10
@@ -248,15 +248,23 @@ class RenderSystem(System):
         pygame.draw.rect(minimap_surface, bg_color, (0, 0, minimap_size, minimap_size))
         pygame.draw.rect(minimap_surface, (100, 100, 150, 100), (0, 0, minimap_size, minimap_size), 2)
         
-        # Define world bounds for minimap scaling
-        world_size = 4000  # Approximate world size
-        scale = minimap_size / world_size
-        center_offset = world_size / 2
+        # Define minimap view area based on camera zoom (show more than player sees)
+        # Base view size that adapts to camera zoom, showing ~4x more than visible
+        screen_view_width = SCREEN_WIDTH / camera.zoom
+        screen_view_height = SCREEN_HEIGHT / camera.zoom
+        view_size = max(screen_view_width, screen_view_height) * 4.25  # Show 4.25x more than camera view (2.5 * 1.7)
+        
+        scale = minimap_size / view_size
+        
+        # Calculate the bounds of what we're showing (centered on camera)
+        view_left = camera.x - view_size / 2
+        view_top = camera.y - view_size / 2
         
         # Draw asteroids as small gray dots with size variation
         for asteroid in asteroids:
-            map_x = int((asteroid.x + center_offset) * scale)
-            map_y = int((asteroid.y + center_offset) * scale)
+            # Convert world coordinates to minimap coordinates relative to view area
+            map_x = int((asteroid.x - view_left) * scale)
+            map_y = int((asteroid.y - view_top) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
                 # Size based on asteroid radius
                 dot_size = max(1, min(3, int(asteroid.radius / 20)))
@@ -274,12 +282,13 @@ class RenderSystem(System):
             'superlaser': (255, 50, 255),  # Magenta
             'repair': (0, 255, 255),       # Cyan
             'converter': (255, 255, 100),  # Light Yellow
-            'hangar': (120, 120, 255)      # Light Blue
+            'hangar': (120, 120, 255),     # Light Blue
+            'missile_launcher': (255, 150, 0)  # Orange-yellow
         }
         
         for building in buildings:
-            map_x = int((building.x + center_offset) * scale)
-            map_y = int((building.y + center_offset) * scale)
+            map_x = int((building.x - view_left) * scale)
+            map_y = int((building.y - view_top) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
                 base_color = building_colors.get(building.type, (255, 255, 255))
                 # Dim color if not powered
@@ -289,7 +298,7 @@ class RenderSystem(System):
                     color = base_color
                 
                 # Size based on building importance
-                if building.type in ['turret', 'laser', 'superlaser']:
+                if building.type in ['turret', 'laser', 'superlaser', 'missile_launcher']:
                     size = 3  # Combat buildings larger
                 elif building.type in ['solar', 'battery']:
                     size = 2  # Power buildings medium
@@ -298,14 +307,15 @@ class RenderSystem(System):
                 
                 pygame.draw.circle(minimap_surface, color, (map_x, map_y), size)
         
-        # Draw base with pulsing effect
-        base_map_x = int((base_pos[0] + center_offset) * scale)
-        base_map_y = int((base_pos[1] + center_offset) * scale)
-        import time
-        pulse = 0.8 + 0.2 * math.sin(time.time() * 3)  # Pulse between 0.8 and 1.0
-        base_size = int(4 * pulse)
-        pygame.draw.circle(minimap_surface, (0, 200, 255), (base_map_x, base_map_y), base_size)
-        pygame.draw.circle(minimap_surface, (255, 255, 255), (base_map_x, base_map_y), 2)
+        # Draw base with pulsing effect (only if it's in the view area)
+        base_map_x = int((base_pos[0] - view_left) * scale)
+        base_map_y = int((base_pos[1] - view_top) * scale)
+        if 0 <= base_map_x < minimap_size and 0 <= base_map_y < minimap_size:
+            import time
+            pulse = 0.8 + 0.2 * math.sin(time.time() * 3)  # Pulse between 0.8 and 1.0
+            base_size = int(4 * pulse)
+            pygame.draw.circle(minimap_surface, (0, 200, 255), (base_map_x, base_map_y), base_size)
+            pygame.draw.circle(minimap_surface, (255, 255, 255), (base_map_x, base_map_y), 2)
         
         # Draw enemies with type-specific colors and sizes
         enemy_colors = {
@@ -318,8 +328,8 @@ class RenderSystem(System):
         }
         
         for enemy in enemies:
-            map_x = int((enemy.x + center_offset) * scale)
-            map_y = int((enemy.y + center_offset) * scale)
+            map_x = int((enemy.x - view_left) * scale)
+            map_y = int((enemy.y - view_top) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
                 enemy_type = getattr(enemy, 'enemy_type', 'basic')
                 color = enemy_colors.get(enemy_type, (255, 0, 0))
@@ -340,12 +350,21 @@ class RenderSystem(System):
                 
                 pygame.draw.circle(minimap_surface, color, (map_x, map_y), size)
         
-        # Draw camera view area
-        cam_size = 800 * scale  # Approximate camera view size
-        cam_x = int((camera.x + center_offset) * scale - cam_size / 2)
-        cam_y = int((camera.y + center_offset) * scale - cam_size / 2)
-        pygame.draw.rect(minimap_surface, (255, 255, 0, 100), 
-                        (cam_x, cam_y, cam_size, cam_size), 1)
+        # Draw camera crosshair at center (since minimap is now centered on camera)
+        center_x = minimap_size // 2
+        center_y = minimap_size // 2
+        crosshair_size = 8
+        
+        # Draw crosshair lines
+        pygame.draw.line(minimap_surface, (255, 255, 0, 150), 
+                        (center_x - crosshair_size, center_y), 
+                        (center_x + crosshair_size, center_y), 2)
+        pygame.draw.line(minimap_surface, (255, 255, 0, 150), 
+                        (center_x, center_y - crosshair_size), 
+                        (center_x, center_y + crosshair_size), 2)
+        
+        # Draw small circle at center
+        pygame.draw.circle(minimap_surface, (255, 255, 0, 200), (center_x, center_y), 3, 1)
         
         # Blit minimap to screen
         self.screen.blit(minimap_surface, (minimap_x, minimap_y))
