@@ -852,6 +852,10 @@ class GameLogicSystem(System):
         # Draw damage numbers
         for dn in self.damage_numbers:
             dn.draw(render_system.screen, render_system.camera)
+        
+        # Draw minimap
+        render_system.draw_minimap(self.asteroids, self.buildings, self.wave_manager.enemies, 
+                                 self.base_pos, render_system.camera)
     
     def _draw_building_placement_range(self, render_system, build_type, x, y):
         """Draw range indicator for building being placed."""

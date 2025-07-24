@@ -234,6 +234,62 @@ class RenderSystem(System):
                                (int(screen_x2), int(screen_y2)), 
                                line_width)
     
+    def draw_minimap(self, asteroids, buildings, enemies, base_pos, camera):
+        """Draw minimap in lower left corner."""
+        minimap_size = 150
+        minimap_x = 10
+        minimap_y = self.screen.get_height() - minimap_size - 10
+        
+        # Create minimap surface with alpha
+        minimap_surface = pygame.Surface((minimap_size, minimap_size), pygame.SRCALPHA)
+        
+        # Background with glass effect
+        bg_color = (20, 20, 40, 180)
+        pygame.draw.rect(minimap_surface, bg_color, (0, 0, minimap_size, minimap_size))
+        pygame.draw.rect(minimap_surface, (100, 100, 150, 100), (0, 0, minimap_size, minimap_size), 2)
+        
+        # Define world bounds for minimap scaling
+        world_size = 4000  # Approximate world size
+        scale = minimap_size / world_size
+        center_offset = world_size / 2
+        
+        # Draw asteroids as small dots
+        for asteroid in asteroids:
+            map_x = int((asteroid.x + center_offset) * scale)
+            map_y = int((asteroid.y + center_offset) * scale)
+            if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
+                pygame.draw.circle(minimap_surface, (150, 150, 150), (map_x, map_y), 1)
+        
+        # Draw buildings
+        for building in buildings:
+            map_x = int((building.x + center_offset) * scale)
+            map_y = int((building.y + center_offset) * scale)
+            if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
+                color = (0, 255, 0) if building.powered else (255, 100, 100)
+                pygame.draw.circle(minimap_surface, color, (map_x, map_y), 2)
+        
+        # Draw base
+        base_map_x = int((base_pos[0] + center_offset) * scale)
+        base_map_y = int((base_pos[1] + center_offset) * scale)
+        pygame.draw.circle(minimap_surface, (0, 200, 255), (base_map_x, base_map_y), 4)
+        
+        # Draw enemies
+        for enemy in enemies:
+            map_x = int((enemy.x + center_offset) * scale)
+            map_y = int((enemy.y + center_offset) * scale)
+            if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
+                pygame.draw.circle(minimap_surface, (255, 0, 0), (map_x, map_y), 2)
+        
+        # Draw camera view area
+        cam_size = 800 * scale  # Approximate camera view size
+        cam_x = int((camera.x + center_offset) * scale - cam_size / 2)
+        cam_y = int((camera.y + center_offset) * scale - cam_size / 2)
+        pygame.draw.rect(minimap_surface, (255, 255, 0, 100), 
+                        (cam_x, cam_y, cam_size, cam_size), 1)
+        
+        # Blit minimap to screen
+        self.screen.blit(minimap_surface, (minimap_x, minimap_y))
+
     def present(self):
         """Present the rendered frame to the screen."""
         pygame.display.flip() 

@@ -133,8 +133,8 @@ POWERUP_COST = 50
 POWERUP_DURATION = 600  # frames (10 sec)
 
 # Asteroid configuration
-ASTEROID_CLUMPS_MIN = 6  # minimum number of asteroid clusters
-ASTEROID_CLUMPS_MAX = 12  # maximum number of asteroid clusters
+ASTEROID_CLUMPS_MIN = 4  # minimum number of asteroid clusters (reduced by 30%)
+ASTEROID_CLUMPS_MAX = 8  # maximum number of asteroid clusters (reduced by 30%)
 ASTEROIDS_PER_CLUMP = 4
 ASTEROID_MIN_DIST = 100
 ASTEROID_BASE_MINERALS = 2000
