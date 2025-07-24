@@ -736,6 +736,7 @@ class AssaultShip(Enemy):
     
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        screen_size = self.size * camera.zoom
         if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
             # Draw hexagonal assault ship (military look)
             points = []
