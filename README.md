@@ -14,9 +14,11 @@ Space Game Clone is an engaging tower defense / RTS hybrid where you must:
 
 ### 🏗️ **Building System**
 - **Modular Construction**: Place buildings anywhere with intelligent connection system
+- **Interactive Management**: Click buildings to view detailed stats and control options
 - **Power Grid Management**: Buildings must be connected to power sources to function
 - **Resource Economy**: Mine asteroids to gather minerals for construction
 - **Strategic Placement**: Buildings have interference zones requiring tactical positioning
+- **Upgrade & Sell**: Enhance buildings or sell them for resource management
 
 ### ⚡ **Power Grid System**
 - **Automatic Connections**: Buildings automatically connect to nearby structures
@@ -64,6 +66,14 @@ Space Game Clone is an engaging tower defense / RTS hybrid where you must:
 | **V** | Converter | 200 | Advanced resource processing |
 | **X** | Superlaser | 500 | Ultimate defense weapon |
 | **H** | Hangar | 250 | Launches 4 friendly attack ships |
+
+### **Building Management**
+| Key | Function |
+|-----|----------|
+| **Mouse Click** | Select building (shows detailed info panel) |
+| **U** | Upgrade selected building |
+| **X** | Sell selected building (50% refund) |
+| **Right Click** | Deselect building/cancel placement |
 
 ### **Game Speed & Controls**
 | Key | Function |

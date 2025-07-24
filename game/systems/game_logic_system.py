@@ -445,6 +445,8 @@ class GameLogicSystem(System):
             self._select_building_at(data['x'], data['y'])
         elif data['type'] == 'upgrade' and data.get('building'):
             self._upgrade_building(data['building'])
+        elif data['type'] == 'sell' and data.get('building'):
+            self._sell_building(data['building'])
     
     def _place_building(self, build_type, x, y):
         """Place a building at the specified location."""
@@ -499,8 +501,18 @@ class GameLogicSystem(System):
             distance = math.sqrt((x - building.x) ** 2 + (y - building.y) ** 2)
             if distance < building.radius:
                 self.selected_building = building
+                # Notify input system about selection change for hotkey handling
+                event_system.emit(EventType.BUILDING_PLACED, {
+                    'type': 'selection_changed', 
+                    'building': building
+                })
                 return
         self.selected_building = None
+        # Notify input system about deselection
+        event_system.emit(EventType.BUILDING_PLACED, {
+            'type': 'selection_changed', 
+            'building': None
+        })
     
     def _upgrade_building(self, building):
         """Upgrade the specified building."""
@@ -512,6 +524,27 @@ class GameLogicSystem(System):
             building.level += 1
             building.max_health *= 1.2
             building.health = building.max_health
+    
+    def _sell_building(self, building):
+        """Sell the specified building for 50% of its base cost."""
+        if building in self.buildings:
+            # Calculate sell price (50% of base cost)
+            sell_price = int(0.5 * BUILD_COSTS[building.type])
+            
+            # Add minerals back to resources
+            self.resources.add_minerals(sell_price)
+            
+            # Remove building from power grid
+            self.power_grid.remove_building(building)
+            
+            # Remove from buildings list
+            self.buildings.remove(building)
+            
+            # Clear selection if this was the selected building
+            if self.selected_building == building:
+                self.selected_building = None
+            
+            print(f"💰 Sold {building.type} for {sell_price} minerals")
     
     def _update_missiles(self):
         """Update all missiles."""

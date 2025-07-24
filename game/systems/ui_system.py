@@ -58,6 +58,123 @@ class UISystem(System):
             self.render_system.screen.blit(text, (text_x, y_offset))
             y_offset += 30
     
+    def draw_building_info_panel(self, building, resources):
+        """Draw detailed building information panel."""
+        # Panel properties
+        panel_width = 280
+        panel_height = 200
+        panel_x = 10
+        panel_y = 100
+        
+        # Use glass panel effect
+        self.render_system.draw_glass_panel(panel_x, panel_y, panel_width, panel_height, alpha=200)
+        
+        # Title
+        title_text = self.render_system.font.render(f"{building.type.upper()} INFO", True, (200, 220, 255))
+        title_x = panel_x + (panel_width - title_text.get_width()) // 2
+        self.render_system.screen.blit(title_text, (panel_x + 10, panel_y + 10))
+        
+        # Building stats
+        y_offset = panel_y + 40
+        line_height = 18
+        
+        # Basic info
+        level_text = self.render_system.small_font.render(f"Level: {building.level}", True, WHITE)
+        self.render_system.screen.blit(level_text, (panel_x + 10, y_offset))
+        y_offset += line_height
+        
+        # Health bar and text
+        health_ratio = building.health / building.max_health
+        health_text = self.render_system.small_font.render(f"Health: {int(building.health)}/{int(building.max_health)}", True, WHITE)
+        self.render_system.screen.blit(health_text, (panel_x + 10, y_offset))
+        
+        # Health bar
+        bar_width = panel_width - 30
+        bar_height = 8
+        bar_x = panel_x + 15
+        bar_y = y_offset + 15
+        self.render_system.draw_gradient_health_bar(bar_x, bar_y, bar_width, bar_height, health_ratio)
+        y_offset += line_height + 15
+        
+        # Power status
+        power_status = "⚡ Powered" if building.powered else "❌ No Power"
+        power_color = (100, 255, 100) if building.powered else (255, 100, 100)
+        power_text = self.render_system.small_font.render(power_status, True, power_color)
+        self.render_system.screen.blit(power_text, (panel_x + 10, y_offset))
+        y_offset += line_height + 5
+        
+        # Building-specific stats
+        self._draw_building_specific_stats(building, panel_x + 10, y_offset, line_height)
+        
+        # Action buttons at bottom
+        button_y = panel_y + panel_height - 45
+        
+        # Upgrade button
+        if building.level < MAX_LEVEL:
+            upgrade_cost = building.upgrade_cost(BUILD_COSTS[building.type])
+            can_upgrade = resources.minerals >= upgrade_cost
+            upgrade_color = (100, 255, 100) if can_upgrade else (150, 150, 150)
+            upgrade_text = self.render_system.small_font.render(f"U - Upgrade: {upgrade_cost}", True, upgrade_color)
+            self.render_system.screen.blit(upgrade_text, (panel_x + 10, button_y))
+        else:
+            max_text = self.render_system.small_font.render("MAX LEVEL", True, (255, 215, 0))
+            self.render_system.screen.blit(max_text, (panel_x + 10, button_y))
+        
+        # Sell button
+        sell_price = int(0.5 * BUILD_COSTS[building.type])
+        sell_text = self.render_system.small_font.render(f"X - Sell: {sell_price}", True, (255, 200, 200))
+        self.render_system.screen.blit(sell_text, (panel_x + 10, button_y + 15))
+    
+    def _draw_building_specific_stats(self, building, x, y, line_height):
+        """Draw building-type specific statistics."""
+        if building.type == "solar":
+            prod_text = self.render_system.small_font.render(f"Energy/s: {building.prod_rate:.1f}", True, (255, 255, 100))
+            self.render_system.screen.blit(prod_text, (x, y))
+            
+        elif building.type == "battery":
+            storage_text = self.render_system.small_font.render(f"Storage: {building.storage}", True, (255, 255, 100))
+            self.render_system.screen.blit(storage_text, (x, y))
+            
+        elif building.type == "miner":
+            mine_text = self.render_system.small_font.render(f"Mine Rate: {building.mine_rate:.1f}/s", True, (255, 255, 100))
+            self.render_system.screen.blit(mine_text, (x, y))
+            
+        elif building.type == "turret":
+            damage_text = self.render_system.small_font.render(f"Damage: {building.damage}", True, (255, 255, 100))
+            range_text = self.render_system.small_font.render(f"Range: {building.fire_range:.0f}", True, (255, 255, 100))
+            self.render_system.screen.blit(damage_text, (x, y))
+            self.render_system.screen.blit(range_text, (x, y + line_height))
+            
+        elif building.type == "laser":
+            damage_text = self.render_system.small_font.render(f"DPS: {building.damage_per_frame * 60:.1f}", True, (255, 255, 100))
+            range_text = self.render_system.small_font.render(f"Range: {building.fire_range:.0f}", True, (255, 255, 100))
+            self.render_system.screen.blit(damage_text, (x, y))
+            self.render_system.screen.blit(range_text, (x, y + line_height))
+            
+        elif building.type == "superlaser":
+            damage_text = self.render_system.small_font.render(f"DPS: {building.damage_per_frame * 60:.1f}", True, (255, 255, 100))
+            range_text = self.render_system.small_font.render(f"Range: {building.fire_range:.0f}", True, (255, 255, 100))
+            self.render_system.screen.blit(damage_text, (x, y))
+            self.render_system.screen.blit(range_text, (x, y + line_height))
+            
+        elif building.type == "repair":
+            heal_text = self.render_system.small_font.render(f"Heal Rate: {building.heal_rate:.1f}/s", True, (255, 255, 100))
+            range_text = self.render_system.small_font.render(f"Range: {building.heal_range:.0f}", True, (255, 255, 100))
+            self.render_system.screen.blit(heal_text, (x, y))
+            self.render_system.screen.blit(range_text, (x, y + line_height))
+            
+        elif building.type == "converter":
+            convert_text = self.render_system.small_font.render(f"Rate: {building.conversion_rate:.1f}/s", True, (255, 255, 100))
+            energy_text = self.render_system.small_font.render(f"Energy Cost: {building.energy_cost:.1f}/s", True, (255, 255, 100))
+            self.render_system.screen.blit(convert_text, (x, y))
+            self.render_system.screen.blit(energy_text, (x, y + line_height))
+            
+        elif building.type == "hangar":
+            ships_text = self.render_system.small_font.render(f"Ships: {len(building.deployed_ships)}/{building.max_ships}", True, (255, 255, 100))
+            range_text = self.render_system.small_font.render(f"Range: {building.ship_range}", True, (255, 255, 100))
+            self.render_system.screen.blit(ships_text, (x, y))
+            self.render_system.screen.blit(range_text, (x, y + line_height))
+    
     def draw_pause_overlay(self):
         """Draw pause overlay."""
         # Semi-transparent overlay
@@ -136,15 +253,9 @@ class UISystem(System):
         self.render_system.screen.blit(camera_text, (10, SCREEN_HEIGHT - 52))
         self.render_system.screen.blit(speed_text, (10, SCREEN_HEIGHT - 32))
         
-        # Show selected building info
+        # Building info panel
         if selected_building:
-            power_status = "⚡ Powered" if selected_building.powered else "❌ No Power"
-            info_text = self.render_system.small_font.render(
-                f"Selected: {selected_building.type.capitalize()} (Level {selected_building.level}) - "
-                f"Health: {int(selected_building.health)}/{int(selected_building.max_health)} - {power_status}", 
-                True, WHITE
-            )
-            self.render_system.screen.blit(info_text, (400, 135))
+            self.draw_building_info_panel(selected_building, resources)
     
     def draw_building_panel(self, selected_build, resources):
         """Draw the building selection panel."""

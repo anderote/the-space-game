@@ -37,6 +37,8 @@ class InputSystem(System):
         """Initialize the input system."""
         # Subscribe to pygame events through event system
         event_system.subscribe_input(self._handle_pygame_event)
+        # Subscribe to building events to track selections
+        event_system.subscribe(EventType.BUILDING_PLACED, self._handle_building_event)
     
     def update(self, dt):
         """Update input state."""
@@ -67,6 +69,11 @@ class InputSystem(System):
         elif key == pygame.K_u:
             if self.selected_building:
                 event_system.emit(EventType.BUILDING_PLACED, {'type': 'upgrade', 'building': self.selected_building})
+        
+        # Sell building
+        elif key == pygame.K_x:
+            if self.selected_building:
+                event_system.emit(EventType.BUILDING_PLACED, {'type': 'sell', 'building': self.selected_building})
         
         # Game speed controls
         elif key == pygame.K_1:
@@ -108,6 +115,8 @@ class InputSystem(System):
                     'x': world_x,
                     'y': world_y
                 })
+                # Store selected building reference in input system for hotkey usage
+                # This will be updated by the game logic system after selection
         
         elif button == 3:  # Right click
             # Cancel building placement or deselect
@@ -130,4 +139,10 @@ class InputSystem(System):
     
     def is_key_pressed(self, key):
         """Check if a key is currently pressed."""
-        return self.keys[key] 
+        return self.keys[key]
+    
+    def _handle_building_event(self, event):
+        """Handle building events to track selections."""
+        data = event.data
+        if data['type'] == 'selection_changed':
+            self.selected_building = data['building'] 
