@@ -486,7 +486,6 @@ class GameLogicSystem(System):
             self.buildings.append(new_building)
             # Update power grid immediately after adding a building
             self.power_grid.buildings = self.buildings
-            self.power_grid.find_nearest_connections(new_building)
             self.selected_build = None
             print(f"✅ Placed {build_type} at ({x:.0f}, {y:.0f})")
         else:

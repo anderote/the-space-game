@@ -96,11 +96,51 @@ class PowerGrid:
     
     def auto_connect_all(self):
         """Automatically connect all buildings that can be connected."""
-        # Try to connect every building to every other nearby building
-        for i, building1 in enumerate(self.buildings):
-            for j, building2 in enumerate(self.buildings):
+        # First, try to connect connectors to everything they can reach
+        connectors = [b for b in self.buildings if b.type == 'connector']
+        other_buildings = [b for b in self.buildings if b.type != 'connector']
+        
+        # Connect connectors to nearby buildings first (they have 6 connection capacity)
+        for connector in connectors:
+            connector_id = self.get_building_id(connector)
+            current_connections = len(self.building_connections.get(connector_id, []))
+            
+            if current_connections < self.get_connection_limit(connector):
+                # Find nearby buildings to connect to
+                nearby_buildings = []
+                for building in self.buildings:
+                    if building != connector:
+                        distance = math.sqrt((connector.x - building.x) ** 2 + (connector.y - building.y) ** 2)
+                        if distance <= self.power_range:
+                            building_id = self.get_building_id(building)
+                            
+                            # Check if already connected
+                            already_connected = (connector_id in self.building_connections and 
+                                               building in self.building_connections[connector_id])
+                            
+                            # Check if the other building has room for connections
+                            other_current_connections = len(self.building_connections.get(building_id, []))
+                            other_limit = self.get_connection_limit(building)
+                            
+                            if not already_connected and other_current_connections < other_limit:
+                                nearby_buildings.append((distance, building))
+                
+                # Sort by distance and connect to closest buildings first
+                nearby_buildings.sort(key=lambda x: x[0])
+                connections_to_make = min(
+                    len(nearby_buildings), 
+                    self.get_connection_limit(connector) - current_connections
+                )
+                
+                for i in range(connections_to_make):
+                    _, building = nearby_buildings[i]
+                    self.add_connection(connector, building)
+        
+        # Then, connect other buildings to each other if they have capacity
+        for i, building1 in enumerate(other_buildings):
+            for j, building2 in enumerate(other_buildings):
                 if i < j:  # Avoid duplicate connections
-                    # Check if they're within range and not already connected
+                    # Check if they're within range and both have capacity
                     distance = math.sqrt((building1.x - building2.x) ** 2 + (building1.y - building2.y) ** 2)
                     if distance <= self.power_range:
                         building1_id = self.get_building_id(building1)
@@ -111,7 +151,14 @@ class PowerGrid:
                                            building2 in self.building_connections[building1_id])
                         
                         if not already_connected:
-                            self.add_connection(building1, building2)
+                            # Check if both buildings have room for more connections
+                            b1_connections = len(self.building_connections.get(building1_id, []))
+                            b2_connections = len(self.building_connections.get(building2_id, []))
+                            b1_limit = self.get_connection_limit(building1)
+                            b2_limit = self.get_connection_limit(building2)
+                            
+                            if b1_connections < b1_limit and b2_connections < b2_limit:
+                                self.add_connection(building1, building2)
 
     def update(self):
         """Update the power grid connections and propagate power."""
