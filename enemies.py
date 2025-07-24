@@ -24,6 +24,7 @@ class Enemy:
         self.is_orbiting = False
         self.enemy_type = enemy_type
         self.last_shot_time = 0  # For laser timing
+        self.laser_target = None  # For visual laser effects
         self.points = 1  # Default point value for basic enemies
     
     # Class variable for spaceship image (will be set from main.py)
@@ -83,6 +84,26 @@ class Enemy:
                 
                 # Triangle points in the direction of orbital movement (tangent to circle)
                 self.movement_angle = self.orbit_angle + math.pi / 2
+                
+                # Basic laser firing for small red ships
+                current_time = pygame.time.get_ticks()
+                laser_cooldown = 60  # 1 second at 60fps
+                laser_range = 120    # Shorter range than larger ships
+                laser_damage = 10    # Lower damage than larger ships
+                
+                if current_time - self.last_shot_time > laser_cooldown:
+                    # Check if target is within laser range (only fire when orbiting and close)
+                    if dist <= laser_range and not isinstance(self.target, dict):
+                        # Fire laser at building target
+                        if hasattr(self.target, 'take_damage'):
+                            self.target.take_damage(laser_damage)
+                            self.last_shot_time = current_time
+                            # Store laser target for visual effects
+                            self.laser_target = self.target
+                        else:
+                            self.laser_target = None
+                    else:
+                        self.laser_target = None
 
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
