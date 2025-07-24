@@ -89,7 +89,7 @@ class Enemy:
                 current_time = pygame.time.get_ticks()
                 laser_cooldown = 60  # 1 second at 60fps
                 laser_range = 120    # Shorter range than larger ships
-                laser_damage = 10    # Lower damage than larger ships
+                laser_damage = 5    # Reduced by 50% (was 10)
                 
                 if current_time - self.last_shot_time > laser_cooldown:
                     # Check if target is within laser range (only fire when orbiting and close)
@@ -145,8 +145,8 @@ class Enemy:
         # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = 20 * camera.zoom
-            bar_height = 4 * camera.zoom
+            bar_width = 40 * camera.zoom  # 2x larger
+            bar_height = 8 * camera.zoom  # 2x larger
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 8 * camera.zoom
             
@@ -258,8 +258,8 @@ class Mothership(Enemy):
         # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = 30 * camera.zoom  # Wider health bar
-            bar_height = 6 * camera.zoom  # Taller health bar
+            bar_width = 60 * camera.zoom  # 2x larger than before
+            bar_height = 12 * camera.zoom  # 2x larger than before
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 12 * camera.zoom
             
@@ -620,7 +620,7 @@ class LargeShip(Enemy):
         self.radius = 15
         self.size = 25
         self.laser_range = 200
-        self.laser_damage = 15
+        self.laser_damage = 7  # Reduced by 50% (was 15)
         self.shot_cooldown = 90  # 1.5 seconds at 60fps
         self.points = 5  # Point value for wave generation
         
@@ -659,18 +659,22 @@ class LargeShip(Enemy):
             pygame.draw.rect(surface, (0, 150, 255), rect, 2)  # Lighter blue border
             
             # Health bar
-            bar_width = max(20, int(self.size * camera.zoom))
-            bar_height = max(2, int(3 * camera.zoom))
-            health_ratio = self.health / self.max_health
-            pygame.draw.rect(surface, (255, 0, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width, bar_height))
-            pygame.draw.rect(surface, (0, 255, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width * health_ratio, bar_height))
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = max(40, int(self.size * camera.zoom * 2))  # 2x larger
+                bar_height = max(4, int(6 * camera.zoom))  # 2x larger
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - self.size - 8
+                
+                pygame.draw.rect(surface, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+                pygame.draw.rect(surface, (0, 255, 0), (bar_x, bar_y, bar_width * health_ratio, bar_height))
 
 class KamikazeShip(Enemy):
     def __init__(self, x, y):
         super().__init__(x, y, health=30, speed=1.25, enemy_type="kamikaze")  # Reduced by 50% (was 2.5)
         self.radius = 6
         self.size = 10
-        self.damage = 100
+        self.damage = 50  # Reduced by 50% (was 100)
         self.points = 2  # Point value for wave generation
         self.has_exploded = False
         
@@ -719,7 +723,7 @@ class AssaultShip(Enemy):
         self.radius = 12
         self.size = 18
         self.machine_gun_range = 150
-        self.machine_gun_damage = 8
+        self.machine_gun_damage = 4  # Reduced by 50% (was 8)
         self.shot_cooldown = 30  # 0.5 seconds at 60fps - rapid fire
         self.points = 3  # Point value for wave generation
         self.burst_count = 0
@@ -773,8 +777,8 @@ class AssaultShip(Enemy):
             # Health bar
             if self.health < self.max_health:
                 health_ratio = self.health / self.max_health
-                bar_width = 20 * camera.zoom
-                bar_height = 4 * camera.zoom
+                bar_width = 40 * camera.zoom  # 2x larger
+                bar_height = 8 * camera.zoom  # 2x larger
                 bar_x = screen_x - bar_width // 2
                 bar_y = screen_y - screen_size - 8 * camera.zoom
                 
@@ -795,7 +799,7 @@ class StealthShip(Enemy):
         self.radius = 8
         self.size = 12
         self.emp_range = 100
-        self.emp_damage = 25  # Disables buildings temporarily
+        self.emp_damage = 12  # Reduced by 50% (was 25) - Disables buildings temporarily
         self.shot_cooldown = 180  # 3 seconds between EMP bursts
         self.points = 4  # Point value for wave generation
         self.stealth_timer = 0
@@ -866,7 +870,7 @@ class HeavyCruiser(Enemy):
         self.radius = 18
         self.size = 30
         self.plasma_range = 250
-        self.plasma_damage = 30
+        self.plasma_damage = 15  # Reduced by 50% (was 30)
         self.shot_cooldown = 150  # 2.5 seconds between shots
         self.points = 6  # Point value for wave generation
         self.charge_time = 90  # 1.5 seconds to charge plasma
@@ -926,8 +930,8 @@ class HeavyCruiser(Enemy):
             # Health bar
             if self.health < self.max_health:
                 health_ratio = self.health / self.max_health
-                bar_width = max(30, int(self.size * camera.zoom))
-                bar_height = max(3, int(4 * camera.zoom))
+                bar_width = max(60, int(self.size * camera.zoom * 2))  # 2x larger
+                bar_height = max(6, int(8 * camera.zoom))  # 2x larger
                 bar_x = screen_x - bar_width // 2
                 bar_y = screen_y - self.size - 10
                 

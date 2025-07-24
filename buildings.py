@@ -155,8 +155,8 @@ class Building:
         # Enhanced health bar with gradient
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = screen_radius * 2
-            bar_height = 5 * zoom
+            bar_width = screen_radius * 4  # 2x larger
+            bar_height = 10 * zoom  # 2x larger
             bar_x = screen_x - bar_width/2
             bar_y = screen_y - screen_radius - 10*zoom
             
@@ -648,8 +648,8 @@ class FriendlyShip:
             # Draw health bar if damaged
             if self.health < self.max_health:
                 health_ratio = self.health / self.max_health
-                bar_width = 15 * camera.zoom
-                bar_height = 3 * camera.zoom
+                bar_width = 30 * camera.zoom  # 2x larger
+                bar_height = 6 * camera.zoom  # 2x larger
                 bar_x = screen_x - bar_width // 2
                 bar_y = screen_y - screen_size - 8 * camera.zoom
                 
