@@ -206,6 +206,155 @@ class Building:
             if self.xp >= xp_needed:
                 self.xp -= xp_needed
                 self.upgrade()
+    
+    def _draw_connector_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced connector with 3D effects and energy flow animation."""
+        # Shadow effect
+        shadow_offset = max(2, screen_radius // 6)
+        pygame.draw.circle(surface, (40, 40, 0), 
+                         (int(screen_x + shadow_offset), int(screen_y + shadow_offset)), int(screen_radius))
+        
+        if self.powered:
+            # Multi-layer pulsing glow effect
+            pulse = 0.5 + 0.5 * math.sin(current_time * 4)  # Faster pulse for energy
+            for i in range(3):
+                glow_alpha = int(60 * pulse / (i + 1))
+                glow_radius = int(screen_radius + (6 - i * 2) * pulse)
+                glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(glow_surface, (255, 200, 0, glow_alpha), 
+                                 (glow_radius, glow_radius), glow_radius)
+                surface.blit(glow_surface, (screen_x - glow_radius, screen_y - glow_radius))
+        
+        # Main body with gradient
+        main_color = (255, 255, 0) if self.powered else (100, 100, 0)
+        pygame.draw.circle(surface, main_color, (int(screen_x), int(screen_y)), int(screen_radius))
+        
+        # Highlight for 3D effect
+        highlight_offset = screen_radius * 0.3
+        pygame.draw.circle(surface, (255, 255, 180), 
+                         (int(screen_x - highlight_offset), int(screen_y - highlight_offset)), 
+                         max(1, int(screen_radius * 0.4)))
+        
+        # Animated energy core
+        if self.powered:
+            core_pulse = 0.3 + 0.2 * math.sin(current_time * 6)
+            core_radius = int(screen_radius * core_pulse)
+            pygame.draw.circle(surface, (255, 255, 255), (int(screen_x), int(screen_y)), core_radius)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.circle(surface, border_color, (int(screen_x), int(screen_y)), 
+                         int(screen_radius), 2)
+
+    def _draw_miner_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced miner with 3D effects and mining beam animation."""
+        # Triangle points
+        points = []
+        shadow_points = []
+        shadow_offset = max(2, screen_radius // 6)
+        
+        for i in range(3):
+            angle = i * 2 * np.pi / 3 - np.pi / 2  # Point upward
+            px = screen_x + screen_radius * np.cos(angle)
+            py = screen_y + screen_radius * np.sin(angle)
+            points.append((px, py))
+            shadow_points.append((px + shadow_offset, py + shadow_offset))
+        
+        # Shadow
+        pygame.draw.polygon(surface, (20, 40, 20), shadow_points)
+        
+        # Mining energy effect when powered and active
+        if self.powered and hasattr(self, 'zap_timer') and self.zap_timer > 0:
+            # Animated energy waves
+            wave_intensity = math.sin(current_time * 8) * 0.5 + 0.5
+            for wave in range(3):
+                wave_size = screen_radius + (wave * 4) + (wave_intensity * 6)
+                wave_alpha = int(80 * (1 - wave * 0.3) * wave_intensity)
+                wave_surface = pygame.Surface((wave_size * 2, wave_size * 2), pygame.SRCALPHA)
+                
+                wave_points = []
+                for i in range(3):
+                    angle = i * 2 * np.pi / 3 - np.pi / 2
+                    px = wave_size + wave_size * np.cos(angle)
+                    py = wave_size + wave_size * np.sin(angle)
+                    wave_points.append((px, py))
+                
+                pygame.draw.polygon(wave_surface, (0, 255, 0, wave_alpha), wave_points)
+                surface.blit(wave_surface, (screen_x - wave_size, screen_y - wave_size))
+        
+        # Main body with gradient
+        main_color = (0, 255, 0) if self.powered else (0, 100, 0)
+        pygame.draw.polygon(surface, main_color, points)
+        
+        # Highlight for 3D effect
+        highlight_points = []
+        for i in range(3):
+            angle = i * 2 * np.pi / 3 - np.pi / 2
+            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
+            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
+            highlight_points.append((px, py))
+        pygame.draw.polygon(surface, (100, 255, 100), highlight_points)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.polygon(surface, border_color, points, 2)
+
+    def _draw_turret_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced turret with 3D effects and targeting animation."""
+        # Pentagon points
+        points = []
+        shadow_points = []
+        shadow_offset = max(2, screen_radius // 6)
+        
+        for i in range(5):
+            angle = i * 2 * np.pi / 5 - np.pi / 2  # Point upward
+            px = screen_x + screen_radius * np.cos(angle)
+            py = screen_y + screen_radius * np.sin(angle)
+            points.append((px, py))
+            shadow_points.append((px + shadow_offset, py + shadow_offset))
+        
+        # Shadow
+        pygame.draw.polygon(surface, (40, 20, 20), shadow_points)
+        
+        # Targeting glow when powered
+        if self.powered:
+            # Rotating targeting scanner effect
+            scanner_angle = current_time * 2
+            for beam in range(4):
+                beam_angle = scanner_angle + (beam * np.pi / 2)
+                beam_length = screen_radius * 1.8
+                beam_end_x = screen_x + beam_length * np.cos(beam_angle)
+                beam_end_y = screen_y + beam_length * np.sin(beam_angle)
+                
+                # Draw scanning beam
+                beam_alpha = int(40 * (math.sin(current_time * 3 + beam) + 1) / 2)
+                if beam_alpha > 0:
+                    pygame.draw.line(surface, (255, 100, 100), 
+                                   (int(screen_x), int(screen_y)), 
+                                   (int(beam_end_x), int(beam_end_y)), 1)
+        
+        # Main body with gradient
+        main_color = (255, 0, 0) if self.powered else (100, 0, 0)
+        pygame.draw.polygon(surface, main_color, points)
+        
+        # Highlight for 3D effect
+        highlight_points = []
+        for i in range(5):
+            angle = i * 2 * np.pi / 5 - np.pi / 2
+            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
+            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
+            highlight_points.append((px, py))
+        pygame.draw.polygon(surface, (255, 100, 100), highlight_points)
+        
+        # Central core
+        if self.powered:
+            core_pulse = 0.4 + 0.2 * math.sin(current_time * 5)
+            core_radius = int(screen_radius * core_pulse * 0.3)
+            pygame.draw.circle(surface, (255, 255, 0), (int(screen_x), int(screen_y)), core_radius)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.polygon(surface, border_color, points, 2)
 
 class Solar(Building):
     def __init__(self, x, y):
@@ -305,152 +454,3 @@ class Converter(Building):
     @property
     def conversion_interval(self):
         return CONVERTER_INTERVAL
-
-    def _draw_connector_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
-        """Draw enhanced connector with 3D effects and energy flow animation."""
-        # Shadow effect
-        shadow_offset = max(2, screen_radius // 6)
-        pygame.draw.circle(surface, (40, 40, 0), 
-                         (int(screen_x + shadow_offset), int(screen_y + shadow_offset)), int(screen_radius))
-        
-        if self.powered:
-            # Multi-layer pulsing glow effect
-            pulse = 0.5 + 0.5 * math.sin(current_time * 4)  # Faster pulse for energy
-            for i in range(3):
-                glow_alpha = int(60 * pulse / (i + 1))
-                glow_radius = int(screen_radius + (6 - i * 2) * pulse)
-                glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
-                pygame.draw.circle(glow_surface, (255, 200, 0, glow_alpha), 
-                                 (glow_radius, glow_radius), glow_radius)
-                surface.blit(glow_surface, (screen_x - glow_radius, screen_y - glow_radius))
-        
-        # Main body with gradient
-        main_color = (255, 255, 0) if self.powered else (100, 100, 0)
-        pygame.draw.circle(surface, main_color, (int(screen_x), int(screen_y)), int(screen_radius))
-        
-        # Highlight for 3D effect
-        highlight_offset = screen_radius * 0.3
-        pygame.draw.circle(surface, (255, 255, 180), 
-                         (int(screen_x - highlight_offset), int(screen_y - highlight_offset)), 
-                         max(1, int(screen_radius * 0.4)))
-        
-        # Animated energy core
-        if self.powered:
-            core_pulse = 0.3 + 0.2 * math.sin(current_time * 6)
-            core_radius = int(screen_radius * core_pulse)
-            pygame.draw.circle(surface, (255, 255, 255), (int(screen_x), int(screen_y)), core_radius)
-        
-        # Border
-        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
-        pygame.draw.circle(surface, border_color, (int(screen_x), int(screen_y)), 
-                         int(screen_radius), max(2, int(3 * zoom)))
-
-    def _draw_miner_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
-        """Draw enhanced miner with 3D effects and mining beam animation."""
-        # Triangle points
-        points = []
-        shadow_points = []
-        shadow_offset = max(2, screen_radius // 6)
-        
-        for i in range(3):
-            angle = i * 2 * np.pi / 3 - np.pi / 2  # Point upward
-            px = screen_x + screen_radius * np.cos(angle)
-            py = screen_y + screen_radius * np.sin(angle)
-            points.append((px, py))
-            shadow_points.append((px + shadow_offset, py + shadow_offset))
-        
-        # Shadow
-        pygame.draw.polygon(surface, (20, 40, 20), shadow_points)
-        
-        # Mining energy effect when powered and active
-        if self.powered and hasattr(self, 'zap_timer') and self.zap_timer > 0:
-            # Animated energy waves
-            wave_intensity = math.sin(current_time * 8) * 0.5 + 0.5
-            for wave in range(3):
-                wave_size = screen_radius + (wave * 4) + (wave_intensity * 6)
-                wave_alpha = int(80 * (1 - wave * 0.3) * wave_intensity)
-                wave_surface = pygame.Surface((wave_size * 2, wave_size * 2), pygame.SRCALPHA)
-                
-                wave_points = []
-                for i in range(3):
-                    angle = i * 2 * np.pi / 3 - np.pi / 2
-                    px = wave_size + wave_size * np.cos(angle)
-                    py = wave_size + wave_size * np.sin(angle)
-                    wave_points.append((px, py))
-                
-                pygame.draw.polygon(wave_surface, (0, 255, 0, wave_alpha), wave_points)
-                surface.blit(wave_surface, (screen_x - wave_size, screen_y - wave_size))
-        
-        # Main body with gradient
-        main_color = (0, 255, 0) if self.powered else (0, 100, 0)
-        pygame.draw.polygon(surface, main_color, points)
-        
-        # Highlight for 3D effect
-        highlight_points = []
-        for i in range(3):
-            angle = i * 2 * np.pi / 3 - np.pi / 2
-            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
-            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
-            highlight_points.append((px, py))
-        pygame.draw.polygon(surface, (100, 255, 100), highlight_points)
-        
-        # Border
-        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
-        pygame.draw.polygon(surface, border_color, points, max(2, int(3 * zoom)))
-
-    def _draw_turret_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
-        """Draw enhanced turret with 3D effects and targeting animation."""
-        # Pentagon points
-        points = []
-        shadow_points = []
-        shadow_offset = max(2, screen_radius // 6)
-        
-        for i in range(5):
-            angle = i * 2 * np.pi / 5 - np.pi / 2  # Point upward
-            px = screen_x + screen_radius * np.cos(angle)
-            py = screen_y + screen_radius * np.sin(angle)
-            points.append((px, py))
-            shadow_points.append((px + shadow_offset, py + shadow_offset))
-        
-        # Shadow
-        pygame.draw.polygon(surface, (40, 20, 20), shadow_points)
-        
-        # Targeting glow when powered
-        if self.powered:
-            # Rotating targeting scanner effect
-            scanner_angle = current_time * 2
-            for beam in range(4):
-                beam_angle = scanner_angle + (beam * np.pi / 2)
-                beam_length = screen_radius * 1.8
-                beam_end_x = screen_x + beam_length * np.cos(beam_angle)
-                beam_end_y = screen_y + beam_length * np.sin(beam_angle)
-                
-                # Draw scanning beam
-                beam_alpha = int(40 * (math.sin(current_time * 3 + beam) + 1) / 2)
-                if beam_alpha > 0:
-                    pygame.draw.line(surface, (255, 100, 100), 
-                                   (int(screen_x), int(screen_y)), 
-                                   (int(beam_end_x), int(beam_end_y)), 1)
-        
-        # Main body with gradient
-        main_color = (255, 0, 0) if self.powered else (100, 0, 0)
-        pygame.draw.polygon(surface, main_color, points)
-        
-        # Highlight for 3D effect
-        highlight_points = []
-        for i in range(5):
-            angle = i * 2 * np.pi / 5 - np.pi / 2
-            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
-            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
-            highlight_points.append((px, py))
-        pygame.draw.polygon(surface, (255, 100, 100), highlight_points)
-        
-        # Central core
-        if self.powered:
-            core_pulse = 0.4 + 0.2 * math.sin(current_time * 5)
-            core_radius = int(screen_radius * core_pulse * 0.3)
-            pygame.draw.circle(surface, (255, 255, 0), (int(screen_x), int(screen_y)), core_radius)
-        
-        # Border
-        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
-        pygame.draw.polygon(surface, border_color, points, max(2, int(3 * zoom)))
