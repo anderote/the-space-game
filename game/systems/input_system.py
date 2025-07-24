@@ -87,13 +87,23 @@ class InputSystem(System):
         elif key == pygame.K_SPACE:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_pause'})
         
+        # ESC key functionality - cancel building selection
+        elif key == pygame.K_ESCAPE:
+            if self.selected_build:
+                # Cancel building placement mode
+                self.selected_build = None
+                # Notify game logic system to cancel building selection
+                event_system.emit(EventType.BUILDING_PLACED, {'type': 'cancel_selection'})
+                print("🚫 Cancelled building selection")
+            else:
+                # If no building selected, toggle menu
+                event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
+        
         # Menu and quit controls
         elif key == pygame.K_o:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
         elif key == pygame.K_p:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'quit'})
-        # Note: ESC key intentionally removed to prevent accidental quitting
-        # Note: ESC key no longer quits game - use window close button instead
     
     def _handle_mouse_click(self, button, pos):
         """Handle mouse clicks."""

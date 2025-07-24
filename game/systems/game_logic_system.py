@@ -443,6 +443,11 @@ class GameLogicSystem(System):
             self._place_building(data['building_type'], data['x'], data['y'])
         elif data['type'] == 'select':
             self.selected_build = data['building_type']
+        elif data['type'] == 'cancel_selection':
+            self.selected_build = None
+            # Play cancel sound
+            if self.audio_system:
+                self.audio_system.play_ui_sound('button_click', 0.5)
         elif data['type'] == 'select_at':
             self._select_building_at(data['x'], data['y'])
         elif data['type'] == 'upgrade' and data.get('building'):

@@ -40,15 +40,19 @@ class UISystem(System):
         # Instructions
         instructions = [
             "Press R to start a new game",
-            "Press ESC to quit",
+            "Press O to toggle menu | Press P to quit",
             "",
             "Controls:",
-            "S/C/B/M/T/L/R/V - Select building type",
+            "S/C/B/M/T/L/R/V/H - Select building type",
+            "ESC - Cancel building selection",
             "Mouse - Place/select buildings",
+            "Right-click - Cancel/deselect",
             "U - Upgrade selected building",
+            "X - Sell selected building",
             "Arrow keys - Pan camera",
             "Mouse wheel - Zoom",
-            "1/2/3/4 - Game speed (Pause/Normal/2x/3x)"
+            "1/2/3/4 - Game speed (0.5x/1x/2x/3x)",
+            "Space - Pause/Resume"
         ]
         
         y_offset = 300
@@ -247,8 +251,8 @@ class UISystem(System):
         controls_width = SCREEN_WIDTH - 200
         self.render_system.draw_glass_panel(0, SCREEN_HEIGHT - 60, controls_width, 60, alpha=160)
         
-        camera_text = self.render_system.hud_font.render("🎯 Arrows: Pan | Scroll: Zoom", True, (200, 220, 255))
-        speed_text = self.render_system.hud_font.render("⏯ Speed: 1-Pause 2-Normal 3-2x 4-3x", True, (200, 220, 255))
+        camera_text = self.render_system.hud_font.render("🎯 Arrows: Pan | Scroll: Zoom | ESC: Cancel Selection", True, (200, 220, 255))
+        speed_text = self.render_system.hud_font.render("⏯ Speed: 1-0.5x 2-1x 3-2x 4-3x | Space: Pause", True, (200, 220, 255))
         
         self.render_system.screen.blit(camera_text, (10, SCREEN_HEIGHT - 52))
         self.render_system.screen.blit(speed_text, (10, SCREEN_HEIGHT - 32))
