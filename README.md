@@ -63,7 +63,7 @@ Space Game Clone is an engaging tower defense / RTS hybrid where you must:
 | **R** | Repair Node | 120 | Repairs nearby damaged buildings |
 | **V** | Converter | 200 | Advanced resource processing |
 | **X** | Superlaser | 500 | Ultimate defense weapon |
-| **H** | Hangar | 250 | Launches friendly attack ships |
+| **H** | Hangar | 250 | Launches 4 friendly attack ships |
 
 ### **Game Speed & Controls**
 | Key | Function |
@@ -94,7 +94,7 @@ Space Game Clone is an engaging tower defense / RTS hybrid where you must:
 
 ### **Support Systems**
 - **Repair Nodes**: Maintain your infrastructure automatically
-- **Hangars**: Deploy friendly fighter squadrons
+- **Hangars**: Deploy up to 4 friendly fighter squadrons with auto-regeneration
 
 ## ⚔️ Enemy Types
 
@@ -123,7 +123,7 @@ Space Game Clone is an engaging tower defense / RTS hybrid where you must:
 
 ### **Late Game (Waves 16+)**
 1. **Superlasers**: Ultimate weapons for massive enemy formations
-2. **Hangars**: Deploy fighter squadrons for additional firepower
+2. **Hangars**: Deploy up to 4 fighter squadrons with 20-second regeneration
 3. **Redundancy**: Multiple power sources and repair capabilities
 4. **Advanced tactics**: Speed control for micro-management
 

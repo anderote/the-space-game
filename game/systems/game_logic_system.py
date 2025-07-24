@@ -734,16 +734,34 @@ class GameLogicSystem(System):
             if self.resources.energy >= HANGAR_ENERGY_COST:
                 self.resources.spend_energy(HANGAR_ENERGY_COST)
                 
-                # Update launch timer
+                # Initialize timers if they don't exist
                 if not hasattr(hangar, 'launch_timer'):
                     hangar.launch_timer = 0
+                if not hasattr(hangar, 'regen_timer'):
+                    hangar.regen_timer = 0
                 
+                # Update timers
                 hangar.launch_timer -= 1
+                hangar.regen_timer -= 1
                 
-                # Try to launch a ship if conditions are met
-                if (hangar.launch_timer <= 0 and 
-                    len(hangar.deployed_ships) < hangar.max_ships and
-                    len(self.wave_manager.enemies) > 0):  # Only launch if there are enemies
+                # Check for ship regeneration (when ships have been destroyed)
+                if (hangar.regen_timer <= 0 and 
+                    len(hangar.deployed_ships) < hangar.max_ships):
+                    
+                    # Regenerate a ship
+                    ship = FriendlyShip(hangar.x, hangar.y, hangar)
+                    hangar.deployed_ships.append(ship)
+                    self.friendly_ships.append(ship)
+                    hangar.regen_timer = hangar.regen_cooldown
+                    
+                    # Regeneration particles (different color to show it's regeneration)
+                    self.add_particles(hangar.x, hangar.y, 12, (0, 255, 150), 
+                                     speed_range=(2, 4), lifetime_range=(30, 60))
+                
+                # Try to launch a ship if conditions are met (for initial deployment)
+                elif (hangar.launch_timer <= 0 and 
+                      len(hangar.deployed_ships) < hangar.max_ships and
+                      len(self.wave_manager.enemies) > 0):  # Only launch if there are enemies
                     
                     # Check if there are enemies within engagement range
                     enemies_in_range = any(
@@ -784,6 +802,10 @@ class GameLogicSystem(System):
                     # Ship destroyed - add explosion particles
                     self.add_particles(ship.x, ship.y, 12, (255, 100, 0), 
                                      speed_range=(2, 5), lifetime_range=(20, 40))
+                    
+                    # Start regeneration timer if not already running
+                    if ship.hangar.regen_timer <= 0:
+                        ship.hangar.regen_timer = ship.hangar.regen_cooldown
         
         self.friendly_ships = active_ships
     

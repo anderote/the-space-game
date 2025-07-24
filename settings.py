@@ -85,9 +85,10 @@ CONVERTER_INTERVAL = 120  # frames between conversions
 # Hangar stats
 HANGAR_ENERGY_COST = 0.5  # energy per frame to maintain
 HANGAR_LAUNCH_COOLDOWN = 300  # frames between ship launches (5 seconds)
-HANGAR_MAX_SHIPS = 3  # maximum ships per hangar
+HANGAR_MAX_SHIPS = 4  # maximum ships per hangar
 HANGAR_SHIP_RANGE = 500  # range within which ships will engage
 HANGAR_RECALL_RANGE = 600  # range beyond which ships return
+HANGAR_REGEN_COOLDOWN = 1200  # frames between ship regeneration (20 seconds)
 
 # Power grid
 POWER_RANGE = 150
