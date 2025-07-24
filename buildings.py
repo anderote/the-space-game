@@ -538,7 +538,8 @@ class FriendlyShip:
             # Try to attack if in range
             if self._distance_to(self.target) <= self.fire_range:
                 if current_time - self.last_shot_time >= self.fire_cooldown:
-                    self.target.take_damage(self.damage)
+                    # Apply damage directly to enemy health (enemies don't have take_damage method)
+                    self.target.health -= self.damage
                     self.last_shot_time = current_time
         elif self.state == "returning":
             self._move_towards(self.hangar.x, self.hangar.y)
