@@ -66,6 +66,20 @@ class InputSystem(System):
         elif key == pygame.K_u:
             if self.selected_building:
                 event_system.emit(EventType.BUILDING_PLACED, {'type': 'upgrade', 'building': self.selected_building})
+        
+        # Game speed controls
+        elif key == pygame.K_1:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'speed', 'value': 0.5})
+        elif key == pygame.K_2:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'speed', 'value': 1.0})
+        elif key == pygame.K_3:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'speed', 'value': 2.0})
+        elif key == pygame.K_4:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'speed', 'value': 3.0})
+        elif key == pygame.K_SPACE:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_pause'})
+        elif key == pygame.K_ESCAPE:
+            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'quit'})
     
     def _handle_mouse_click(self, button, pos):
         """Handle mouse clicks."""

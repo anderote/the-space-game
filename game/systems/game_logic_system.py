@@ -56,6 +56,59 @@ class Particle:
                 pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), int(self.size))
 
 
+class LaserBeam:
+    """Laser beam effect for combat lasers."""
+    def __init__(self, start_x, start_y, target_x, target_y, color, duration=10):
+        self.start_x = start_x
+        self.start_y = start_y
+        self.target_x = target_x
+        self.target_y = target_y
+        self.color = color
+        self.duration = duration
+        self.max_duration = duration
+        self.width = 3
+        
+    def update(self):
+        self.duration -= 1
+        return self.duration > 0
+    
+    def draw(self, surface, camera):
+        if self.duration <= 0:
+            return
+            
+        # Calculate screen positions
+        start_screen_x, start_screen_y = camera.world_to_screen(self.start_x, self.start_y)
+        target_screen_x, target_screen_y = camera.world_to_screen(self.target_x, self.target_y)
+        
+        # Fade effect based on remaining duration
+        fade_ratio = self.duration / self.max_duration
+        
+        # Draw laser beam with glow effect
+        beam_width = max(1, int(self.width * fade_ratio * camera.zoom))
+        
+        if beam_width > 0:
+            # Outer glow
+            glow_color = (*self.color, int(100 * fade_ratio))
+            pygame.draw.line(surface, self.color, 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           beam_width + 4)
+            
+            # Main beam
+            main_color = (*self.color, int(200 * fade_ratio))
+            pygame.draw.line(surface, self.color, 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           beam_width)
+            
+            # Core beam (brighter)
+            core_color = (min(255, self.color[0] + 50), min(255, self.color[1] + 50), min(255, self.color[2] + 50))
+            pygame.draw.line(surface, core_color, 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           max(1, beam_width // 2))
+
+
 class MiningLaser:
     """Mining laser effect."""
     def __init__(self, start_x, start_y, target_x, target_y, duration=30):
@@ -173,6 +226,7 @@ class GameLogicSystem(System):
         self.missiles = []
         self.particles = []
         self.mining_lasers = []
+        self.laser_beams = []
         self.damage_numbers = []
         self.enemy_lasers = []
         self.mothership_missiles = []
@@ -285,6 +339,7 @@ class GameLogicSystem(System):
         # Update particles and effects
         self._update_particles()
         self._update_mining_lasers()
+        self._update_laser_beams()
         self._update_damage_numbers()
         
         # Update mining system
@@ -494,6 +549,12 @@ class GameLogicSystem(System):
             if not laser.update():
                 self.mining_lasers.remove(laser)
     
+    def _update_laser_beams(self):
+        """Update combat laser beam effects."""
+        for beam in self.laser_beams[:]:
+            if not beam.update():
+                self.laser_beams.remove(beam)
+    
     def _update_damage_numbers(self):
         """Update damage numbers."""
         for dn in self.damage_numbers[:]:
@@ -641,8 +702,19 @@ class GameLogicSystem(System):
                 self.resources.spend_energy(energy_cost)
                 target.health -= damage
                 
-                # Visual effect - add laser line or particles
-                self.add_particles(target.x, target.y, 3, (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
+                # Create laser beam effect
+                if laser_building.type == 'laser':
+                    laser_effect = LaserBeam(laser_building.x, laser_building.y, target.x, target.y, 
+                                           (0, 150, 255), duration=8)  # Blue laser
+                else:
+                    laser_effect = LaserBeam(laser_building.x, laser_building.y, target.x, target.y, 
+                                           (255, 50, 255), duration=12)  # Purple superlaser
+                
+                self.laser_beams.append(laser_effect)
+                
+                # Impact particles
+                self.add_particles(target.x, target.y, 5, 
+                                 (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
                                  speed_range=(0.5, 1.5), lifetime_range=(10, 20))
     
     def _update_buildings(self):
@@ -676,6 +748,7 @@ class GameLogicSystem(System):
         self.missiles.clear()
         self.particles.clear()
         self.mining_lasers.clear()
+        self.laser_beams.clear()
         self.damage_numbers.clear()
         
         self.wave_manager.wave = 1
@@ -705,6 +778,11 @@ class GameLogicSystem(System):
         
         # Draw power grid connections
         render_system.draw_power_connections(self.power_grid)
+        
+        # Draw building placement preview range
+        if self.selected_build:
+            mouse_x, mouse_y = render_system.camera.screen_to_world(*pygame.mouse.get_pos())
+            self._draw_building_placement_range(render_system, self.selected_build, mouse_x, mouse_y)
         
         # Draw buildings with selection glow
         for building in self.buildings:
@@ -767,6 +845,25 @@ class GameLogicSystem(System):
         for laser in self.mining_lasers:
             laser.draw(render_system.screen, render_system.camera)
         
+        # Draw combat laser beams
+        for beam in self.laser_beams:
+            beam.draw(render_system.screen, render_system.camera)
+        
         # Draw damage numbers
         for dn in self.damage_numbers:
-            dn.draw(render_system.screen, render_system.camera) 
+            dn.draw(render_system.screen, render_system.camera)
+    
+    def _draw_building_placement_range(self, render_system, build_type, x, y):
+        """Draw range indicator for building being placed."""
+        # Define ranges and colors for different building types
+        building_ranges = {
+            'turret': (TURRET_RANGE, (255, 0, 0, 100)),      # Red for turrets
+            'laser': (LASER_RANGE, (100, 200, 255, 100)),    # Blue for lasers
+            'superlaser': (SUPERLASER_RANGE, (255, 100, 255, 100)),  # Purple for superlasers
+            'repair': (REPAIR_RANGE, (0, 255, 255, 100)),    # Cyan for repair
+            'miner': (MINER_RANGE, (0, 255, 0, 100)),        # Green for miners
+        }
+        
+        if build_type in building_ranges:
+            range_val, color = building_ranges[build_type]
+            render_system.draw_range_indicator(x, y, range_val, color) 

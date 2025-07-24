@@ -200,6 +200,12 @@ class StateManager:
         self.states = {}
         self.current_state = None
         self.running = True
+        self.game_speed = 1.0
+        self.is_paused = False
+        
+        # Subscribe to game state change events
+        from game.core.event_system import event_system, EventType
+        event_system.subscribe(EventType.GAME_STATE_CHANGE, self._handle_game_state_change)
     
     def add_state(self, state_type, state):
         """Add a state to the manager."""
@@ -216,8 +222,10 @@ class StateManager:
     
     def update(self, dt):
         """Update the current state."""
-        if self.current_state and self.current_state.active:
-            self.current_state.update(dt)
+        if self.current_state and self.current_state.active and not self.is_paused:
+            # Apply game speed scaling to delta time
+            scaled_dt = dt * self.game_speed
+            self.current_state.update(scaled_dt)
     
     def handle_event(self, event):
         """Handle events in the current state."""
@@ -232,4 +240,17 @@ class StateManager:
     
     def quit(self):
         """Signal that the game should quit."""
-        self.running = False 
+        self.running = False
+    
+    def _handle_game_state_change(self, event):
+        """Handle game state change events."""
+        data = event.data
+        
+        if data['type'] == 'speed':
+            self.game_speed = data['value']
+            print(f"Game speed set to {self.game_speed}x")
+        elif data['type'] == 'toggle_pause':
+            self.is_paused = not self.is_paused
+            print(f"Game {'paused' if self.is_paused else 'resumed'}")
+        elif data['type'] == 'quit':
+            self.quit() 

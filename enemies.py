@@ -8,7 +8,7 @@ import math
 from settings import *
 
 class Enemy:
-    def __init__(self, x, y, health, speed=1.0, enemy_type="basic"):
+    def __init__(self, x, y, health, speed=0.5, enemy_type="basic"):  # Reduced by 50% (was 1.0)
         self.x = x
         self.y = y
         self.radius = 8
@@ -19,7 +19,7 @@ class Enemy:
         self.target = None
         self.orbit_angle = 0  # Angle for orbiting
         self.orbit_radius = 50
-        self.orbit_speed = 0.05
+        self.orbit_speed = 0.01  # Reduced by 80% (was 0.05)
         self.movement_angle = 0  # Direction of movement for triangle shape
         self.is_orbiting = False
         self.enemy_type = enemy_type
@@ -483,7 +483,7 @@ class WaveManager:
 # New enemy types with point values
 class LargeShip(Enemy):
     def __init__(self, x, y):
-        super().__init__(x, y, health=200, speed=0.5, enemy_type="large")
+        super().__init__(x, y, health=200, speed=0.25, enemy_type="large")  # Reduced by 50% (was 0.5)
         self.radius = 15
         self.size = 25
         self.laser_range = 200
@@ -534,7 +534,7 @@ class LargeShip(Enemy):
 
 class KamikazeShip(Enemy):
     def __init__(self, x, y):
-        super().__init__(x, y, health=30, speed=2.5, enemy_type="kamikaze")
+        super().__init__(x, y, health=30, speed=1.25, enemy_type="kamikaze")  # Reduced by 50% (was 2.5)
         self.radius = 6
         self.size = 10
         self.damage = 100
