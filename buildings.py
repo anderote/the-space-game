@@ -497,6 +497,11 @@ class FriendlyShip:
         self.target = None
         self.state = "seeking"  # "seeking", "attacking", "returning"
         self.size = 8
+        # Circling behavior attributes
+        self.orbit_angle = 0
+        self.orbit_radius = 60
+        self.orbit_speed = 0.08  # Faster than enemies for dynamic combat
+        self.is_orbiting = False
         
     def update(self, enemies, current_time):
         """Update ship behavior"""
@@ -534,13 +539,30 @@ class FriendlyShip:
         
         # Move based on state
         if self.state == "attacking" and self.target:
-            self._move_towards(self.target.x, self.target.y)
-            # Try to attack if in range
-            if self._distance_to(self.target) <= self.fire_range:
-                if current_time - self.last_shot_time >= self.fire_cooldown:
-                    # Apply damage directly to enemy health (enemies don't have take_damage method)
-                    self.target.health -= self.damage
-                    self.last_shot_time = current_time
+            target_dist = self._distance_to(self.target)
+            
+            # Start circling when within attack range
+            if target_dist <= self.fire_range + 20:  # Start circling slightly outside fire range
+                self.is_orbiting = True
+                
+                # Calculate orbit position
+                self.orbit_angle += self.orbit_speed
+                orbit_x = self.target.x + self.orbit_radius * math.cos(self.orbit_angle)
+                orbit_y = self.target.y + self.orbit_radius * math.sin(self.orbit_angle)
+                
+                # Move towards orbit position
+                self._move_towards(orbit_x, orbit_y)
+                
+                # Try to attack if in range
+                if target_dist <= self.fire_range:
+                    if current_time - self.last_shot_time >= self.fire_cooldown:
+                        # Apply damage directly to enemy health (enemies don't have take_damage method)
+                        self.target.health -= self.damage
+                        self.last_shot_time = current_time
+            else:
+                # Move towards target until in range
+                self.is_orbiting = False
+                self._move_towards(self.target.x, self.target.y)
         elif self.state == "returning":
             self._move_towards(self.hangar.x, self.hangar.y)
             # Check if we've returned to hangar
@@ -600,9 +622,28 @@ class FriendlyShip:
                 py = screen_y + screen_size * math.sin(point_angle)
                 points.append((px, py))
                 
-            # Draw blue triangle
-            pygame.draw.polygon(surface, (100, 150, 255), points)
-            pygame.draw.polygon(surface, (50, 100, 200), points, 2)
+            # Draw blue triangle with different color based on state
+            if self.is_orbiting:
+                # Brighter color when attacking/orbiting
+                ship_color = (150, 200, 255)
+                border_color = (200, 255, 255)
+            else:
+                # Normal color when seeking/returning
+                ship_color = (100, 150, 255)
+                border_color = (50, 100, 200)
+                
+            pygame.draw.polygon(surface, ship_color, points)
+            pygame.draw.polygon(surface, border_color, points, 2)
+            
+            # Draw targeting indicator when orbiting
+            if self.is_orbiting and self.target:
+                target_screen_x, target_screen_y = camera.world_to_screen(self.target.x, self.target.y)
+                orbit_radius_screen = self.orbit_radius * camera.zoom
+                # Draw orbit circle (faint)
+                if orbit_radius_screen > 5:  # Only draw if visible
+                    pygame.draw.circle(surface, (100, 150, 255), 
+                                     (int(target_screen_x), int(target_screen_y)), 
+                                     int(orbit_radius_screen), 1)
             
             # Draw health bar if damaged
             if self.health < self.max_health:

@@ -12,6 +12,8 @@ class PowerGrid:
         self.power_range = power_range
         self.connections = []  # List of (building1, building2) tuples
         self.building_connections = {}  # Building id -> list of connected building objects
+        self.last_full_update = 0  # Frame counter for periodic full updates
+        self.full_update_interval = 300  # Recalculate every 5 seconds (at 60fps)
         
     def get_building_id(self, building):
         """Get a unique ID for a building (using memory address)."""
@@ -162,6 +164,21 @@ class PowerGrid:
 
     def update(self):
         """Update the power grid connections and propagate power."""
+        self.last_full_update += 1
+        
+        # Perform full recalculation periodically to ensure connectivity
+        if self.last_full_update >= self.full_update_interval:
+            self.last_full_update = 0
+            self.full_recalculate()
+        else:
+            # Regular maintenance update
+            self.incremental_update()
+        
+        # Always propagate power after connections are updated
+        self.propagate_power()
+    
+    def incremental_update(self):
+        """Perform quick incremental updates."""
         # Clean up connections for buildings that no longer exist
         valid_buildings = self.buildings
         
@@ -186,9 +203,17 @@ class PowerGrid:
         
         # Auto-connect all buildings that can be connected
         self.auto_connect_all()
+    
+    def full_recalculate(self):
+        """Perform complete recalculation of all connections."""
+        print("🔌 Performing full power grid recalculation...")
         
-        # Power propagation
-        self.propagate_power()
+        # Clear all existing connections
+        self.connections = []
+        self.building_connections = {}
+        
+        # Rebuild all connections from scratch
+        self.auto_connect_all()
     
     def propagate_power(self):
         """Propagate power through the network using BFS."""

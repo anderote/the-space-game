@@ -790,7 +790,7 @@ class GameLogicSystem(System):
                     self.add_particles(hangar.x, hangar.y, 12, (0, 255, 150), 
                                      speed_range=(2, 4), lifetime_range=(30, 60))
                 
-                # Try to launch a ship if conditions are met (for initial deployment)
+                # Try to launch ships if conditions are met (for initial deployment)
                 elif (hangar.launch_timer <= 0 and 
                       len(hangar.deployed_ships) < hangar.max_ships and
                       len(self.wave_manager.enemies) > 0):  # Only launch if there are enemies
@@ -802,14 +802,24 @@ class GameLogicSystem(System):
                     )
                     
                     if enemies_in_range:
-                        # Launch a new ship
-                        ship = FriendlyShip(hangar.x, hangar.y, hangar)
-                        hangar.deployed_ships.append(ship)
-                        self.friendly_ships.append(ship)
+                        # Launch all available ships at once in formation
+                        ships_to_launch = hangar.max_ships - len(hangar.deployed_ships)
+                        
+                        # Formation positions around hangar
+                        formation_radius = 30
+                        for i in range(ships_to_launch):
+                            angle = (i / max(1, ships_to_launch)) * 2 * math.pi
+                            offset_x = formation_radius * math.cos(angle)
+                            offset_y = formation_radius * math.sin(angle)
+                            
+                            ship = FriendlyShip(hangar.x + offset_x, hangar.y + offset_y, hangar)
+                            hangar.deployed_ships.append(ship)
+                            self.friendly_ships.append(ship)
+                        
                         hangar.launch_timer = hangar.launch_cooldown
                         
-                        # Launch particles
-                        self.add_particles(hangar.x, hangar.y, 8, (100, 150, 255), 
+                        # Launch particles for all ships
+                        self.add_particles(hangar.x, hangar.y, ships_to_launch * 4, (100, 150, 255), 
                                          speed_range=(1, 3), lifetime_range=(20, 40))
     
     def _update_friendly_ships(self):
