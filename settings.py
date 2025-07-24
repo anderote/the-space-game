@@ -109,7 +109,7 @@ MOTHERSHIP_SPAWN_CHANCE = 0.15  # 15% chance per enemy to be mothership (for wav
 WAVE_WAIT_TIME = 120  # frames between waves
 SPAWN_INTERVAL = 30  # frames between enemy spawns
 INITIAL_WAIT = 4800  # frames before first wave (80 seconds at 60fps)
-WAVE_GROWTH_FACTOR = 1.8  # Increased from default (faster wave growth)
+WAVE_GROWTH_FACTOR = 2.16  # Increased by 20% from 1.8 (faster wave growth)
 FORMATION_SIZE_THRESHOLD = 15  # Start using formations when wave has this many enemies
 MAX_FORMATIONS = 4  # Maximum number of formations per wave
 

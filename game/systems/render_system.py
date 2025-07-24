@@ -253,32 +253,84 @@ class RenderSystem(System):
         scale = minimap_size / world_size
         center_offset = world_size / 2
         
-        # Draw asteroids as small dots
+        # Draw asteroids as small gray dots with size variation
         for asteroid in asteroids:
             map_x = int((asteroid.x + center_offset) * scale)
             map_y = int((asteroid.y + center_offset) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
-                pygame.draw.circle(minimap_surface, (150, 150, 150), (map_x, map_y), 1)
+                # Size based on asteroid radius
+                dot_size = max(1, min(3, int(asteroid.radius / 20)))
+                color = (120, 120, 120) if asteroid.minerals > 0 else (80, 80, 80)
+                pygame.draw.circle(minimap_surface, color, (map_x, map_y), dot_size)
         
-        # Draw buildings
+        # Draw buildings with type-specific colors
+        building_colors = {
+            'connector': (255, 255, 0),    # Yellow
+            'solar': (0, 200, 255),        # Cyan  
+            'battery': (180, 0, 180),      # Purple
+            'miner': (0, 255, 0),          # Green
+            'turret': (255, 100, 0),       # Orange
+            'laser': (100, 150, 255),      # Light Blue
+            'superlaser': (255, 50, 255),  # Magenta
+            'repair': (0, 255, 255),       # Cyan
+            'converter': (255, 255, 100)   # Light Yellow
+        }
+        
         for building in buildings:
             map_x = int((building.x + center_offset) * scale)
             map_y = int((building.y + center_offset) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
-                color = (0, 255, 0) if building.powered else (255, 100, 100)
-                pygame.draw.circle(minimap_surface, color, (map_x, map_y), 2)
+                base_color = building_colors.get(building.type, (255, 255, 255))
+                # Dim color if not powered
+                if not building.powered:
+                    color = tuple(c // 2 for c in base_color)
+                else:
+                    color = base_color
+                
+                # Size based on building importance
+                if building.type in ['turret', 'laser', 'superlaser']:
+                    size = 3  # Combat buildings larger
+                elif building.type in ['solar', 'battery']:
+                    size = 2  # Power buildings medium
+                else:
+                    size = 2  # Other buildings medium
+                
+                pygame.draw.circle(minimap_surface, color, (map_x, map_y), size)
         
-        # Draw base
+        # Draw base with pulsing effect
         base_map_x = int((base_pos[0] + center_offset) * scale)
         base_map_y = int((base_pos[1] + center_offset) * scale)
-        pygame.draw.circle(minimap_surface, (0, 200, 255), (base_map_x, base_map_y), 4)
+        import time
+        pulse = 0.8 + 0.2 * math.sin(time.time() * 3)  # Pulse between 0.8 and 1.0
+        base_size = int(4 * pulse)
+        pygame.draw.circle(minimap_surface, (0, 200, 255), (base_map_x, base_map_y), base_size)
+        pygame.draw.circle(minimap_surface, (255, 255, 255), (base_map_x, base_map_y), 2)
         
-        # Draw enemies
+        # Draw enemies with type-specific colors and sizes
+        enemy_colors = {
+            'basic': (255, 0, 0),      # Red
+            'large': (255, 100, 0),    # Orange
+            'kamikaze': (255, 50, 150) # Pink
+        }
+        
         for enemy in enemies:
             map_x = int((enemy.x + center_offset) * scale)
             map_y = int((enemy.y + center_offset) * scale)
             if 0 <= map_x < minimap_size and 0 <= map_y < minimap_size:
-                pygame.draw.circle(minimap_surface, (255, 0, 0), (map_x, map_y), 2)
+                enemy_type = getattr(enemy, 'enemy_type', 'basic')
+                color = enemy_colors.get(enemy_type, (255, 0, 0))
+                
+                # Size based on enemy type
+                if hasattr(enemy, 'is_mothership'):
+                    size = 4  # Motherships largest
+                elif enemy_type == 'large':
+                    size = 3  # Large ships bigger
+                elif enemy_type == 'kamikaze':
+                    size = 1  # Kamikaze smallest
+                else:
+                    size = 2  # Basic enemies medium
+                
+                pygame.draw.circle(minimap_surface, color, (map_x, map_y), size)
         
         # Draw camera view area
         cam_size = 800 * scale  # Approximate camera view size

@@ -463,7 +463,7 @@ class GameLogicSystem(System):
         
         for existing in self.buildings:
             distance = math.sqrt((x - existing.x) ** 2 + (y - existing.y) ** 2)
-            min_distance = new_building.radius + existing.radius + 2.0  # Minimal buffer for easier placement
+            min_distance = new_building.radius + existing.radius + 1.0  # Reduced buffer by 50% for easier placement
             if distance < min_distance:
                 can_place = False
                 conflict_reason = f"Too close to {existing.type} (distance: {distance:.1f}, needed: {min_distance:.1f})"
@@ -472,7 +472,7 @@ class GameLogicSystem(System):
         # Check distance to base
         if can_place:
             base_distance = math.sqrt((x - self.base_pos[0]) ** 2 + (y - self.base_pos[1]) ** 2)
-            min_base_distance = new_building.radius + BASE_RADIUS + 2.0  # Minimal buffer for easier placement
+            min_base_distance = new_building.radius + BASE_RADIUS + 1.0  # Reduced buffer by 50% for easier placement
             if base_distance < min_base_distance:
                 can_place = False
                 conflict_reason = f"Too close to base (distance: {base_distance:.1f}, needed: {min_base_distance:.1f})"
@@ -866,6 +866,7 @@ class GameLogicSystem(System):
             'superlaser': (SUPERLASER_RANGE, (255, 100, 255, 100)),  # Purple for superlasers
             'repair': (REPAIR_RANGE, (0, 255, 255, 100)),    # Cyan for repair
             'miner': (MINER_RANGE, (0, 255, 0, 100)),        # Green for miners
+            'connector': (POWER_RANGE, (255, 255, 0, 100)),  # Yellow for connectors
         }
         
         if build_type in building_ranges:

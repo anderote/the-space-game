@@ -401,18 +401,51 @@ class WaveManager:
     def get_spawn_position(self):
         """Get spawn position based on formation or single spawn"""
         if self.formations:
-            # Formation spawning with multiple directions
+            # Enhanced grid formation spawning
             formation_x, formation_y = self.formations[self.current_formation]
-            # Add some spread within the formation
-            spread = 50
-            x = formation_x + random.uniform(-spread, spread)
-            y = formation_y + random.uniform(-spread, spread)
-            # Keep within world bounds
-            x = max(0, min(self.world_w, x))
-            y = max(0, min(self.world_h, y))
             
-            # Move to next formation after spawning some enemies
-            if random.random() < 0.3:  # 30% chance to switch formations
+            # Create grid positions within each formation
+            if not hasattr(self, 'formation_grid_positions'):
+                self.formation_grid_positions = {}
+                self.formation_spawn_counts = {}
+            
+            if self.current_formation not in self.formation_grid_positions:
+                # Create a 3x3 or 4x4 grid for this formation
+                grid_size = 3 if self.enemies_per_formation <= 9 else 4
+                spacing = 60  # Distance between ships in grid
+                
+                grid_positions = []
+                start_offset = -(grid_size - 1) * spacing / 2
+                
+                for row in range(grid_size):
+                    for col in range(grid_size):
+                        offset_x = start_offset + col * spacing
+                        offset_y = start_offset + row * spacing
+                        grid_positions.append((formation_x + offset_x, formation_y + offset_y))
+                
+                # Shuffle to make spawning less predictable but maintain formation
+                random.shuffle(grid_positions)
+                self.formation_grid_positions[self.current_formation] = grid_positions
+                self.formation_spawn_counts[self.current_formation] = 0
+            
+            # Get next position from grid
+            spawn_count = self.formation_spawn_counts[self.current_formation]
+            grid_positions = self.formation_grid_positions[self.current_formation]
+            
+            if spawn_count < len(grid_positions):
+                x, y = grid_positions[spawn_count]
+                self.formation_spawn_counts[self.current_formation] += 1
+            else:
+                # Fallback if we need more ships than grid positions
+                x = formation_x + random.uniform(-100, 100)
+                y = formation_y + random.uniform(-100, 100)
+            
+            # Keep within world bounds
+            x = max(50, min(self.world_w - 50, x))
+            y = max(50, min(self.world_h - 50, y))
+            
+            # Move to next formation after spawning enough enemies
+            if self.formation_spawn_counts[self.current_formation] >= self.enemies_per_formation:
                 self.current_formation = (self.current_formation + 1) % len(self.formations)
             
             return x, y
