@@ -1,7 +1,8 @@
 """
 Power grid and connection logic for Space Game Clone.
+Simplified system: nodes automatically connect to nearby nodes.
 """
-from collections import deque, defaultdict
+from collections import deque
 import math
 
 class PowerGrid:
@@ -12,26 +13,17 @@ class PowerGrid:
         self.connections = []  # List of (building1, building2) tuples
         self.building_connections = {}  # Building id -> list of connected building objects
         
-        # Connection limits per building type
-        self.connection_limits = {
-            'connector': 6,
-            'turret': 1,      # defense nodes
-            'laser': 1,       # defense nodes  
-            'superlaser': 1,  # defense nodes
-            'miner': 1,       # mining nodes
-            'solar': 4,       # other nodes
-            'battery': 4,     # other nodes
-            'repair': 4,      # other nodes
-            'converter': 4    # other nodes
-        }
-
     def get_building_id(self, building):
         """Get a unique ID for a building (using memory address)."""
         return id(building)
     
     def get_connection_limit(self, building):
         """Get the maximum number of connections for a building type."""
-        return self.connection_limits.get(building.type, 4)
+        # Defense and mining nodes have limited connections
+        if building.type in ['turret', 'laser', 'superlaser', 'miner']:
+            return 2
+        # All other nodes can have up to 6 connections
+        return 6
     
     def can_connect(self, building1, building2):
         """Check if two buildings can be connected."""
@@ -99,47 +91,35 @@ class PowerGrid:
             # Remove from building_connections
             del self.building_connections[building_id]
     
-    def find_nearest_connections(self, new_building):
-        """Find the best connections for a new building."""
-        # Get all potential connections within range
-        potential_connections = []
-        
-        for existing in self.buildings:
-            if existing != new_building:
-                distance = math.sqrt((new_building.x - existing.x) ** 2 + (new_building.y - existing.y) ** 2)
-                if distance <= self.power_range:
-                    potential_connections.append((distance, existing))
-        
-        # Sort by distance
-        potential_connections.sort(key=lambda x: x[0])
-        
-        # Try to connect to the nearest buildings, respecting connection limits
-        new_building_limit = self.get_connection_limit(new_building)
-        connections_made = 0
-        
-        for distance, existing in potential_connections:
-            if connections_made >= new_building_limit:
-                break
-            
-            if self.can_connect(new_building, existing):
-                self.add_connection(new_building, existing)
-                connections_made += 1
-                
-                # Prioritize connecting to powered buildings
-                if existing.powered:
-                    break
+    def auto_connect_all(self):
+        """Automatically connect all buildings that can be connected."""
+        # Try to connect every building to every other nearby building
+        for i, building1 in enumerate(self.buildings):
+            for j, building2 in enumerate(self.buildings):
+                if i < j:  # Avoid duplicate connections
+                    # Check if they're within range and not already connected
+                    distance = math.sqrt((building1.x - building2.x) ** 2 + (building1.y - building2.y) ** 2)
+                    if distance <= self.power_range:
+                        building1_id = self.get_building_id(building1)
+                        building2_id = self.get_building_id(building2)
+                        
+                        # Check if already connected
+                        already_connected = (building1_id in self.building_connections and 
+                                           building2 in self.building_connections[building1_id])
+                        
+                        if not already_connected:
+                            self.add_connection(building1, building2)
 
     def update(self):
         """Update the power grid connections and propagate power."""
         # Clean up connections for buildings that no longer exist
-        valid_buildings = self.buildings  # Use list directly instead of set
+        valid_buildings = self.buildings
         
         # Remove connections to non-existent buildings
         self.connections = [(b1, b2) for b1, b2 in self.connections 
                           if b1 in valid_buildings and b2 in valid_buildings]
         
         # Clean up building_connections dict
-        # Create a mapping of building object to ID for validation
         valid_building_ids = {self.get_building_id(b) for b in valid_buildings}
         
         building_ids_to_remove = []
@@ -154,11 +134,8 @@ class PowerGrid:
         for building_id in building_ids_to_remove:
             del self.building_connections[building_id]
         
-        # Auto-connect new buildings that don't have connections yet
-        for building in self.buildings:
-            building_id = self.get_building_id(building)
-            if building_id not in self.building_connections or len(self.building_connections[building_id]) == 0:
-                self.find_nearest_connections(building)
+        # Auto-connect all buildings that can be connected
+        self.auto_connect_all()
         
         # Power propagation
         self.propagate_power()
@@ -171,7 +148,7 @@ class PowerGrid:
         
         # Start BFS from power sources (solar panels and batteries)
         queue = deque()
-        powered_buildings = []  # Use list instead of set
+        powered_buildings = []
         
         for building in self.buildings:
             if building.type in ['solar', 'battery']:
