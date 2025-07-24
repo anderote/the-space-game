@@ -138,9 +138,10 @@ class UISystem(System):
         
         # Show selected building info
         if selected_building:
+            power_status = "⚡ Powered" if selected_building.powered else "❌ No Power"
             info_text = self.render_system.small_font.render(
                 f"Selected: {selected_building.type.capitalize()} (Level {selected_building.level}) - "
-                f"Health: {int(selected_building.health)}/{int(selected_building.max_health)}", 
+                f"Health: {int(selected_building.health)}/{int(selected_building.max_health)} - {power_status}", 
                 True, WHITE
             )
             self.render_system.screen.blit(info_text, (400, 135))

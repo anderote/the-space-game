@@ -408,7 +408,7 @@ class GameLogicSystem(System):
         
         for existing in self.buildings:
             distance = math.sqrt((x - existing.x) ** 2 + (y - existing.y) ** 2)
-            min_distance = new_building.radius + existing.radius + 0.8
+            min_distance = new_building.radius + existing.radius + 2.0  # Minimal buffer for easier placement
             if distance < min_distance:
                 can_place = False
                 conflict_reason = f"Too close to {existing.type} (distance: {distance:.1f}, needed: {min_distance:.1f})"
@@ -417,13 +417,16 @@ class GameLogicSystem(System):
         # Check distance to base
         if can_place:
             base_distance = math.sqrt((x - self.base_pos[0]) ** 2 + (y - self.base_pos[1]) ** 2)
-            min_base_distance = new_building.radius + BASE_RADIUS + 0.8
+            min_base_distance = new_building.radius + BASE_RADIUS + 2.0  # Minimal buffer for easier placement
             if base_distance < min_base_distance:
                 can_place = False
                 conflict_reason = f"Too close to base (distance: {base_distance:.1f}, needed: {min_base_distance:.1f})"
         
         if can_place:
             self.buildings.append(new_building)
+            # Update power grid immediately after adding a building
+            self.power_grid.buildings = self.buildings
+            self.power_grid.find_nearest_connections(new_building)
             self.selected_build = None
             print(f"✅ Placed {build_type} at ({x:.0f}, {y:.0f})")
         else:
@@ -648,8 +651,13 @@ class GameLogicSystem(System):
         destroyed_buildings = [b for b in self.buildings if b.health <= 0]
         for building in destroyed_buildings:
             self.add_particles(building.x, building.y, 20, (255, 100, 0), speed_range=(2, 6), lifetime_range=(30, 50))
+            # Remove building from power grid
+            self.power_grid.remove_building(building)
         
         self.buildings[:] = [b for b in self.buildings if b.health > 0]
+        
+        # Update power grid buildings list
+        self.power_grid.buildings = self.buildings
         
         # Remove depleted asteroids
         self.asteroids[:] = [a for a in self.asteroids if a.minerals > 0]
@@ -694,6 +702,9 @@ class GameLogicSystem(System):
         
         # Draw base
         render_system.draw_base(self.base_pos, BASE_RADIUS, self.base_health, BASE_HEALTH)
+        
+        # Draw power grid connections
+        render_system.draw_power_connections(self.power_grid)
         
         # Draw buildings with selection glow
         for building in self.buildings:

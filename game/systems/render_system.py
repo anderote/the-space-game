@@ -207,6 +207,33 @@ class RenderSystem(System):
         if screen_range > 5:  # Only draw if visible
             pygame.draw.circle(self.screen, color[:3], (int(screen_x), int(screen_y)), int(screen_range), 2)
     
+    def draw_power_connections(self, power_grid):
+        """Draw power grid connections."""
+        connections = power_grid.get_connections()
+        
+        for x1, y1, x2, y2 in connections:
+            screen_x1, screen_y1 = self.camera.world_to_screen(x1, y1)
+            screen_x2, screen_y2 = self.camera.world_to_screen(x2, y2)
+            
+            # Check if connection is visible on screen
+            if ((-50 <= screen_x1 <= SCREEN_WIDTH + 50 and -50 <= screen_y1 <= SCREEN_HEIGHT + 50) or
+                (-50 <= screen_x2 <= SCREEN_WIDTH + 50 and -50 <= screen_y2 <= SCREEN_HEIGHT + 50)):
+                
+                # Draw connection line with slight glow effect
+                line_width = max(1, int(3 * self.camera.zoom))
+                
+                # Outer glow
+                pygame.draw.line(self.screen, (50, 150, 255), 
+                               (int(screen_x1), int(screen_y1)), 
+                               (int(screen_x2), int(screen_y2)), 
+                               line_width + 2)
+                
+                # Main line
+                pygame.draw.line(self.screen, (100, 200, 255), 
+                               (int(screen_x1), int(screen_y1)), 
+                               (int(screen_x2), int(screen_y2)), 
+                               line_width)
+    
     def present(self):
         """Present the rendered frame to the screen."""
         pygame.display.flip() 
