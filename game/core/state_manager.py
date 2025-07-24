@@ -71,8 +71,7 @@ class MenuState(GameState):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:  # Start new game
                 self.state_manager.change_state(GameStateType.PLAYING)
-            elif event.key == pygame.K_ESCAPE:
-                return False  # Quit game
+            # ESC key intentionally removed to prevent accidental quitting
         return True
     
     def render(self, surface):
@@ -111,7 +110,7 @@ class PlayingState(GameState):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 self.state_manager.change_state(GameStateType.PAUSED)
-            elif event.key == pygame.K_ESCAPE:
+            elif event.key == pygame.K_o:
                 self.state_manager.change_state(GameStateType.MENU)
             elif event.key == pygame.K_1:
                 self.game_speed = 0.0  # Pause
@@ -154,7 +153,7 @@ class PausedState(GameState):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 self.state_manager.change_state(GameStateType.PLAYING)
-            elif event.key == pygame.K_ESCAPE:
+            elif event.key == pygame.K_o:
                 self.state_manager.change_state(GameStateType.MENU)
         return True
     
@@ -184,7 +183,7 @@ class GameOverState(GameState):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
                 self.state_manager.change_state(GameStateType.PLAYING)
-            elif event.key == pygame.K_ESCAPE:
+            elif event.key == pygame.K_o:
                 self.state_manager.change_state(GameStateType.MENU)
         return True
     
@@ -255,10 +254,10 @@ class StateManager:
         elif data['type'] == 'toggle_menu':
             # Toggle between playing and menu state
             if isinstance(self.current_state, PlayingState):
-                self.change_state(GameState.MENU)
+                self.change_state(GameStateType.MENU)
                 print("Opened game menu")
             else:
-                self.change_state(GameState.PLAYING)
+                self.change_state(GameStateType.PLAYING)
                 print("Returned to game")
         elif data['type'] == 'quit':
             self.quit()

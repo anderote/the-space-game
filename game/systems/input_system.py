@@ -80,10 +80,11 @@ class InputSystem(System):
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_pause'})
         
         # Menu and quit controls
-        elif key == pygame.K_ESCAPE:
+        elif key == pygame.K_o:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
         elif key == pygame.K_p:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'quit'})
+        # Note: ESC key intentionally removed to prevent accidental quitting
         # Note: ESC key no longer quits game - use window close button instead
     
     def _handle_mouse_click(self, button, pos):
