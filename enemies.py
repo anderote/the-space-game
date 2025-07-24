@@ -362,13 +362,15 @@ class WaveManager:
 
     def calculate_wave_points(self):
         """Calculate total points for this wave using exponential growth"""
-        if self.wave <= 5:
-            # First 5 waves: only basic enemies (1 point each)
-            return min(3 + self.wave, 8)  # Waves 1-5: 4,5,6,7,8 points
+        if self.wave <= 3:
+            # First 3 waves: only basic enemies (1 point each) - 3x larger starting size
+            base_points = (3 + self.wave) * 3  # Waves 1-3: 12,15,18 points (was 4,5,6)
+            return min(base_points, 24)
         else:
-            # Exponential growth after wave 5
-            base_points = 8
-            return int(base_points * (1.4 ** (self.wave - 5)))
+            # Exponential growth after wave 3 - 30% slower growth
+            base_points = 24  # Starting from wave 4
+            growth_factor = 1.4 * 0.7  # 30% slower growth = 0.98
+            return int(base_points * (growth_factor ** (self.wave - 3)))
     
     def generate_enemy_composition(self):
         """Generate list of enemy types to spawn based on wave points"""
