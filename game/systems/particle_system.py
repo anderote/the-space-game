@@ -351,7 +351,7 @@ class ParticleSystem:
             size_range=(2, 4)
         )
     
-    def update(self):
+    def update(self, dt=None):
         """Update all particles and remove dead ones."""
         self.particles = [p for p in self.particles if p.update()]
     

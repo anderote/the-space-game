@@ -87,8 +87,7 @@ class GameEngine:
             'render': self.render_system,
             'ui': self.ui_system,
             'input': self.input_system,
-            'audio': self.audio_system,
-            'particles': self.particle_system
+            'audio': self.audio_system
         }
         
         # Create states
