@@ -525,6 +525,94 @@ class MissileLauncher(Building):
         return int(self.build_cost["minerals"] * 0.5)
 
 
+class ForceFieldGenerator(Building):
+    def __init__(self, x, y):
+        super().__init__(x, y, (0, 255, 255), 22)
+        self.type = "force_field"
+        self.field_range = 150  # Range of force field protection
+        self.shield_strength = 100  # Shield points per second
+        self.energy_cost = 8  # Energy per second to maintain
+        self.active = False
+        self.shield_charge = 0
+        self.max_shield = 500
+        
+    @property
+    def build_cost(self):
+        return {"minerals": 400, "energy": 0}
+    
+    @property
+    def sell_price(self):
+        return int(self.build_cost["minerals"] * 0.5)
+    
+    def draw(self, surface, camera_x=0, camera_y=0, zoom=1.0):
+        # Call parent draw method first
+        super().draw(surface, camera_x, camera_y, zoom)
+        
+        # Calculate screen position
+        screen_x = (self.x - camera_x) * zoom + SCREEN_WIDTH // 2
+        screen_y = (self.y - camera_y) * zoom + SCREEN_HEIGHT // 2
+        screen_radius = self.radius * zoom
+        screen_field_range = self.field_range * zoom
+        
+        # Draw force field generator as a cyan octagon with energy core
+        points = []
+        for i in range(8):
+            angle = i * 2 * np.pi / 8
+            px = screen_x + screen_radius * np.cos(angle)
+            py = screen_y + screen_radius * np.sin(angle)
+            points.append((px, py))
+        
+        # Determine color based on power state
+        if not self.powered:
+            color = (50, 100, 100)  # Dark cyan for unpowered
+        elif getattr(self, 'disabled', False):
+            color = (0, 127, 127)  # Dimmed cyan for disabled
+        else:
+            color = (0, 255, 255)  # Bright cyan for active
+        
+        pygame.draw.polygon(surface, color, points)
+        pygame.draw.polygon(surface, (255, 255, 255), points, 2)
+        
+        # Draw energy core
+        if self.powered and not getattr(self, 'disabled', False):
+            import time
+            current_time = time.time()
+            core_pulse = 0.4 + 0.3 * math.sin(current_time * 4)
+            core_radius = int(screen_radius * core_pulse * 0.6)
+            pygame.draw.circle(surface, (255, 255, 255), (int(screen_x), int(screen_y)), core_radius)
+        
+        # Draw force field range indicator if active
+        if self.powered and not getattr(self, 'disabled', False) and self.active:
+            # Pulsing field boundary
+            import time
+            current_time = time.time()
+            field_alpha = int(30 + 20 * math.sin(current_time * 2))
+            
+            # Create transparent surface for force field
+            field_surface = pygame.Surface((screen_field_range * 2, screen_field_range * 2), pygame.SRCALPHA)
+            pygame.draw.circle(field_surface, (0, 255, 255, field_alpha), 
+                             (int(screen_field_range), int(screen_field_range)), int(screen_field_range), 3)
+            
+            surface.blit(field_surface, (screen_x - screen_field_range, screen_y - screen_field_range))
+            
+        # Draw shield charge indicator
+        if self.shield_charge > 0:
+            charge_ratio = self.shield_charge / self.max_shield
+            bar_width = screen_radius * 3
+            bar_height = 8 * zoom
+            bar_x = screen_x - bar_width/2
+            bar_y = screen_y + screen_radius + 15*zoom
+            
+            # Background
+            pygame.draw.rect(surface, (20, 20, 50), (bar_x, bar_y, bar_width, bar_height))
+            # Shield charge
+            charge_width = int(bar_width * charge_ratio)
+            if charge_width > 0:
+                pygame.draw.rect(surface, (0, 200, 255), (bar_x, bar_y, charge_width, bar_height))
+            # Border
+            pygame.draw.rect(surface, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), 1)
+
+
 class FriendlyShip:
     """Friendly attack ship launched from hangars"""
     def __init__(self, x, y, hangar):

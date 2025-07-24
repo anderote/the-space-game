@@ -179,7 +179,8 @@ class GameEngine:
                 energy_ratio,
                 self.game_logic_system.current_energy_production,
                 self.game_logic_system.solar_panel_count,
-                self.game_logic_system.solar_panel_levels
+                self.game_logic_system.solar_panel_levels,
+                self.game_logic_system.research_system
             )
             self.ui_system.draw_building_panel(
                 self.game_logic_system.selected_build,

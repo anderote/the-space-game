@@ -362,32 +362,44 @@ class WaveManager:
         self.enemies_to_spawn = self.generate_enemy_composition()
         self.spawn_timer = 0
         
-        # Set up formations for larger waves
+        # Enhanced multi-directional formation system for aggressive waves
         total_enemies = len(self.enemies_to_spawn)
-        if total_enemies >= FORMATION_SIZE_THRESHOLD:
-            num_formations = min(MAX_FORMATIONS, max(2, total_enemies // 8))
-            self.enemies_per_formation = total_enemies // num_formations
+        
+        # Formation waves (every 6 waves) or large regular waves get multi-point spawning
+        if self.wave % 6 == 0 or total_enemies >= FORMATION_SIZE_THRESHOLD:
+            # Massive formation waves get many more spawn points
+            if self.wave % 6 == 0:
+                # Formation waves: spawn from ALL sides with multiple points per side
+                num_formations = min(16, max(8, total_enemies // 6))  # More spawn points for chaos
+                print(f"🌊 Creating {num_formations} spawn points for formation wave!")
+            else:
+                # Large regular waves: moderate multi-spawn
+                num_formations = min(MAX_FORMATIONS, max(4, total_enemies // 8))
             
-            # Create formation spawn points around the map edges
+            self.enemies_per_formation = max(1, total_enemies // num_formations)
+            
+            # Create spawn points all around the larger map perimeter
             self.formations = []
             for i in range(num_formations):
-                # Distribute formations around the map perimeter
+                # Enhanced distribution for larger map
                 side = i % 4
-                if side == 0:  # Top
-                    x = random.randint(self.world_w // 4, 3 * self.world_w // 4)
-                    y = 0
-                elif side == 1:  # Right
-                    x = self.world_w
-                    y = random.randint(self.world_h // 4, 3 * self.world_h // 4)
-                elif side == 2:  # Bottom
-                    x = random.randint(self.world_w // 4, 3 * self.world_w // 4)
-                    y = self.world_h
-                else:  # Left
-                    x = 0
-                    y = random.randint(self.world_h // 4, 3 * self.world_h // 4)
+                if side == 0:  # Top edge - multiple points
+                    x = random.randint(self.world_w // 8, 7 * self.world_w // 8)
+                    y = random.randint(-50, 50)  # Just outside map
+                elif side == 1:  # Right edge - multiple points
+                    x = random.randint(self.world_w - 50, self.world_w + 50)
+                    y = random.randint(self.world_h // 8, 7 * self.world_h // 8)
+                elif side == 2:  # Bottom edge - multiple points
+                    x = random.randint(self.world_w // 8, 7 * self.world_w // 8)
+                    y = random.randint(self.world_h - 50, self.world_h + 50)
+                else:  # Left edge - multiple points
+                    x = random.randint(-50, 50)
+                    y = random.randint(self.world_h // 8, 7 * self.world_h // 8)
                 
                 self.formations.append((x, y))
             
+            # Randomize formation order for unpredictable attacks
+            random.shuffle(self.formations)
             self.current_formation = 0
         else:
             # Small waves use single spawn points
@@ -395,24 +407,159 @@ class WaveManager:
             self.enemies_per_formation = total_enemies
 
     def calculate_wave_points(self):
-        """Calculate total points for this wave with minimum 10 fighters per wave"""
-        # Ensure we have enough points for minimum 10 fighters plus additional enemies
-        min_fighters = max(10, 10 + self.wave)  # At least 10, growing by 1 per wave
+        """Calculate total points for this wave with dynamic special waves"""
+        # Special wave types for variety and challenge
+        wave_type = self._determine_wave_type()
         
-        if self.wave <= 3:
-            # Early waves: minimum fighters + some extra
-            return min_fighters + (self.wave * 2)
+        if wave_type == "formation":
+            # MASSIVE formation wave: 30*(1 + 0.8*N) ships for overwhelming assault
+            formation_ships = int(30 * (1 + 0.8 * self.wave))
+            print(f"🚀 MASSIVE FORMATION WAVE {self.wave}: {formation_ships} ships incoming from all directions!")
+            return formation_ships
+        elif wave_type == "elite":
+            # Elite waves: fewer but much stronger ships
+            elite_ships = max(8, int(10 + self.wave * 2))
+            print(f"⭐ ELITE WAVE {self.wave}: {elite_ships} elite ships with enhanced abilities!")
+            return elite_ships
+        elif wave_type == "swarm":
+            # Swarm waves: massive numbers of weak ships
+            swarm_ships = int(40 + self.wave * 6)
+            print(f"🐝 SWARM WAVE {self.wave}: {swarm_ships} ships in overwhelming numbers!")
+            return swarm_ships
+        elif wave_type == "boss":
+            # Boss waves: single massive enemy with escorts
+            boss_ships = max(5, int(8 + self.wave))
+            print(f"👹 BOSS WAVE {self.wave}: {boss_ships} ships led by a massive mothership!")
+            return boss_ships
         else:
-            # Later waves: minimum fighters + scaling additional enemies
-            extra_points = int((self.wave - 3) * 3)  # More enemies in later waves
-            return min_fighters + extra_points
+            # Regular waves with much more aggressive scaling
+            if self.wave <= 3:
+                # Early waves: moderate growth
+                return 15 + (self.wave * 5)  # 20, 25, 30 ships
+            elif self.wave <= 10:
+                # Mid waves: exponential growth
+                base_ships = 35 + ((self.wave - 3) * 8)  # Faster scaling
+                return base_ships
+            else:
+                # Late waves: massive exponential scaling
+                base_ships = 91  # From wave 10
+                exponential_growth = int((self.wave - 10) ** 1.8 * 5)  # Exponential scaling
+                return base_ships + exponential_growth
+    
+    def _determine_wave_type(self):
+        """Determine what type of special wave this is"""
+        if self.wave % 15 == 0:  # Every 15 waves
+            return "boss"
+        elif self.wave % 10 == 0:  # Every 10 waves
+            return "elite"
+        elif self.wave % 8 == 0:  # Every 8 waves
+            return "swarm"
+        elif self.wave % 6 == 0:  # Every 6 waves
+            return "formation"
+        else:
+            return "regular"
     
     def generate_enemy_composition(self):
         """Generate list of enemy types to spawn based on wave points"""
         import math
         enemies_to_spawn = []
         remaining_points = self.wave_points
+        wave_type = self._determine_wave_type()
         
+        # Special handling for different wave types
+        if wave_type == "formation":
+            # MASSIVE formation waves with varied composition
+            total_ships = remaining_points
+            
+            # Dynamic composition based on wave number
+            if self.wave <= 12:
+                # Early formation waves: 50% fighters, 35% motherships, 15% special
+                fighters = int(total_ships * 0.5)
+                motherships = int(total_ships * 0.35)
+                special_ships = total_ships - fighters - motherships
+            else:
+                # Late formation waves: 40% fighters, 40% motherships, 20% special
+                fighters = int(total_ships * 0.4)
+                motherships = int(total_ships * 0.4)
+                special_ships = total_ships - fighters - motherships
+            
+            # Add fighters
+            for _ in range(fighters):
+                enemies_to_spawn.append("basic")
+            
+            # Add motherships
+            for _ in range(motherships):
+                enemies_to_spawn.append("mothership")
+            
+            # Add varied special ships
+            special_types = ["assault", "stealth", "heavy", "kamikaze"]
+            for i in range(special_ships):
+                ship_type = special_types[i % len(special_types)]
+                enemies_to_spawn.append(ship_type)
+            
+            return enemies_to_spawn
+        
+        elif wave_type == "elite":
+            # Elite waves: all ships are upgraded versions
+            total_ships = remaining_points
+            
+            # Composition: 30% assault, 30% stealth, 25% large, 15% cruiser
+            assault_count = int(total_ships * 0.3)
+            stealth_count = int(total_ships * 0.3)
+            large_count = int(total_ships * 0.25)
+            cruiser_count = total_ships - assault_count - stealth_count - large_count
+            
+            for _ in range(assault_count):
+                enemies_to_spawn.append("assault")
+            for _ in range(stealth_count):
+                enemies_to_spawn.append("stealth")
+            for _ in range(large_count):
+                enemies_to_spawn.append("large")
+            for _ in range(cruiser_count):
+                enemies_to_spawn.append("cruiser")
+            
+            return enemies_to_spawn
+        
+        elif wave_type == "swarm":
+            # Swarm waves: mostly basic fighters with some fast ships
+            total_ships = remaining_points
+            
+            # Composition: 70% basic, 20% kamikaze, 10% assault
+            basic_count = int(total_ships * 0.7)
+            kamikaze_count = int(total_ships * 0.2)
+            assault_count = total_ships - basic_count - kamikaze_count
+            
+            for _ in range(basic_count):
+                enemies_to_spawn.append("basic")
+            for _ in range(kamikaze_count):
+                enemies_to_spawn.append("kamikaze")
+            for _ in range(assault_count):
+                enemies_to_spawn.append("assault")
+            
+            return enemies_to_spawn
+        
+        elif wave_type == "boss":
+            # Boss waves: mostly motherships and large ships
+            total_ships = remaining_points
+            
+            # Composition: 20% basic, 40% mothership, 25% large, 15% cruiser
+            basic_count = int(total_ships * 0.2)
+            mothership_count = int(total_ships * 0.4)
+            large_count = int(total_ships * 0.25)
+            cruiser_count = total_ships - basic_count - mothership_count - large_count
+            
+            for _ in range(basic_count):
+                enemies_to_spawn.append("basic")
+            for _ in range(mothership_count):
+                enemies_to_spawn.append("mothership")
+            for _ in range(large_count):
+                enemies_to_spawn.append("large")
+            for _ in range(cruiser_count):
+                enemies_to_spawn.append("cruiser")
+            
+            return enemies_to_spawn
+        
+        # Regular wave generation
         # Ensure at least 10 basic enemies per wave, growing over time
         min_fighters = max(10, 10 + self.wave)  # Start with 10, add 1 per wave
         
@@ -437,10 +584,15 @@ class WaveManager:
                 enemies_to_spawn.append("basic")
                 remaining_points -= 1
         else:
-            # Later waves: Add variety on top of guaranteed fighters
+            # Later waves: Much more aggressive scaling and variety
             
-            # Always add some motherships to later waves
-            motherships_to_add = min(3, max(1, remaining_points // 8))  # Scale with wave size
+            # Scale motherships with wave level - more for higher waves
+            if self.wave <= 10:
+                motherships_to_add = max(2, min(6, remaining_points // 6))  # More motherships
+            else:
+                # High level waves: lots of motherships
+                motherships_to_add = max(4, min(remaining_points // 4, remaining_points // 3))
+            
             for _ in range(motherships_to_add):
                 if remaining_points >= 8:
                     enemies_to_spawn.append("mothership")
@@ -460,16 +612,19 @@ class WaveManager:
             while remaining_points > 0 and attempts < 100:  # Prevent infinite loops
                 attempts += 1
                 
-                # Prefer smaller ships early, larger ships in later waves
-                if self.wave <= 7:
-                    # Early waves: favor smaller ships
-                    weights = [0.4, 0.3, 0.15, 0.1, 0.05]
-                elif self.wave <= 12:
-                    # Mid waves: balanced mix
-                    weights = [0.25, 0.25, 0.2, 0.2, 0.1]
-                else:
-                    # Late waves: favor larger ships
+                # More aggressive ship distribution scaling
+                if self.wave <= 5:
+                    # Early waves: mostly small ships
+                    weights = [0.5, 0.3, 0.15, 0.05, 0.0]
+                elif self.wave <= 10:
+                    # Mid waves: balanced with more heavy ships
+                    weights = [0.3, 0.25, 0.25, 0.15, 0.05]
+                elif self.wave <= 20:
+                    # High waves: prefer larger ships
                     weights = [0.15, 0.2, 0.25, 0.25, 0.15]
+                else:
+                    # Ultra-high waves: mostly heavy ships
+                    weights = [0.1, 0.15, 0.2, 0.3, 0.25]
                 
                 # Choose ship type based on weights and available points
                 available_ships = [(ship, cost) for ship, cost in ship_types if cost <= remaining_points]

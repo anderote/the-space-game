@@ -233,7 +233,7 @@ class UISystem(System):
         restart_x = (SCREEN_WIDTH - restart_text.get_width()) // 2
         self.render_system.screen.blit(restart_text, (restart_x, 450))
     
-    def draw_hud(self, resources, wave_manager, score, kill_count, selected_building, energy_ratio, energy_production=0.0, solar_count=0, solar_levels=0):
+    def draw_hud(self, resources, wave_manager, score, kill_count, selected_building, energy_ratio, energy_production=0.0, solar_count=0, solar_levels=0, research_system=None):
         """Draw the main game HUD."""
         # Resource panel with glass effect (made wider for enhanced energy display)
         self.render_system.draw_glass_panel(10, 45, 380, 35, alpha=160)
@@ -308,11 +308,15 @@ class UISystem(System):
         # Building info panel
         if selected_building:
             self.draw_building_info_panel(selected_building, resources)
+        
+        # Research panel
+        if research_system:
+            self.draw_research_panel(research_system, resources)
     
     def draw_building_panel(self, selected_build, resources):
         """Draw the building selection panel."""
-        panel_width = 200
-        panel_x = SCREEN_WIDTH - panel_width
+        panel_width = 180  # Reduced width to make room for research panel
+        panel_x = SCREEN_WIDTH - 380  # Moved left to make room for research panel
         panel_height = SCREEN_HEIGHT
         
         # Use glass panel effect
@@ -335,7 +339,8 @@ class UISystem(System):
             ('Repair', 'repair', BUILD_COSTS['repair'], 'R'),
             ('Converter', 'converter', BUILD_COSTS['converter'], 'V'),
             ('Hangar', 'hangar', BUILD_COSTS['hangar'], 'H'),
-            ('Missile', 'missile_launcher', BUILD_COSTS['missile_launcher'], 'G')
+            ('Missile', 'missile_launcher', BUILD_COSTS['missile_launcher'], 'G'),
+            ('Force Field', 'force_field', BUILD_COSTS['force_field'], 'F')
         ]
         
         button_height = 50
@@ -400,4 +405,115 @@ class UISystem(System):
             
             cost_color = (255, 255, 100) if is_affordable else (200, 150, 150)
             cost_text = self.render_system.small_font.render(f"Cost: {cost}", True, cost_color)
-            self.render_system.screen.blit(cost_text, (button_x + 25, button_y + 28)) 
+            self.render_system.screen.blit(cost_text, (button_x + 25, button_y + 28))
+    
+    def draw_research_panel(self, research_system, resources):
+        """Draw the research panel."""
+        panel_width = 200
+        panel_x = SCREEN_WIDTH - panel_width
+        panel_height = SCREEN_HEIGHT
+        
+        # Use glass panel effect
+        self.render_system.draw_glass_panel(panel_x, 0, panel_width, panel_height, alpha=200)
+        
+        # Title
+        title_text = self.render_system.title_font.render("RESEARCH", True, (255, 200, 100))
+        title_x = (panel_width - title_text.get_width()) // 2
+        self.render_system.screen.blit(title_text, (panel_x + title_x, 20))
+        
+        # Scrollable research list
+        available_research = research_system.get_available_research()
+        completed_research = [research_system.research_nodes[node_id] for node_id in research_system.completed_research]
+        
+        button_height = 60
+        button_margin = 5
+        start_y = 60
+        max_visible = (SCREEN_HEIGHT - start_y - 20) // (button_height + button_margin)
+        
+        # Get mouse position for hover effects
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        
+        # Show available research first
+        y_offset = start_y
+        
+        if available_research:
+            # Available research header
+            header_text = self.render_system.small_font.render("Available:", True, (100, 255, 100))
+            self.render_system.screen.blit(header_text, (panel_x + 10, y_offset))
+            y_offset += 25
+            
+            for research in available_research[:max_visible // 2]:
+                if y_offset + button_height > SCREEN_HEIGHT - 20:
+                    break
+                self._draw_research_button(research, panel_x + 10, y_offset, panel_width - 20, button_height, resources, mouse_x, mouse_y, True)
+                y_offset += button_height + button_margin
+        
+        # Show completed research
+        if completed_research and y_offset < SCREEN_HEIGHT - 100:
+            y_offset += 10
+            header_text = self.render_system.small_font.render("Completed:", True, (100, 100, 255))
+            self.render_system.screen.blit(header_text, (panel_x + 10, y_offset))
+            y_offset += 25
+            
+            for research in completed_research:
+                if y_offset + button_height > SCREEN_HEIGHT - 20:
+                    break
+                self._draw_research_button(research, panel_x + 10, y_offset, panel_width - 20, button_height, resources, mouse_x, mouse_y, False)
+                y_offset += button_height + button_margin
+    
+    def _draw_research_button(self, research, x, y, width, height, resources, mouse_x, mouse_y, can_research):
+        """Draw a single research button."""
+        # Check if mouse is hovering
+        hovering = x <= mouse_x <= x + width and y <= mouse_y <= y + height
+        
+        # Button colors
+        if research.completed:
+            bg_color = (0, 100, 0, 120)  # Green for completed
+            border_color = (0, 200, 0)
+        elif can_research and resources.minerals >= research.cost:
+            bg_color = (100, 100, 0, 120) if not hovering else (150, 150, 0, 150)  # Yellow for available
+            border_color = (255, 255, 0) if not hovering else (255, 255, 100)
+        else:
+            bg_color = (100, 0, 0, 120)  # Red for unavailable
+            border_color = (200, 0, 0)
+        
+        # Draw button background
+        button_rect = pygame.Rect(x, y, width, height)
+        self.render_system.draw_glass_panel(x, y, width, height, alpha=120)
+        pygame.draw.rect(self.render_system.screen, border_color, button_rect, 2)
+        
+        # Research name
+        name_text = self.render_system.small_font.render(research.name, True, (255, 255, 255))
+        name_width = name_text.get_width()
+        if name_width > width - 10:
+            # Truncate if too long
+            truncated_name = research.name[:int(len(research.name) * (width - 10) / name_width)] + "..."
+            name_text = self.render_system.small_font.render(truncated_name, True, (255, 255, 255))
+        self.render_system.screen.blit(name_text, (x + 5, y + 5))
+        
+        # Cost
+        cost_color = (255, 100, 100) if resources.minerals < research.cost else (255, 255, 100)
+        if research.completed:
+            cost_text = self.render_system.small_font.render("DONE", True, (100, 255, 100))
+        else:
+            cost_text = self.render_system.small_font.render(f"⛏ {research.cost}", True, cost_color)
+        self.render_system.screen.blit(cost_text, (x + 5, y + 25))
+        
+        # Category icon
+        category_icons = {
+            "combat": "⚔",
+            "defense": "🛡",
+            "economy": "⛏",
+            "energy": "⚡",
+            "support": "🔧"
+        }
+        icon = category_icons.get(research.category, "🔬")
+        icon_text = self.render_system.small_font.render(icon, True, (200, 200, 200))
+        self.render_system.screen.blit(icon_text, (x + width - 25, y + 5))
+        
+        # Description (truncated)
+        desc_text = research.description
+        if len(desc_text) > 25:
+            desc_text = desc_text[:22] + "..."
+        desc_render = self.render_system.small_font.render(desc_text, True, (200, 200, 200))
+        self.render_system.screen.blit(desc_render, (x + 5, y + 40)) 

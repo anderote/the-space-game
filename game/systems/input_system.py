@@ -28,7 +28,8 @@ class InputSystem(System):
             pygame.K_r: 'repair',
             pygame.K_v: 'converter',
             pygame.K_h: 'hangar',
-            pygame.K_g: 'missile_launcher'
+            pygame.K_g: 'missile_launcher',
+            pygame.K_f: 'force_field'
         }
         
         self.selected_build = None
@@ -119,25 +120,37 @@ class InputSystem(System):
     def _handle_mouse_click(self, button, pos):
         """Handle mouse clicks."""
         if button == 1:  # Left click
-            world_x, world_y = self.camera.screen_to_world(pos[0], pos[1])
+            # Check for research panel clicks first (right side of screen)
+            if pos[0] >= SCREEN_WIDTH - 200:  # Research panel area
+                self._handle_research_click(pos)
+                return
             
-            if self.selected_build:
-                # Place building
-                event_system.emit(EventType.BUILDING_PLACED, {
-                    'type': 'place',
-                    'building_type': self.selected_build,
-                    'x': world_x,
-                    'y': world_y
-                })
+            # Check for building panel clicks (middle-right of screen)
+            elif pos[0] >= SCREEN_WIDTH - 380 and pos[0] < SCREEN_WIDTH - 200:  # Building panel area
+                # Building panel click handling would go here
+                pass
+            
+            # World interaction
             else:
-                # Select building
-                event_system.emit(EventType.BUILDING_PLACED, {
-                    'type': 'select_at',
-                    'x': world_x,
-                    'y': world_y
-                })
-                # Store selected building reference in input system for hotkey usage
-                # This will be updated by the game logic system after selection
+                world_x, world_y = self.camera.screen_to_world(pos[0], pos[1])
+                
+                if self.selected_build:
+                    # Place building
+                    event_system.emit(EventType.BUILDING_PLACED, {
+                        'type': 'place',
+                        'building_type': self.selected_build,
+                        'x': world_x,
+                        'y': world_y
+                    })
+                else:
+                    # Select building
+                    event_system.emit(EventType.BUILDING_PLACED, {
+                        'type': 'select_at',
+                        'x': world_x,
+                        'y': world_y
+                    })
+                    # Store selected building reference in input system for hotkey usage
+                    # This will be updated by the game logic system after selection
         
         elif button == 3:  # Right click
             # Cancel building placement or deselect
@@ -145,6 +158,33 @@ class InputSystem(System):
                 self.selected_build = None
             else:
                 self.selected_building = None
+    
+    def _handle_research_click(self, pos):
+        """Handle clicks in the research panel."""
+        # Calculate which research button was clicked
+        panel_x = SCREEN_WIDTH - 200
+        start_y = 60
+        button_height = 60
+        button_margin = 5
+        
+        # Check if click is in research area
+        if pos[0] < panel_x + 10 or pos[0] > SCREEN_WIDTH - 10:
+            return
+        
+        # Skip header area
+        if pos[1] < start_y + 25:
+            return
+        
+        # Calculate button index based on Y position
+        relative_y = pos[1] - (start_y + 25)  # Account for header
+        button_index = relative_y // (button_height + button_margin)
+        
+        # Emit research event - the game logic system will handle validation
+        event_system.emit(EventType.BUILDING_PLACED, {
+            'type': 'research_click',
+            'button_index': button_index,
+            'pos': pos
+        })
     
     def _handle_mouse_wheel(self, y):
         """Handle mouse wheel for zooming."""

@@ -8,8 +8,8 @@ SCREEN_HEIGHT = 900
 FPS = 60
 
 # World settings (3x bigger than screen, increased by 15%)
-WORLD_WIDTH = int(SCREEN_WIDTH * 1.5)  # Reduced by 50% (was 3 * 1.15)
-WORLD_HEIGHT = int(SCREEN_HEIGHT * 1.5)  # Reduced by 50% (was 3 * 1.15)
+WORLD_WIDTH = int(SCREEN_WIDTH * 3.0)  # Doubled from 1.5
+WORLD_HEIGHT = int(SCREEN_HEIGHT * 3.0)  # Doubled from 1.5
 
 # Camera settings
 CAMERA_SPEED = 10
@@ -56,7 +56,8 @@ BUILD_COSTS = {
     'repair': 120,
     'converter': 90,
     'hangar': 250,  # Hangar for friendly attack ships
-    'missile_launcher': 300  # Heavy missile launcher
+    'missile_launcher': 300,  # Heavy missile launcher
+    'force_field': 400  # Force field generator
 }
 
 # Building stats
@@ -70,10 +71,10 @@ TURRET_RANGE = 350  # base range
 TURRET_COOLDOWN = 170  # base cooldown in frames (40% slower than previous, was 120)
 TURRET_ENERGY_COST = 4  # energy per shot
 TURRET_MINERAL_COST = 3  # minerals per shot
-LASER_DAMAGE = 0.65  # per level per frame
+LASER_DAMAGE = 0.25  # per level per frame
 LASER_COST = 0.12  # energy per level per frame
 LASER_RANGE = 270  # base range
-SUPERLASER_DAMAGE = 6.5  # per level per frame - much higher damage
+SUPERLASER_DAMAGE = 2.5  # per level per frame - much higher damage
 SUPERLASER_COST = 1.2  # energy per level per frame - much higher cost
 SUPERLASER_RANGE = 700  # much longer range
 REPAIR_RATE = 0.15  # per level per frame

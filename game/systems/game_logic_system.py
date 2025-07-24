@@ -13,7 +13,8 @@ from game.utils.math_utils import distance_squared
 from settings import *
 from resources import ResourceManager
 from asteroids import Asteroid, DamageNumber
-from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Hangar, MissileLauncher, Building, FriendlyShip
+from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Hangar, MissileLauncher, ForceFieldGenerator, Building, FriendlyShip
+from research import ResearchSystem
 from power import PowerGrid
 from enemies import WaveManager, MothershipMissile, LargeShip, KamikazeShip
 
@@ -162,9 +163,7 @@ class Missile:
         else:
             self.x += (dx / dist) * self.speed
             self.y += (dy / dist) * self.speed
-            # Add trail particles
-            if random.random() < 0.3:
-                game_logic.add_particles(self.x, self.y, 1, (255, 200, 100), speed_range=(0.2, 0.8), lifetime_range=(8, 15))
+            # Missile trail particles removed
     
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
@@ -217,17 +216,12 @@ class HeavyMissile:
                     damage_to_deal = self.damage if enemy_dist < 10 else self.splash_damage
                     enemy.health -= damage_to_deal
             
-            # Add explosion effects
-            if game_logic.particle_system:
-                game_logic.particle_system.add_explosion(self.x, self.y, intensity=1.5)
-            game_logic.add_particles(self.x, self.y, 25, (255, 150, 0), speed_range=(2, 6), lifetime_range=(20, 40))
+            # Missile explosion particles removed
             
         else:
             self.x += (dx / dist) * self.speed
             self.y += (dy / dist) * self.speed
-            # Add bigger trail particles
-            if random.random() < 0.5:
-                game_logic.add_particles(self.x, self.y, 2, (255, 180, 0), speed_range=(0.3, 1.0), lifetime_range=(12, 20))
+            # Heavy missile trail particles removed
     
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
@@ -271,6 +265,9 @@ class GameLogicSystem(System):
         self.mothership_missiles = []
         self.friendly_ships = []  # Ships launched from hangars
         
+        # Research system
+        self.research_system = ResearchSystem()
+        
         # Game objects
         self.power_grid = None
         self.wave_manager = None
@@ -303,7 +300,8 @@ class GameLogicSystem(System):
             'repair': Repair,
             'converter': Converter,
             'hangar': Hangar,
-            'missile_launcher': MissileLauncher
+            'missile_launcher': MissileLauncher,
+            'force_field': ForceFieldGenerator
         }
     
     def initialize(self):
@@ -466,7 +464,7 @@ class GameLogicSystem(System):
         
         return asteroids
     
-    def add_particles(self, x, y, count, color, speed_range=(1, 3), lifetime_range=(30, 60)):
+    def add_particles(self, x, y, count, color, speed_range=(0.1, 0.3), lifetime_range=(30, 60)):
         """Add particles at a position with random velocities."""
         if self.particle_system:
             self.particle_system.add_particles(x, y, count, color, speed_range, lifetime_range)
@@ -506,6 +504,10 @@ class GameLogicSystem(System):
             self._sell_building(data['building'])
         elif data['type'] == 'toggle_disabled' and data.get('building'):
             self._toggle_building_disabled(data['building'])
+        elif data['type'] == 'research' and data.get('research_id'):
+            self._research_technology(data['research_id'])
+        elif data['type'] == 'research_click':
+            self._handle_research_click(data)
     
     def _place_building(self, build_type, x, y):
         """Place a building at the specified location."""
@@ -523,13 +525,16 @@ class GameLogicSystem(System):
         # Check for collisions
         new_building = self.build_types[build_type](x, y)
         
+        # Apply research multipliers to new building
+        self._apply_research_to_building(new_building)
+        
         # Check distance to other buildings
         can_place = True
         conflict_reason = ""
         
         for existing in self.buildings:
             distance = math.sqrt((x - existing.x) ** 2 + (y - existing.y) ** 2)
-            min_distance = new_building.radius + existing.radius + 1.0  # Reduced buffer by 50% for easier placement
+            min_distance = new_building.radius + existing.radius + 0.5  # Reduced buffer by 75% for easier placement
             if distance < min_distance:
                 can_place = False
                 conflict_reason = f"Too close to {existing.type} (distance: {distance:.1f}, needed: {min_distance:.1f})"
@@ -538,7 +543,7 @@ class GameLogicSystem(System):
         # Check distance to base
         if can_place:
             base_distance = math.sqrt((x - self.base_pos[0]) ** 2 + (y - self.base_pos[1]) ** 2)
-            min_base_distance = new_building.radius + BASE_RADIUS + 1.0  # Reduced buffer by 50% for easier placement
+            min_base_distance = new_building.radius + BASE_RADIUS + 0.5  # Reduced buffer by 75% for easier placement
             if base_distance < min_base_distance:
                 can_place = False
                 conflict_reason = f"Too close to base (distance: {base_distance:.1f}, needed: {min_base_distance:.1f})"
@@ -629,6 +634,68 @@ class GameLogicSystem(System):
             status = "disabled" if building.disabled else "enabled"
             print(f"🔄 {building.type.title()} {status}")
     
+    def _research_technology(self, research_id):
+        """Research a technology if possible."""
+        success, cost = self.research_system.research(research_id, self.resources.minerals)
+        if success:
+            self.resources.minerals -= cost
+            node = self.research_system.research_nodes[research_id]
+            print(f"🔬 Researched: {node.name} (-{cost} minerals)")
+            
+            # Apply research effects to existing buildings
+            self._apply_research_effects()
+        else:
+            node = self.research_system.research_nodes.get(research_id)
+            if node:
+                if self.resources.minerals < node.cost:
+                    print(f"❌ Not enough minerals for {node.name}! Need {node.cost}, have {int(self.resources.minerals)}")
+                else:
+                    print(f"❌ Prerequisites not met for {node.name}")
+    
+    def _apply_research_effects(self):
+        """Apply research effects to existing buildings and game state."""
+        # Apply effects to all existing buildings
+        for building in self.buildings:
+            self._apply_research_to_building(building)
+    
+    def _apply_research_to_building(self, building):
+        """Apply research effects to a specific building."""
+        # Apply health multipliers
+        health_multiplier = self.research_system.get_global_multiplier("building_health")
+        if health_multiplier > 1.0:
+            old_max_health = building.max_health
+            building.max_health = old_max_health * health_multiplier
+            # Scale current health proportionally if building is damaged
+            if building.health < old_max_health:
+                health_ratio = building.health / old_max_health
+                building.health = building.max_health * health_ratio
+            else:
+                building.health = building.max_health
+        
+        # Apply hangar capacity bonuses (additive)
+        if building.type == "hangar":
+            capacity_bonus = self.research_system.get_building_multiplier("hangar", "capacity")
+            # This is handled in the max_ships property dynamically
+        
+        # Apply miner max asteroids bonuses (additive)
+        if building.type == "miner":
+            max_asteroids_bonus = self.research_system.get_building_multiplier("miner", "max_asteroids")
+            # This is handled dynamically in the mining logic
+        
+        # Apply connector connection bonuses (additive)
+        if building.type == "connector":
+            connections_bonus = self.research_system.get_building_multiplier("connector", "connections")
+            # This is handled in the power grid system dynamically
+    
+    def _handle_research_click(self, data):
+        """Handle research panel clicks to start research."""
+        button_index = data.get('button_index', -1)
+        available_research = self.research_system.get_available_research()
+        
+        if 0 <= button_index < len(available_research):
+            research = available_research[button_index]
+            self._research_technology(research.id)
+    
     def _update_missiles(self):
         """Update all missiles."""
         for m in self.missiles[:]:
@@ -647,11 +714,7 @@ class GameLogicSystem(System):
             self.audio_system.play_explosion(0.8)
         
         # Enhanced explosion effects
-        if self.particle_system:
-            self.particle_system.add_explosion(missile.x, missile.y, intensity=1.0)
-        else:
-            # Fallback explosion particles
-            self.add_particles(missile.x, missile.y, 15, (255, 150, 0), speed_range=(2, 5), lifetime_range=(20, 35))
+        # Missile explosion particles removed
         
         # Splash damage to enemies
         for enemy in self.wave_manager.enemies:
@@ -719,9 +782,12 @@ class GameLogicSystem(System):
                             laser = MiningLaser(miner.x, miner.y, asteroid.x, asteroid.y, duration=45)
                             self.mining_lasers.append(laser)
                             
-                            # Mine from asteroid
-                            mining_rate = MINING_RATE_SINGLE * miner.level
-                            mine_amount = min(mining_rate, asteroid.minerals)
+                            # Mine from asteroid with research multipliers
+                            base_mining_rate = MINING_RATE_SINGLE * miner.level
+                            mining_rate_multiplier = self.research_system.get_building_multiplier("miner", "mining_rate")
+                            mineral_income_multiplier = self.research_system.get_global_multiplier("mineral_income")
+                            final_mining_rate = base_mining_rate * mining_rate_multiplier * mineral_income_multiplier
+                            mine_amount = min(final_mining_rate, asteroid.minerals)
                             
                             if mine_amount > 0:
                                 self.resources.add_minerals(mine_amount)
@@ -729,22 +795,34 @@ class GameLogicSystem(System):
                                 
                                 # Minimal visual effects - just a few sparks at the laser hit point
                                 if random.random() < 0.3:  # Only 30% chance for particles
-                                    self.add_particles(laser.target_x, laser.target_y, 2, (255, 255, 100), speed_range=(1, 2), lifetime_range=(8, 12))
+                                    self.add_particles(laser.target_x, laser.target_y, 2, (255, 255, 100), speed_range=(0.015, 0.04), lifetime_range=(8, 12))
                                 
                                 # No damage numbers for mining
     
     def _update_building_systems(self):
         """Update building systems like repair and energy production."""
-        # Energy production with visual effects
+        # Energy production with visual effects and research multipliers
         energy_producing_buildings = [b for b in self.buildings if b.type == 'solar' and b.powered]
-        energy_prod = sum(b.prod_rate for b in energy_producing_buildings)
-        self.current_energy_production = energy_prod * 60  # Convert to per-second rate
+        
+        # Apply research multipliers to energy production
+        base_energy_prod = sum(b.prod_rate for b in energy_producing_buildings)
+        solar_production_multiplier = self.research_system.get_building_multiplier("solar", "production")
+        final_energy_prod = base_energy_prod * solar_production_multiplier
+        
+        self.current_energy_production = final_energy_prod * 60  # Convert to per-second rate
         
         # Store detailed solar panel information for UI
         self.solar_panel_count = len(energy_producing_buildings)
         self.solar_panel_levels = sum(b.level for b in energy_producing_buildings) if energy_producing_buildings else 0
         
-        self.resources.add_energy(energy_prod)
+        self.resources.add_energy(final_energy_prod)
+        
+        # Add passive mineral income from trade networks research
+        passive_income = self.research_system.get_global_multiplier("passive_income")
+        if passive_income > 1.0:
+            # Convert passive_income from multiplier to actual income rate
+            passive_rate = passive_income - 1.0  # Remove the base 1.0 multiplier
+            self.resources.add_minerals(passive_rate / 60.0)  # Convert to per-frame rate
         
         # Add power pulse effects to producing solar panels
         if self.particle_system and energy_producing_buildings:
@@ -821,15 +899,23 @@ class GameLogicSystem(System):
                 self.resources.spend_energy(TURRET_ENERGY_COST)
                 self.resources.spend_minerals(TURRET_MINERAL_COST)
                 
+                # Calculate damage with research multipliers
+                base_damage = turret.damage  # This uses the building's property
+                damage_multiplier = self.research_system.get_global_multiplier("weapon_damage")
+                turret_damage_multiplier = self.research_system.get_building_multiplier("turret", "damage")
+                final_damage = base_damage * damage_multiplier * turret_damage_multiplier
+                
                 # Create missile
-                missile = Missile(turret.x, turret.y, target, TURRET_DAMAGE * turret.level)
+                missile = Missile(turret.x, turret.y, target, final_damage)
                 self.missiles.append(missile)
                 
-                # Play missile launch sound
-                if self.audio_system:
-                    self.audio_system.play_sound('missile_launch', 0.6)
+                # Missile launch sound removed to prevent audio errors
                 
-                turret.cooldown_timer = TURRET_COOLDOWN
+                # Calculate cooldown with research multipliers
+                base_cooldown = TURRET_COOLDOWN
+                fire_rate_multiplier = self.research_system.get_building_multiplier("turret", "fire_rate")
+                final_cooldown = base_cooldown / fire_rate_multiplier if fire_rate_multiplier > 0 else base_cooldown
+                turret.cooldown_timer = final_cooldown
     
     def _update_laser(self, laser_building):
         """Update laser behavior."""
@@ -840,17 +926,25 @@ class GameLogicSystem(System):
             
             for enemy in self.wave_manager.enemies:
                 distance = math.sqrt((laser_building.x - enemy.x) ** 2 + (laser_building.y - enemy.y) ** 2)
-                range_limit = LASER_RANGE if laser_building.type == 'laser' else SUPERLASER_RANGE
-                if distance < range_limit and distance < min_distance:
+                # Use building's fire_range property which can be modified by research
+                range_multiplier = self.research_system.get_building_multiplier("laser" if laser_building.type == "laser" else "superlaser", "range")
+                base_range = LASER_RANGE if laser_building.type == 'laser' else SUPERLASER_RANGE
+                effective_range = base_range * range_multiplier
+                if distance < effective_range and distance < min_distance:
                     target = enemy
                     min_distance = distance
             
             if target:
                 energy_cost = (LASER_COST if laser_building.type == 'laser' else SUPERLASER_COST) * laser_building.level
-                damage = (LASER_DAMAGE if laser_building.type == 'laser' else SUPERLASER_DAMAGE) * laser_building.level
+                
+                # Calculate damage with research multipliers
+                base_damage = laser_building.damage_per_frame  # This uses the building's property
+                damage_multiplier = self.research_system.get_global_multiplier("weapon_damage")
+                laser_damage_multiplier = self.research_system.get_building_multiplier("laser" if laser_building.type == "laser" else "superlaser", "damage")
+                final_damage = base_damage * damage_multiplier * laser_damage_multiplier
                 
                 self.resources.spend_energy(energy_cost)
-                target.health -= damage
+                target.health -= final_damage
                 
                 # Create laser beam effect
                 if laser_building.type == 'laser':
@@ -903,8 +997,7 @@ class GameLogicSystem(System):
                 
                 # Missile launch sound removed to prevent audio errors
                 
-                # Add launch particles
-                self.add_particles(launcher.x, launcher.y, 8, (255, 200, 0), speed_range=(1, 3), lifetime_range=(15, 25))
+                # Missile launcher particles removed
     
     def _update_hangars(self):
         """Update hangar systems and ship launching."""
@@ -925,9 +1018,14 @@ class GameLogicSystem(System):
                 hangar.launch_timer -= 1
                 hangar.regen_timer -= 1
                 
+                # Calculate effective max ships with research multipliers
+                base_max_ships = hangar.max_ships
+                capacity_bonus = self.research_system.get_building_multiplier("hangar", "capacity")
+                effective_max_ships = int(base_max_ships + capacity_bonus)
+                
                 # Check for ship regeneration (when ships have been destroyed)
                 if (hangar.regen_timer <= 0 and 
-                    len(hangar.deployed_ships) < hangar.max_ships):
+                    len(hangar.deployed_ships) < effective_max_ships):
                     
                     # Regenerate a ship
                     ship = FriendlyShip(hangar.x, hangar.y, hangar)
@@ -941,7 +1039,7 @@ class GameLogicSystem(System):
                 
                 # Try to launch ships if conditions are met (for initial deployment)
                 elif (hangar.launch_timer <= 0 and 
-                      len(hangar.deployed_ships) < hangar.max_ships and
+                      len(hangar.deployed_ships) < effective_max_ships and
                       len(self.wave_manager.enemies) > 0):  # Only launch if there are enemies
                     
                     # Check if there are enemies within engagement range
