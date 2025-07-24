@@ -4,3 +4,5 @@ noise
 pytest
 black
 flake8 
+Pillow
+pygame_gui
