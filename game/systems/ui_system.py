@@ -170,7 +170,8 @@ class UISystem(System):
             ('Laser', 'laser', BUILD_COSTS['laser'], 'L'),
             ('SuperLaser', 'superlaser', BUILD_COSTS['superlaser'], 'K'),
             ('Repair', 'repair', BUILD_COSTS['repair'], 'R'),
-            ('Converter', 'converter', BUILD_COSTS['converter'], 'V')
+            ('Converter', 'converter', BUILD_COSTS['converter'], 'V'),
+            ('Hangar', 'hangar', BUILD_COSTS['hangar'], 'H')
         ]
         
         button_height = 50

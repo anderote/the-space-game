@@ -273,7 +273,8 @@ class RenderSystem(System):
             'laser': (100, 150, 255),      # Light Blue
             'superlaser': (255, 50, 255),  # Magenta
             'repair': (0, 255, 255),       # Cyan
-            'converter': (255, 255, 100)   # Light Yellow
+            'converter': (255, 255, 100),  # Light Yellow
+            'hangar': (120, 120, 255)      # Light Blue
         }
         
         for building in buildings:

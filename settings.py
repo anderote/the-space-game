@@ -54,7 +54,8 @@ BUILD_COSTS = {
     'laser': 200,
     'superlaser': 500,  # New expensive long-range laser
     'repair': 120,
-    'converter': 90
+    'converter': 90,
+    'hangar': 250  # Hangar for friendly attack ships
 }
 
 # Building stats
@@ -78,8 +79,15 @@ REPAIR_RATE = 0.15  # per level per frame
 REPAIR_ENERGY_COST = 0.05  # energy per frame
 REPAIR_RANGE = 250  # base range
 CONVERTER_ENERGY_COST = 100
-CONVERTER_MINERAL_RATE = 5  # per level
-CONVERTER_INTERVAL = 300  # frames (10 sec)
+CONVERTER_MINERAL_RATE = 2  # minerals per conversion
+CONVERTER_INTERVAL = 120  # frames between conversions
+
+# Hangar stats
+HANGAR_ENERGY_COST = 0.5  # energy per frame to maintain
+HANGAR_LAUNCH_COOLDOWN = 300  # frames between ship launches (5 seconds)
+HANGAR_MAX_SHIPS = 3  # maximum ships per hangar
+HANGAR_SHIP_RANGE = 500  # range within which ships will engage
+HANGAR_RECALL_RANGE = 600  # range beyond which ships return
 
 # Power grid
 POWER_RANGE = 150

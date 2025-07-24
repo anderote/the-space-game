@@ -13,7 +13,7 @@ from game.utils.math_utils import distance_squared
 from settings import *
 from resources import ResourceManager
 from asteroids import Asteroid, DamageNumber
-from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Building
+from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Hangar, Building, FriendlyShip
 from power import PowerGrid
 from enemies import WaveManager, MothershipMissile, LargeShip, KamikazeShip
 
@@ -230,6 +230,7 @@ class GameLogicSystem(System):
         self.damage_numbers = []
         self.enemy_lasers = []
         self.mothership_missiles = []
+        self.friendly_ships = []  # Ships launched from hangars
         
         # Game objects
         self.power_grid = None
@@ -256,7 +257,8 @@ class GameLogicSystem(System):
             'laser': Laser,
             'superlaser': SuperLaser,
             'repair': Repair,
-            'converter': Converter
+            'converter': Converter,
+            'hangar': Hangar
         }
     
     def initialize(self):
@@ -347,6 +349,9 @@ class GameLogicSystem(System):
         
         # Update building systems
         self._update_building_systems()
+        
+        # Update friendly ships
+        self._update_friendly_ships()
         
         # Remove destroyed buildings
         self._update_buildings()
@@ -644,6 +649,9 @@ class GameLogicSystem(System):
         
         # Turret and laser systems
         self._update_combat_buildings()
+        
+        # Hangar systems
+        self._update_hangars()
     
     def _update_combat_buildings(self):
         """Update turrets and lasers."""
@@ -717,6 +725,68 @@ class GameLogicSystem(System):
                                  (0, 0, 255) if laser_building.type == 'laser' else (255, 0, 255), 
                                  speed_range=(0.5, 1.5), lifetime_range=(10, 20))
     
+    def _update_hangars(self):
+        """Update hangar systems and ship launching."""
+        import pygame
+        current_time = pygame.time.get_ticks()
+        
+        for hangar in [b for b in self.buildings if b.type == 'hangar' and b.powered]:
+            if self.resources.energy >= HANGAR_ENERGY_COST:
+                self.resources.spend_energy(HANGAR_ENERGY_COST)
+                
+                # Update launch timer
+                if not hasattr(hangar, 'launch_timer'):
+                    hangar.launch_timer = 0
+                
+                hangar.launch_timer -= 1
+                
+                # Try to launch a ship if conditions are met
+                if (hangar.launch_timer <= 0 and 
+                    len(hangar.deployed_ships) < hangar.max_ships and
+                    len(self.wave_manager.enemies) > 0):  # Only launch if there are enemies
+                    
+                    # Check if there are enemies within engagement range
+                    enemies_in_range = any(
+                        math.sqrt((e.x - hangar.x)**2 + (e.y - hangar.y)**2) <= hangar.ship_range
+                        for e in self.wave_manager.enemies
+                    )
+                    
+                    if enemies_in_range:
+                        # Launch a new ship
+                        ship = FriendlyShip(hangar.x, hangar.y, hangar)
+                        hangar.deployed_ships.append(ship)
+                        self.friendly_ships.append(ship)
+                        hangar.launch_timer = hangar.launch_cooldown
+                        
+                        # Launch particles
+                        self.add_particles(hangar.x, hangar.y, 8, (100, 150, 255), 
+                                         speed_range=(1, 3), lifetime_range=(20, 40))
+    
+    def _update_friendly_ships(self):
+        """Update all friendly ships launched from hangars."""
+        import pygame
+        current_time = pygame.time.get_ticks()
+        
+        # Update each ship
+        active_ships = []
+        for ship in self.friendly_ships:
+            # Check if ship is still alive and active
+            still_active = ship.update(self.wave_manager.enemies, current_time)
+            
+            if still_active and ship.health > 0:
+                active_ships.append(ship)
+            else:
+                # Ship was destroyed or returned to hangar
+                if ship in ship.hangar.deployed_ships:
+                    ship.hangar.deployed_ships.remove(ship)
+                    
+                if ship.health <= 0:
+                    # Ship destroyed - add explosion particles
+                    self.add_particles(ship.x, ship.y, 12, (255, 100, 0), 
+                                     speed_range=(2, 5), lifetime_range=(20, 40))
+        
+        self.friendly_ships = active_ships
+    
     def _update_buildings(self):
         """Update and remove destroyed buildings."""
         # Remove destroyed buildings
@@ -750,6 +820,7 @@ class GameLogicSystem(System):
         self.mining_lasers.clear()
         self.laser_beams.clear()
         self.damage_numbers.clear()
+        self.friendly_ships.clear()
         
         self.wave_manager.wave = 1
         self.wave_manager.enemies.clear()
@@ -828,10 +899,17 @@ class GameLogicSystem(System):
             elif self.selected_building.type == 'miner':
                 render_system.draw_range_indicator(self.selected_building.x, self.selected_building.y, 
                                                  MINER_RANGE, (0, 255, 0, 100))
+            elif self.selected_building.type == 'hangar':
+                render_system.draw_range_indicator(self.selected_building.x, self.selected_building.y, 
+                                                 self.selected_building.ship_range, (120, 120, 255, 100))
         
         # Draw enemies
         for enemy in self.wave_manager.enemies:
             enemy.draw(render_system.screen, render_system.camera)
+        
+        # Draw friendly ships
+        for ship in self.friendly_ships:
+            ship.draw(render_system.screen, render_system.camera)
         
         # Draw missiles
         for missile in self.missiles:
@@ -867,6 +945,7 @@ class GameLogicSystem(System):
             'repair': (REPAIR_RANGE, (0, 255, 255, 100)),    # Cyan for repair
             'miner': (MINER_RANGE, (0, 255, 0, 100)),        # Green for miners
             'connector': (POWER_RANGE, (255, 255, 0, 100)),  # Yellow for connectors
+            'hangar': (HANGAR_SHIP_RANGE, (120, 120, 255, 100)),  # Light blue for hangars
         }
         
         if build_type in building_ranges:

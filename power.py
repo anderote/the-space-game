@@ -19,9 +19,12 @@ class PowerGrid:
     
     def get_connection_limit(self, building):
         """Get the maximum number of connections for a building type."""
-        # Defense and mining nodes have limited connections
+        # Defense and mining nodes have only 1 connection
         if building.type in ['turret', 'laser', 'superlaser', 'miner']:
-            return 2
+            return 1
+        # Hangars can have 4 connections (need more power for ship operations)
+        elif building.type == 'hangar':
+            return 4
         # All other nodes can have up to 6 connections
         return 6
     

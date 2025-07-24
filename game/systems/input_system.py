@@ -26,7 +26,8 @@ class InputSystem(System):
             pygame.K_l: 'laser',
             pygame.K_k: 'superlaser',
             pygame.K_r: 'repair',
-            pygame.K_v: 'converter'
+            pygame.K_v: 'converter',
+            pygame.K_h: 'hangar'
         }
         
         self.selected_build = None

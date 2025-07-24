@@ -454,3 +454,161 @@ class Converter(Building):
     @property
     def conversion_interval(self):
         return CONVERTER_INTERVAL
+
+class Hangar(Building):
+    def __init__(self, x, y):
+        super().__init__(x, y, (120, 120, 255), 20)
+        self.type = "hangar"
+        self.launch_timer = 0
+        self.deployed_ships = []  # List of friendly ships launched from this hangar
+        self.max_ships = 3  # Maximum number of ships this hangar can deploy
+        
+    @property
+    def launch_cooldown(self):
+        return 300  # 5 seconds at 60fps
+        
+    @property
+    def ship_range(self):
+        return 500  # Range within which ships will engage enemies
+        
+    @property
+    def recall_range(self):
+        return 600  # Range beyond which ships will return to hangar
+
+
+class FriendlyShip:
+    """Friendly attack ship launched from hangars"""
+    def __init__(self, x, y, hangar):
+        self.x = x
+        self.y = y
+        self.hangar = hangar  # Reference to parent hangar
+        self.health = 30
+        self.max_health = 30
+        self.speed = 2.0
+        self.damage = 15
+        self.fire_range = 80
+        self.last_shot_time = 0
+        self.fire_cooldown = 60  # 1 second at 60fps
+        self.target = None
+        self.state = "seeking"  # "seeking", "attacking", "returning"
+        self.size = 8
+        
+    def update(self, enemies, current_time):
+        """Update ship behavior"""
+        if self.health <= 0:
+            return False  # Ship destroyed
+            
+        # Find distance to hangar
+        hangar_dist = math.sqrt((self.x - self.hangar.x)**2 + (self.y - self.hangar.y)**2)
+        
+        # Check if we should return to hangar
+        if hangar_dist > self.hangar.recall_range:
+            self.state = "returning"
+            self.target = None
+        elif not enemies or not any(self._distance_to(e) <= self.hangar.ship_range for e in enemies):
+            # No enemies in range, return to hangar
+            self.state = "returning"
+            self.target = None
+        else:
+            # Find nearest enemy within range
+            closest_enemy = None
+            closest_dist = float('inf')
+            
+            for enemy in enemies:
+                dist = self._distance_to(enemy)
+                if dist <= self.hangar.ship_range and dist < closest_dist:
+                    closest_enemy = enemy
+                    closest_dist = dist
+                    
+            if closest_enemy:
+                self.target = closest_enemy
+                self.state = "attacking"
+            else:
+                self.state = "returning"
+                self.target = None
+        
+        # Move based on state
+        if self.state == "attacking" and self.target:
+            self._move_towards(self.target.x, self.target.y)
+            # Try to attack if in range
+            if self._distance_to(self.target) <= self.fire_range:
+                if current_time - self.last_shot_time >= self.fire_cooldown:
+                    self.target.take_damage(self.damage)
+                    self.last_shot_time = current_time
+        elif self.state == "returning":
+            self._move_towards(self.hangar.x, self.hangar.y)
+            # Check if we've returned to hangar
+            if hangar_dist < 30:
+                return False  # Ship has returned, remove from active list
+        else:  # seeking
+            # Patrol around hangar
+            patrol_radius = 100
+            patrol_x = self.hangar.x + patrol_radius * math.cos(current_time * 0.01)
+            patrol_y = self.hangar.y + patrol_radius * math.sin(current_time * 0.01)
+            self._move_towards(patrol_x, patrol_y)
+            
+        return True  # Ship still active
+        
+    def _distance_to(self, target):
+        """Calculate distance to target"""
+        return math.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
+        
+    def _move_towards(self, target_x, target_y):
+        """Move towards target position"""
+        dx = target_x - self.x
+        dy = target_y - self.y
+        dist = math.sqrt(dx*dx + dy*dy)
+        
+        if dist > 0:
+            # Normalize and apply speed
+            self.x += (dx / dist) * self.speed
+            self.y += (dy / dist) * self.speed
+            
+    def take_damage(self, damage):
+        """Take damage from enemy attacks"""
+        self.health -= damage
+        
+    def draw(self, surface, camera):
+        """Draw the friendly ship"""
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        screen_size = self.size * camera.zoom
+        
+        if 0 <= screen_x <= surface.get_width() and 0 <= screen_y <= surface.get_height():
+            # Draw as a small blue triangle pointing towards movement direction
+            if hasattr(self, 'target') and self.target:
+                # Point towards target
+                dx = self.target.x - self.x
+                dy = self.target.y - self.y
+            else:
+                # Point towards hangar
+                dx = self.hangar.x - self.x
+                dy = self.hangar.y - self.y
+                
+            angle = math.atan2(dy, dx)
+            
+            # Triangle points
+            points = []
+            for i in range(3):
+                point_angle = angle + (i * 2 * math.pi / 3)
+                px = screen_x + screen_size * math.cos(point_angle)
+                py = screen_y + screen_size * math.sin(point_angle)
+                points.append((px, py))
+                
+            # Draw blue triangle
+            pygame.draw.polygon(surface, (100, 150, 255), points)
+            pygame.draw.polygon(surface, (50, 100, 200), points, 2)
+            
+            # Draw health bar if damaged
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = 15 * camera.zoom
+                bar_height = 3 * camera.zoom
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - screen_size - 8 * camera.zoom
+                
+                # Background
+                pygame.draw.rect(surface, (100, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+                # Health
+                health_width = int(bar_width * health_ratio)
+                if health_width > 0:
+                    pygame.draw.rect(surface, (0, 150, 0), (bar_x, bar_y, health_width, bar_height))
