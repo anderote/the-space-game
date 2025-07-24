@@ -207,6 +207,9 @@ class GameLogicSystem(System):
     
     def initialize(self):
         """Initialize the game logic system."""
+        # Load asteroid images
+        self._load_asteroid_images()
+        
         # Initialize asteroids
         self.asteroids = self.spawn_asteroids()
         
@@ -218,6 +221,46 @@ class GameLogicSystem(System):
         event_system.subscribe(EventType.BUILDING_PLACED, self._handle_building_event)
         
         print("Game logic system initialized!")
+    
+    def _load_asteroid_images(self):
+        """Load asteroid images from the images folder."""
+        import os
+        
+        # Load asteroid images organized by size type
+        asteroid_images = {
+            'small': [],
+            'medium': [],
+            'large': []
+        }
+        images_path = "images"
+        
+        if os.path.exists(images_path):
+            for i in range(1, 5):  # asteroid_1.png to asteroid_4.png
+                filename = f"asteroid_{i}.png"
+                filepath = os.path.join(images_path, filename)
+                if os.path.exists(filepath):
+                    try:
+                        base_image = pygame.image.load(filepath).convert_alpha()
+                        
+                        # Create different sizes and add to respective lists
+                        small_image = pygame.transform.scale(base_image, (40, 40))
+                        medium_image = pygame.transform.scale(base_image, (60, 60))
+                        large_image = pygame.transform.scale(base_image, (80, 80))
+                        
+                        asteroid_images['small'].append(small_image)
+                        asteroid_images['medium'].append(medium_image)
+                        asteroid_images['large'].append(large_image)
+                        
+                        print(f"Loaded asteroid image: {filename}")
+                    except Exception as e:
+                        print(f"Failed to load {filename}: {e}")
+        
+        # Set the loaded images on the Asteroid class
+        if any(asteroid_images.values()):
+            Asteroid.asteroid_images = asteroid_images
+            print(f"Loaded asteroid images - Small: {len(asteroid_images['small'])}, Medium: {len(asteroid_images['medium'])}, Large: {len(asteroid_images['large'])}")
+        else:
+            print("No asteroid images found, using default rendering")
     
     def update(self, dt):
         """Update all game logic."""
@@ -290,10 +333,12 @@ class GameLogicSystem(System):
                     ax = cx + random.uniform(-30, 30)
                     ay = cy + random.uniform(-30, 30)
                     
-                    # Use radius instead of size string
+                    # Use radius instead of size string, assign image variant
                     radius = random.randint(20, 40)
                     minerals = random.randint(200, 800)
-                    asteroids.append(Asteroid(ax, ay, radius, minerals))
+                    asteroid = Asteroid(ax, ay, radius, minerals)
+                    # Image variant will be set automatically based on available images
+                    asteroids.append(asteroid)
         
         # Add distant clumps
         for _ in range(12):
@@ -311,7 +356,9 @@ class GameLogicSystem(System):
                 ay = cy + random.uniform(-40, 40)
                 radius = random.randint(25, 45)
                 minerals = random.randint(300, 1000)
-                asteroids.append(Asteroid(ax, ay, radius, minerals))
+                asteroid = Asteroid(ax, ay, radius, minerals)
+                # Image variant will be set automatically based on available images
+                asteroids.append(asteroid)
         
         return asteroids
     
@@ -342,10 +389,14 @@ class GameLogicSystem(System):
     def _place_building(self, build_type, x, y):
         """Place a building at the specified location."""
         if build_type not in self.build_types:
+            print(f"Unknown building type: {build_type}")
             return
         
         cost = BUILD_COSTS[build_type]
+        print(f"Attempting to place {build_type} at ({x:.0f}, {y:.0f}) - Cost: {cost}, Available: {self.resources.minerals}")
+        
         if not self.resources.spend_minerals(cost):
+            print(f"Not enough minerals! Need {cost}, have {self.resources.minerals}")
             return
         
         # Check for collisions
@@ -353,24 +404,32 @@ class GameLogicSystem(System):
         
         # Check distance to other buildings
         can_place = True
+        conflict_reason = ""
+        
         for existing in self.buildings:
             distance = math.sqrt((x - existing.x) ** 2 + (y - existing.y) ** 2)
-            if distance < (new_building.radius + existing.radius + 0.8):
+            min_distance = new_building.radius + existing.radius + 0.8
+            if distance < min_distance:
                 can_place = False
+                conflict_reason = f"Too close to {existing.type} (distance: {distance:.1f}, needed: {min_distance:.1f})"
                 break
         
         # Check distance to base
-        base_distance = math.sqrt((x - self.base_pos[0]) ** 2 + (y - self.base_pos[1]) ** 2)
-        if base_distance < (new_building.radius + BASE_RADIUS + 0.8):
-            can_place = False
+        if can_place:
+            base_distance = math.sqrt((x - self.base_pos[0]) ** 2 + (y - self.base_pos[1]) ** 2)
+            min_base_distance = new_building.radius + BASE_RADIUS + 0.8
+            if base_distance < min_base_distance:
+                can_place = False
+                conflict_reason = f"Too close to base (distance: {base_distance:.1f}, needed: {min_base_distance:.1f})"
         
         if can_place:
             self.buildings.append(new_building)
             self.selected_build = None
-            print(f"Placed {build_type} at ({x:.0f}, {y:.0f})")
+            print(f"✅ Placed {build_type} at ({x:.0f}, {y:.0f})")
         else:
             # Refund cost
             self.resources.add_minerals(cost)
+            print(f"❌ Cannot place {build_type}: {conflict_reason}")
     
     def _select_building_at(self, x, y):
         """Select a building at the specified world coordinates."""
