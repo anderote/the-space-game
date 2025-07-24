@@ -8,7 +8,7 @@ import math
 from settings import *
 
 class Enemy:
-    def __init__(self, x, y, health, speed=1.0, enemy_type="basic"):
+    def __init__(self, x, y, health, speed=0.5, enemy_type="basic"):  # Reduced by 50% (was 1.0)
         self.x = x
         self.y = y
         self.radius = 8
@@ -19,11 +19,12 @@ class Enemy:
         self.target = None
         self.orbit_angle = 0  # Angle for orbiting
         self.orbit_radius = 50
-        self.orbit_speed = 0.05
+        self.orbit_speed = 0.01  # Reduced by 80% (was 0.05)
         self.movement_angle = 0  # Direction of movement for triangle shape
         self.is_orbiting = False
         self.enemy_type = enemy_type
         self.last_shot_time = 0  # For laser timing
+        self.laser_target = None  # For visual laser effects
         self.points = 1  # Default point value for basic enemies
     
     # Class variable for spaceship image (will be set from main.py)
@@ -83,6 +84,26 @@ class Enemy:
                 
                 # Triangle points in the direction of orbital movement (tangent to circle)
                 self.movement_angle = self.orbit_angle + math.pi / 2
+                
+                # Basic laser firing for small red ships
+                current_time = pygame.time.get_ticks()
+                laser_cooldown = 60  # 1 second at 60fps
+                laser_range = 120    # Shorter range than larger ships
+                laser_damage = 5    # Reduced by 50% (was 10)
+                
+                if current_time - self.last_shot_time > laser_cooldown:
+                    # Check if target is within laser range (only fire when orbiting and close)
+                    if dist <= laser_range and not isinstance(self.target, dict):
+                        # Fire laser at building target
+                        if hasattr(self.target, 'take_damage'):
+                            self.target.take_damage(laser_damage)
+                            self.last_shot_time = current_time
+                            # Store laser target for visual effects
+                            self.laser_target = self.target
+                        else:
+                            self.laser_target = None
+                    else:
+                        self.laser_target = None
 
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
@@ -124,8 +145,8 @@ class Enemy:
         # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = 20 * camera.zoom
-            bar_height = 4 * camera.zoom
+            bar_width = 40 * camera.zoom  # 2x larger
+            bar_height = 8 * camera.zoom  # 2x larger
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 8 * camera.zoom
             
@@ -237,8 +258,8 @@ class Mothership(Enemy):
         # Health bar if damaged (only show when not at full health, 50% opacity)
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = 30 * camera.zoom  # Wider health bar
-            bar_height = 6 * camera.zoom  # Taller health bar
+            bar_width = 60 * camera.zoom  # 2x larger than before
+            bar_height = 12 * camera.zoom  # 2x larger than before
             bar_x = screen_x - bar_width // 2
             bar_y = screen_y - screen_size - 12 * camera.zoom
             
@@ -362,57 +383,163 @@ class WaveManager:
 
     def calculate_wave_points(self):
         """Calculate total points for this wave using exponential growth"""
-        if self.wave <= 5:
-            # First 5 waves: only basic enemies (1 point each)
-            return min(3 + self.wave, 8)  # Waves 1-5: 4,5,6,7,8 points
+        if self.wave <= 3:
+            # First 3 waves: only basic enemies (1 point each) - 3x larger starting size
+            base_points = (3 + self.wave) * 3  # Waves 1-3: 12,15,18 points (was 4,5,6)
+            return min(base_points, 24)
         else:
-            # Exponential growth after wave 5
-            base_points = 8
-            return int(base_points * (1.4 ** (self.wave - 5)))
+            # Exponential growth after wave 3 - 30% slower growth
+            base_points = 24  # Starting from wave 4
+            growth_factor = 1.4 * 0.7  # 30% slower growth = 0.98
+            return int(base_points * (growth_factor ** (self.wave - 3)))
     
     def generate_enemy_composition(self):
         """Generate list of enemy types to spawn based on wave points"""
         enemies_to_spawn = []
         remaining_points = self.wave_points
         
-        if self.wave <= 5:
-            # Waves 1-5: Only basic enemies
+        if self.wave <= 3:
+            # Waves 1-3: Only basic enemies
             while remaining_points >= 1:
                 enemies_to_spawn.append("basic")
                 remaining_points -= 1
         else:
-            # Later waves: Mix of enemy types
-            while remaining_points > 0:
-                # Choose enemy type based on remaining points and probability
-                if remaining_points >= 5 and random.random() < 0.2:  # 20% chance for large ship
-                    enemies_to_spawn.append("large")
-                    remaining_points -= 5
-                elif remaining_points >= 2 and random.random() < 0.3:  # 30% chance for kamikaze
-                    enemies_to_spawn.append("kamikaze") 
-                    remaining_points -= 2
-                elif remaining_points >= 1:
-                    enemies_to_spawn.append("basic")
-                    remaining_points -= 1
+            # Later waves: Balanced composition with 50% basic fighters minimum
+            total_basic_points = max(remaining_points // 2, remaining_points - 30)  # At least 50% basic
+            
+            # Add basic fighters first (50% of total points)
+            basic_count = 0
+            while total_basic_points > 0 and remaining_points > 0:
+                enemies_to_spawn.append("basic")
+                remaining_points -= 1
+                total_basic_points -= 1
+                basic_count += 1
+            
+            # Fill remaining points with varied ship types
+            ship_types = [
+                ("kamikaze", 2),    # Fast suicide ships
+                ("assault", 3),     # Machine gun ships  
+                ("stealth", 4),     # EMP cloaking ships
+                ("large", 5),       # Laser battleships
+                ("cruiser", 6),     # Heavy plasma cruisers
+            ]
+            
+            # Distribute remaining points among ship types
+            attempts = 0
+            while remaining_points > 0 and attempts < 100:  # Prevent infinite loops
+                attempts += 1
+                
+                # Prefer smaller ships early, larger ships in later waves
+                if self.wave <= 7:
+                    # Early waves: favor smaller ships
+                    weights = [0.4, 0.3, 0.15, 0.1, 0.05]
+                elif self.wave <= 12:
+                    # Mid waves: balanced mix
+                    weights = [0.25, 0.25, 0.2, 0.2, 0.1]
                 else:
+                    # Late waves: favor larger ships
+                    weights = [0.15, 0.2, 0.25, 0.25, 0.15]
+                
+                # Choose ship type based on weights and available points
+                available_ships = [(ship, cost) for ship, cost in ship_types if cost <= remaining_points]
+                if not available_ships:
+                    # Fill remaining points with basic fighters
+                    while remaining_points > 0:
+                        enemies_to_spawn.append("basic")
+                        remaining_points -= 1
                     break
-                    
+                
+                # Weighted random selection
+                ship_weights = []
+                for i, (ship, cost) in enumerate(ship_types):
+                    if cost <= remaining_points:
+                        ship_weights.append(weights[i])
+                    else:
+                        ship_weights.append(0)
+                
+                if sum(ship_weights) == 0:
+                    break
+                
+                # Normalize weights
+                total_weight = sum(ship_weights)
+                ship_weights = [w / total_weight for w in ship_weights]
+                
+                # Select ship type
+                rand_val = random.random()
+                cumulative = 0
+                selected_ship = None
+                selected_cost = 0
+                
+                for i, (ship, cost) in enumerate(ship_types):
+                    cumulative += ship_weights[i]
+                    if rand_val <= cumulative and cost <= remaining_points:
+                        selected_ship = ship
+                        selected_cost = cost
+                        break
+                
+                if selected_ship:
+                    enemies_to_spawn.append(selected_ship)
+                    remaining_points -= selected_cost
+                else:
+                    # Fallback to basic fighter
+                    if remaining_points >= 1:
+                        enemies_to_spawn.append("basic")
+                        remaining_points -= 1
+                    else:
+                        break
+        
+        # Shuffle to randomize spawn order while maintaining composition
+        random.shuffle(enemies_to_spawn)
         return enemies_to_spawn
     
     def get_spawn_position(self):
         """Get spawn position based on formation or single spawn"""
         if self.formations:
-            # Formation spawning with multiple directions
+            # Enhanced grid formation spawning
             formation_x, formation_y = self.formations[self.current_formation]
-            # Add some spread within the formation
-            spread = 50
-            x = formation_x + random.uniform(-spread, spread)
-            y = formation_y + random.uniform(-spread, spread)
-            # Keep within world bounds
-            x = max(0, min(self.world_w, x))
-            y = max(0, min(self.world_h, y))
             
-            # Move to next formation after spawning some enemies
-            if random.random() < 0.3:  # 30% chance to switch formations
+            # Create grid positions within each formation
+            if not hasattr(self, 'formation_grid_positions'):
+                self.formation_grid_positions = {}
+                self.formation_spawn_counts = {}
+            
+            if self.current_formation not in self.formation_grid_positions:
+                # Create a 3x3 or 4x4 grid for this formation
+                grid_size = 3 if self.enemies_per_formation <= 9 else 4
+                spacing = 60  # Distance between ships in grid
+                
+                grid_positions = []
+                start_offset = -(grid_size - 1) * spacing / 2
+                
+                for row in range(grid_size):
+                    for col in range(grid_size):
+                        offset_x = start_offset + col * spacing
+                        offset_y = start_offset + row * spacing
+                        grid_positions.append((formation_x + offset_x, formation_y + offset_y))
+                
+                # Shuffle to make spawning less predictable but maintain formation
+                random.shuffle(grid_positions)
+                self.formation_grid_positions[self.current_formation] = grid_positions
+                self.formation_spawn_counts[self.current_formation] = 0
+            
+            # Get next position from grid
+            spawn_count = self.formation_spawn_counts[self.current_formation]
+            grid_positions = self.formation_grid_positions[self.current_formation]
+            
+            if spawn_count < len(grid_positions):
+                x, y = grid_positions[spawn_count]
+                self.formation_spawn_counts[self.current_formation] += 1
+            else:
+                # Fallback if we need more ships than grid positions
+                x = formation_x + random.uniform(-100, 100)
+                y = formation_y + random.uniform(-100, 100)
+            
+            # Keep within world bounds
+            x = max(50, min(self.world_w - 50, x))
+            y = max(50, min(self.world_h - 50, y))
+            
+            # Move to next formation after spawning enough enemies
+            if self.formation_spawn_counts[self.current_formation] >= self.enemies_per_formation:
                 self.current_formation = (self.current_formation + 1) % len(self.formations)
             
             return x, y
@@ -462,6 +589,12 @@ class WaveManager:
                         self.enemies.append(LargeShip(x, y))
                     elif enemy_type == "kamikaze":
                         self.enemies.append(KamikazeShip(x, y))
+                    elif enemy_type == "assault":
+                        self.enemies.append(AssaultShip(x, y))
+                    elif enemy_type == "stealth":
+                        self.enemies.append(StealthShip(x, y))
+                    elif enemy_type == "cruiser":
+                        self.enemies.append(HeavyCruiser(x, y))
                     
                     self.spawn_timer = SPAWN_INTERVAL
                 else:
@@ -483,11 +616,11 @@ class WaveManager:
 # New enemy types with point values
 class LargeShip(Enemy):
     def __init__(self, x, y):
-        super().__init__(x, y, health=200, speed=0.5, enemy_type="large")
+        super().__init__(x, y, health=200, speed=0.25, enemy_type="large")  # Reduced by 50% (was 0.5)
         self.radius = 15
         self.size = 25
         self.laser_range = 200
-        self.laser_damage = 15
+        self.laser_damage = 7  # Reduced by 50% (was 15)
         self.shot_cooldown = 90  # 1.5 seconds at 60fps
         self.points = 5  # Point value for wave generation
         
@@ -526,18 +659,22 @@ class LargeShip(Enemy):
             pygame.draw.rect(surface, (0, 150, 255), rect, 2)  # Lighter blue border
             
             # Health bar
-            bar_width = max(20, int(self.size * camera.zoom))
-            bar_height = max(2, int(3 * camera.zoom))
-            health_ratio = self.health / self.max_health
-            pygame.draw.rect(surface, (255, 0, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width, bar_height))
-            pygame.draw.rect(surface, (0, 255, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width * health_ratio, bar_height))
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = max(40, int(self.size * camera.zoom * 2))  # 2x larger
+                bar_height = max(4, int(6 * camera.zoom))  # 2x larger
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - self.size - 8
+                
+                pygame.draw.rect(surface, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+                pygame.draw.rect(surface, (0, 255, 0), (bar_x, bar_y, bar_width * health_ratio, bar_height))
 
 class KamikazeShip(Enemy):
     def __init__(self, x, y):
-        super().__init__(x, y, health=30, speed=2.5, enemy_type="kamikaze")
+        super().__init__(x, y, health=30, speed=1.25, enemy_type="kamikaze")  # Reduced by 50% (was 2.5)
         self.radius = 6
         self.size = 10
-        self.damage = 100
+        self.damage = 50  # Reduced by 50% (was 100)
         self.points = 2  # Point value for wave generation
         self.has_exploded = False
         
@@ -578,4 +715,225 @@ class KamikazeShip(Enemy):
                 points.append((px, py))
             
             pygame.draw.polygon(surface, (255, 50, 50), points)  # Bright red
-            pygame.draw.polygon(surface, (255, 100, 100), points, 2)  # Lighter red border 
+            pygame.draw.polygon(surface, (255, 100, 100), points, 2)  # Lighter red border
+
+class AssaultShip(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y, health=120, speed=0.75, enemy_type="assault")
+        self.radius = 12
+        self.size = 18
+        self.machine_gun_range = 150
+        self.machine_gun_damage = 4  # Reduced by 50% (was 8)
+        self.shot_cooldown = 30  # 0.5 seconds at 60fps - rapid fire
+        self.points = 3  # Point value for wave generation
+        self.burst_count = 0
+        self.max_burst = 5  # Fire 5 shots per burst
+        self.burst_pause = 120  # 2 second pause between bursts
+        
+    def update(self, buildings, base_pos):
+        super().update(buildings, base_pos)
+        # Rapid fire machine gun behavior
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_shot_time > self.shot_cooldown:
+            # Find nearest building in range
+            nearest_building = None
+            min_dist = float('inf')
+            
+            for building in buildings:
+                dist = math.hypot(building.x - self.x, building.y - self.y)
+                if dist <= self.machine_gun_range and dist < min_dist:
+                    min_dist = dist
+                    nearest_building = building
+            
+            if nearest_building and self.burst_count < self.max_burst:
+                # Deal damage to building
+                nearest_building.take_damage(self.machine_gun_damage)
+                self.last_shot_time = current_time
+                self.laser_target = nearest_building
+                self.burst_count += 1
+            elif self.burst_count >= self.max_burst:
+                # Reset burst after pause
+                if current_time - self.last_shot_time > self.burst_pause:
+                    self.burst_count = 0
+                self.laser_target = None
+            else:
+                self.laser_target = None
+    
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        screen_size = self.size * camera.zoom
+        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
+            # Draw hexagonal assault ship (military look)
+            points = []
+            for i in range(6):
+                angle = i * math.pi / 3 + self.movement_angle
+                px = screen_x + self.size * camera.zoom * math.cos(angle)
+                py = screen_y + self.size * camera.zoom * math.sin(angle)
+                points.append((px, py))
+            
+            pygame.draw.polygon(surface, (150, 75, 0), points)  # Dark orange
+            pygame.draw.polygon(surface, (200, 100, 0), points, 2)  # Orange border
+            
+            # Health bar
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = 40 * camera.zoom  # 2x larger
+                bar_height = 8 * camera.zoom  # 2x larger
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - screen_size - 8 * camera.zoom
+                
+                # Create semi-transparent health bar
+                health_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
+                health_surface.fill((200, 0, 0, 127))
+                surface.blit(health_surface, (bar_x, bar_y))
+                
+                green_width = max(1, int(bar_width * health_ratio))
+                if green_width > 0:
+                    green_surface = pygame.Surface((green_width, bar_height), pygame.SRCALPHA)
+                    green_surface.fill((0, 200, 0, 127))
+                    surface.blit(green_surface, (bar_x, bar_y))
+
+class StealthShip(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y, health=80, speed=1.0, enemy_type="stealth")
+        self.radius = 8
+        self.size = 12
+        self.emp_range = 100
+        self.emp_damage = 12  # Reduced by 50% (was 25) - Disables buildings temporarily
+        self.shot_cooldown = 180  # 3 seconds between EMP bursts
+        self.points = 4  # Point value for wave generation
+        self.stealth_timer = 0
+        self.is_cloaked = False
+        self.cloak_duration = 120  # 2 seconds cloaked
+        self.decloak_duration = 180  # 3 seconds visible
+        
+    def update(self, buildings, base_pos):
+        super().update(buildings, base_pos)
+        
+        # Stealth cloaking behavior
+        self.stealth_timer += 1
+        if self.is_cloaked:
+            if self.stealth_timer >= self.cloak_duration:
+                self.is_cloaked = False
+                self.stealth_timer = 0
+        else:
+            if self.stealth_timer >= self.decloak_duration:
+                self.is_cloaked = True
+                self.stealth_timer = 0
+        
+        # EMP weapon behavior
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_shot_time > self.shot_cooldown and not self.is_cloaked:
+            # Find multiple buildings in range for EMP blast
+            targets = []
+            for building in buildings:
+                dist = math.hypot(building.x - self.x, building.y - self.y)
+                if dist <= self.emp_range:
+                    targets.append(building)
+            
+            if targets:
+                # Deal damage to all buildings in range
+                for building in targets:
+                    building.take_damage(self.emp_damage)
+                self.last_shot_time = current_time
+                self.laser_target = targets[0] if targets else None
+            else:
+                self.laser_target = None
+    
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
+            # Only draw if not fully cloaked
+            alpha = 50 if self.is_cloaked else 255
+            
+            # Draw diamond-shaped stealth ship
+            points = [
+                (screen_x, screen_y - self.size * camera.zoom),
+                (screen_x + self.size * camera.zoom * 0.7, screen_y),
+                (screen_x, screen_y + self.size * camera.zoom),
+                (screen_x - self.size * camera.zoom * 0.7, screen_y)
+            ]
+            
+            if self.is_cloaked:
+                # Semi-transparent when cloaked
+                stealth_surface = pygame.Surface((self.size * 2 * camera.zoom, self.size * 2 * camera.zoom), pygame.SRCALPHA)
+                adjusted_points = [(p[0] - screen_x + self.size * camera.zoom, p[1] - screen_y + self.size * camera.zoom) for p in points]
+                pygame.draw.polygon(stealth_surface, (100, 0, 150, alpha), adjusted_points)
+                surface.blit(stealth_surface, (screen_x - self.size * camera.zoom, screen_y - self.size * camera.zoom))
+            else:
+                pygame.draw.polygon(surface, (100, 0, 150), points)  # Purple
+                pygame.draw.polygon(surface, (150, 50, 200), points, 2)  # Light purple border
+
+class HeavyCruiser(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y, health=300, speed=0.4, enemy_type="cruiser")
+        self.radius = 18
+        self.size = 30
+        self.plasma_range = 250
+        self.plasma_damage = 15  # Reduced by 50% (was 30)
+        self.shot_cooldown = 150  # 2.5 seconds between shots
+        self.points = 6  # Point value for wave generation
+        self.charge_time = 90  # 1.5 seconds to charge plasma
+        self.is_charging = False
+        self.charge_start = 0
+        
+    def update(self, buildings, base_pos):
+        super().update(buildings, base_pos)
+        # Heavy plasma cannon behavior
+        current_time = pygame.time.get_ticks()
+        
+        if not self.is_charging and current_time - self.last_shot_time > self.shot_cooldown:
+            # Start charging if target in range
+            nearest_building = None
+            min_dist = float('inf')
+            
+            for building in buildings:
+                dist = math.hypot(building.x - self.x, building.y - self.y)
+                if dist <= self.plasma_range and dist < min_dist:
+                    min_dist = dist
+                    nearest_building = building
+            
+            if nearest_building:
+                self.is_charging = True
+                self.charge_start = current_time
+                self.laser_target = nearest_building
+        
+        elif self.is_charging:
+            if current_time - self.charge_start >= self.charge_time:
+                # Fire charged plasma shot
+                if self.laser_target and hasattr(self.laser_target, 'take_damage'):
+                    self.laser_target.take_damage(self.plasma_damage)
+                self.last_shot_time = current_time
+                self.is_charging = False
+                self.laser_target = None
+    
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
+            # Draw large rectangular cruiser
+            rect_width = int(self.size * camera.zoom)
+            rect_height = int(self.size * 0.6 * camera.zoom)
+            
+            # Main hull
+            rect = pygame.Rect(screen_x - rect_width//2, screen_y - rect_height//2, rect_width, rect_height)
+            pygame.draw.rect(surface, (80, 80, 120), rect)  # Dark blue-gray
+            pygame.draw.rect(surface, (120, 120, 180), rect, 3)  # Light blue-gray border
+            
+            # Charging effect
+            if self.is_charging:
+                current_time = pygame.time.get_ticks()
+                charge_progress = min(1.0, (current_time - self.charge_start) / self.charge_time)
+                glow_size = int(rect_width * (0.5 + 0.5 * charge_progress))
+                glow_color = (int(255 * charge_progress), int(100 * charge_progress), int(255 * charge_progress))
+                pygame.draw.circle(surface, glow_color, (int(screen_x), int(screen_y)), glow_size, 2)
+            
+            # Health bar
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = max(60, int(self.size * camera.zoom * 2))  # 2x larger
+                bar_height = max(6, int(8 * camera.zoom))  # 2x larger
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - self.size - 10
+                
+                pygame.draw.rect(surface, (255, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+                pygame.draw.rect(surface, (0, 255, 0), (bar_x, bar_y, bar_width * health_ratio, bar_height)) 

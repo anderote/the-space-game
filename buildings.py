@@ -66,65 +66,21 @@ class Building:
         
         color = self.color if self.powered else (100, 100, 100)
         
-        # Draw different shapes based on building type
+        # Enhanced building drawing with 3D effects and animations
+        import time
+        current_time = time.time()
+        
+        # Draw different shapes based on building type with enhanced visuals
         if self.type == "connector":
-            # Yellow circle with enhanced glow when powered
-            if self.powered:
-                # Pulsing glow effect
-                import time
-                pulse = 0.5 + 0.3 * math.sin(time.time() * 3)  # Faster pulse
-                glow_radius = int(screen_radius + 4 * pulse)
-                pygame.draw.circle(surface, (100, 100, 0), (int(screen_x), int(screen_y)), glow_radius)
-            
-            pygame.draw.circle(surface, (255, 255, 0), (int(screen_x), int(screen_y)), int(screen_radius))
-            pygame.draw.circle(surface, (0, 0, 0), (int(screen_x), int(screen_y)), int(screen_radius), max(2, int(3 * zoom)))
+            self._draw_connector_enhanced(surface, screen_x, screen_y, screen_radius, current_time)
             # Selection indicators removed
         
         elif self.type == "miner":
-            # Green triangle with mining beam effect when powered
-            points = []
-            for i in range(3):
-                angle = i * 2 * np.pi / 3 - np.pi / 2  # Point upward
-                px = screen_x + screen_radius * np.cos(angle)
-                py = screen_y + screen_radius * np.sin(angle)
-                points.append((px, py))
-            
-            # Add mining energy effect when powered
-            if self.powered and hasattr(self, 'zap_timer') and self.zap_timer > 0:
-                # Mining beam glow
-                glow_points = []
-                for i in range(3):
-                    angle = i * 2 * np.pi / 3 - np.pi / 2
-                    px = screen_x + (screen_radius + 3) * np.cos(angle)
-                    py = screen_y + (screen_radius + 3) * np.sin(angle)
-                    glow_points.append((px, py))
-                pygame.draw.polygon(surface, (50, 100, 50), glow_points)
-            
-            pygame.draw.polygon(surface, (0, 255, 0), points)
-            pygame.draw.polygon(surface, (0, 0, 0), points, max(2, int(3 * zoom)))
+            self._draw_miner_enhanced(surface, screen_x, screen_y, screen_radius, current_time)
             # Selection indicators removed
         
         elif self.type == "turret":
-            # Red pentagon with enhanced border and glow effect when powered
-            points = []
-            for i in range(5):
-                angle = i * 2 * np.pi / 5 - np.pi / 2  # Point upward
-                px = screen_x + screen_radius * np.cos(angle)
-                py = screen_y + screen_radius * np.sin(angle)
-                points.append((px, py))
-            
-            # Add glow effect when powered
-            if self.powered:
-                glow_points = []
-                for i in range(5):
-                    angle = i * 2 * np.pi / 5 - np.pi / 2
-                    px = screen_x + (screen_radius + 3) * np.cos(angle)
-                    py = screen_y + (screen_radius + 3) * np.sin(angle)
-                    glow_points.append((px, py))
-                pygame.draw.polygon(surface, (100, 30, 30), glow_points)
-            
-            pygame.draw.polygon(surface, (255, 0, 0), points)
-            pygame.draw.polygon(surface, (0, 0, 0), points, max(2, int(3 * zoom)))
+            self._draw_turret_enhanced(surface, screen_x, screen_y, screen_radius, current_time)
             # Selection indicators removed
         
         elif self.type == "laser":
@@ -199,8 +155,8 @@ class Building:
         # Enhanced health bar with gradient
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
-            bar_width = screen_radius * 2
-            bar_height = 5 * zoom
+            bar_width = screen_radius * 4  # 2x larger
+            bar_height = 10 * zoom  # 2x larger
             bar_x = screen_x - bar_width/2
             bar_y = screen_y - screen_radius - 10*zoom
             
@@ -250,6 +206,155 @@ class Building:
             if self.xp >= xp_needed:
                 self.xp -= xp_needed
                 self.upgrade()
+    
+    def _draw_connector_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced connector with 3D effects and energy flow animation."""
+        # Shadow effect
+        shadow_offset = max(2, screen_radius // 6)
+        pygame.draw.circle(surface, (40, 40, 0), 
+                         (int(screen_x + shadow_offset), int(screen_y + shadow_offset)), int(screen_radius))
+        
+        if self.powered:
+            # Multi-layer pulsing glow effect
+            pulse = 0.5 + 0.5 * math.sin(current_time * 4)  # Faster pulse for energy
+            for i in range(3):
+                glow_alpha = int(60 * pulse / (i + 1))
+                glow_radius = int(screen_radius + (6 - i * 2) * pulse)
+                glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(glow_surface, (255, 200, 0, glow_alpha), 
+                                 (glow_radius, glow_radius), glow_radius)
+                surface.blit(glow_surface, (screen_x - glow_radius, screen_y - glow_radius))
+        
+        # Main body with gradient
+        main_color = (255, 255, 0) if self.powered else (100, 100, 0)
+        pygame.draw.circle(surface, main_color, (int(screen_x), int(screen_y)), int(screen_radius))
+        
+        # Highlight for 3D effect
+        highlight_offset = screen_radius * 0.3
+        pygame.draw.circle(surface, (255, 255, 180), 
+                         (int(screen_x - highlight_offset), int(screen_y - highlight_offset)), 
+                         max(1, int(screen_radius * 0.4)))
+        
+        # Animated energy core
+        if self.powered:
+            core_pulse = 0.3 + 0.2 * math.sin(current_time * 6)
+            core_radius = int(screen_radius * core_pulse)
+            pygame.draw.circle(surface, (255, 255, 255), (int(screen_x), int(screen_y)), core_radius)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.circle(surface, border_color, (int(screen_x), int(screen_y)), 
+                         int(screen_radius), 2)
+
+    def _draw_miner_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced miner with 3D effects and mining beam animation."""
+        # Triangle points
+        points = []
+        shadow_points = []
+        shadow_offset = max(2, screen_radius // 6)
+        
+        for i in range(3):
+            angle = i * 2 * np.pi / 3 - np.pi / 2  # Point upward
+            px = screen_x + screen_radius * np.cos(angle)
+            py = screen_y + screen_radius * np.sin(angle)
+            points.append((px, py))
+            shadow_points.append((px + shadow_offset, py + shadow_offset))
+        
+        # Shadow
+        pygame.draw.polygon(surface, (20, 40, 20), shadow_points)
+        
+        # Mining energy effect when powered and active
+        if self.powered and hasattr(self, 'zap_timer') and self.zap_timer > 0:
+            # Animated energy waves
+            wave_intensity = math.sin(current_time * 8) * 0.5 + 0.5
+            for wave in range(3):
+                wave_size = screen_radius + (wave * 4) + (wave_intensity * 6)
+                wave_alpha = int(80 * (1 - wave * 0.3) * wave_intensity)
+                wave_surface = pygame.Surface((wave_size * 2, wave_size * 2), pygame.SRCALPHA)
+                
+                wave_points = []
+                for i in range(3):
+                    angle = i * 2 * np.pi / 3 - np.pi / 2
+                    px = wave_size + wave_size * np.cos(angle)
+                    py = wave_size + wave_size * np.sin(angle)
+                    wave_points.append((px, py))
+                
+                pygame.draw.polygon(wave_surface, (0, 255, 0, wave_alpha), wave_points)
+                surface.blit(wave_surface, (screen_x - wave_size, screen_y - wave_size))
+        
+        # Main body with gradient
+        main_color = (0, 255, 0) if self.powered else (0, 100, 0)
+        pygame.draw.polygon(surface, main_color, points)
+        
+        # Highlight for 3D effect
+        highlight_points = []
+        for i in range(3):
+            angle = i * 2 * np.pi / 3 - np.pi / 2
+            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
+            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
+            highlight_points.append((px, py))
+        pygame.draw.polygon(surface, (100, 255, 100), highlight_points)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.polygon(surface, border_color, points, 2)
+
+    def _draw_turret_enhanced(self, surface, screen_x, screen_y, screen_radius, current_time):
+        """Draw enhanced turret with 3D effects and targeting animation."""
+        # Pentagon points
+        points = []
+        shadow_points = []
+        shadow_offset = max(2, screen_radius // 6)
+        
+        for i in range(5):
+            angle = i * 2 * np.pi / 5 - np.pi / 2  # Point upward
+            px = screen_x + screen_radius * np.cos(angle)
+            py = screen_y + screen_radius * np.sin(angle)
+            points.append((px, py))
+            shadow_points.append((px + shadow_offset, py + shadow_offset))
+        
+        # Shadow
+        pygame.draw.polygon(surface, (40, 20, 20), shadow_points)
+        
+        # Targeting glow when powered
+        if self.powered:
+            # Rotating targeting scanner effect
+            scanner_angle = current_time * 2
+            for beam in range(4):
+                beam_angle = scanner_angle + (beam * np.pi / 2)
+                beam_length = screen_radius * 1.8
+                beam_end_x = screen_x + beam_length * np.cos(beam_angle)
+                beam_end_y = screen_y + beam_length * np.sin(beam_angle)
+                
+                # Draw scanning beam
+                beam_alpha = int(40 * (math.sin(current_time * 3 + beam) + 1) / 2)
+                if beam_alpha > 0:
+                    pygame.draw.line(surface, (255, 100, 100), 
+                                   (int(screen_x), int(screen_y)), 
+                                   (int(beam_end_x), int(beam_end_y)), 1)
+        
+        # Main body with gradient
+        main_color = (255, 0, 0) if self.powered else (100, 0, 0)
+        pygame.draw.polygon(surface, main_color, points)
+        
+        # Highlight for 3D effect
+        highlight_points = []
+        for i in range(5):
+            angle = i * 2 * np.pi / 5 - np.pi / 2
+            px = screen_x + screen_radius * 0.6 * np.cos(angle) - screen_radius * 0.2
+            py = screen_y + screen_radius * 0.6 * np.sin(angle) - screen_radius * 0.2
+            highlight_points.append((px, py))
+        pygame.draw.polygon(surface, (255, 100, 100), highlight_points)
+        
+        # Central core
+        if self.powered:
+            core_pulse = 0.4 + 0.2 * math.sin(current_time * 5)
+            core_radius = int(screen_radius * core_pulse * 0.3)
+            pygame.draw.circle(surface, (255, 255, 0), (int(screen_x), int(screen_y)), core_radius)
+        
+        # Border
+        border_color = (255, 255, 255) if self.powered else (150, 150, 150)
+        pygame.draw.polygon(surface, border_color, points, 2)
 
 class Solar(Building):
     def __init__(self, x, y):
@@ -349,3 +454,208 @@ class Converter(Building):
     @property
     def conversion_interval(self):
         return CONVERTER_INTERVAL
+
+class Hangar(Building):
+    def __init__(self, x, y):
+        super().__init__(x, y, (120, 120, 255), 20)
+        self.type = "hangar"
+        self.launch_timer = 0
+        self.deployed_ships = []  # List of friendly ships launched from this hangar
+        self.max_ships = 4  # Maximum number of ships this hangar can deploy
+        self.regen_timer = 3000  # Timer for ship regeneration when destroyed
+        
+    @property
+    def launch_cooldown(self):
+        return 300  # 5 seconds at 60fps
+        
+    @property
+    def regen_cooldown(self):
+        return 1200  # 20 seconds at 60fps
+        
+    @property
+    def ship_range(self):
+        return 500  # Range within which ships will engage enemies
+        
+    @property
+    def recall_range(self):
+        return 600  # Range beyond which ships will return to hangar
+
+
+class FriendlyShip:
+    """Friendly attack ship launched from hangars"""
+    def __init__(self, x, y, hangar):
+        self.x = x
+        self.y = y
+        self.hangar = hangar  # Reference to parent hangar
+        self.health = 30
+        self.max_health = 30
+        self.speed = 1.7
+        self.damage = 15
+        self.fire_range = 80
+        self.last_shot_time = 0
+        self.fire_cooldown = 60  # 1 second at 60fps
+        self.target = None
+        self.state = "seeking"  # "seeking", "attacking", "returning"
+        self.size = 8
+        # Circling behavior attributes
+        self.orbit_angle = 0
+        self.orbit_radius = 60
+        self.orbit_speed = 0.08  # Faster than enemies for dynamic combat
+        self.is_orbiting = False
+        
+    def update(self, enemies, current_time):
+        """Update ship behavior"""
+        if self.health <= 0:
+            return False  # Ship destroyed
+            
+        # Find distance to hangar
+        hangar_dist = math.sqrt((self.x - self.hangar.x)**2 + (self.y - self.hangar.y)**2)
+        
+        # Check if we should return to hangar
+        if hangar_dist > self.hangar.recall_range:
+            self.state = "returning"
+            self.target = None
+        elif not enemies or not any(self._distance_to(e) <= self.hangar.ship_range for e in enemies):
+            # No enemies in range, return to hangar
+            self.state = "returning"
+            self.target = None
+        else:
+            # Find nearest enemy within range
+            closest_enemy = None
+            closest_dist = float('inf')
+            
+            for enemy in enemies:
+                dist = self._distance_to(enemy)
+                if dist <= self.hangar.ship_range and dist < closest_dist:
+                    closest_enemy = enemy
+                    closest_dist = dist
+                    
+            if closest_enemy:
+                self.target = closest_enemy
+                self.state = "attacking"
+            else:
+                self.state = "returning"
+                self.target = None
+        
+        # Move based on state
+        if self.state == "attacking" and self.target:
+            target_dist = self._distance_to(self.target)
+            
+            # Start circling when within attack range
+            if target_dist <= self.fire_range + 20:  # Start circling slightly outside fire range
+                self.is_orbiting = True
+                
+                # Calculate orbit position
+                self.orbit_angle += self.orbit_speed
+                orbit_x = self.target.x + self.orbit_radius * math.cos(self.orbit_angle)
+                orbit_y = self.target.y + self.orbit_radius * math.sin(self.orbit_angle)
+                
+                # Move towards orbit position
+                self._move_towards(orbit_x, orbit_y)
+                
+                # Try to attack if in range
+                if target_dist <= self.fire_range:
+                    if current_time - self.last_shot_time >= self.fire_cooldown:
+                        # Apply damage directly to enemy health (enemies don't have take_damage method)
+                        self.target.health -= self.damage
+                        self.last_shot_time = current_time
+            else:
+                # Move towards target until in range
+                self.is_orbiting = False
+                self._move_towards(self.target.x, self.target.y)
+        elif self.state == "returning":
+            self._move_towards(self.hangar.x, self.hangar.y)
+            # Check if we've returned to hangar
+            if hangar_dist < 30:
+                return False  # Ship has returned, remove from active list
+        else:  # seeking
+            # Patrol around hangar
+            patrol_radius = 100
+            patrol_x = self.hangar.x + patrol_radius * math.cos(current_time * 0.01)
+            patrol_y = self.hangar.y + patrol_radius * math.sin(current_time * 0.01)
+            self._move_towards(patrol_x, patrol_y)
+            
+        return True  # Ship still active
+        
+    def _distance_to(self, target):
+        """Calculate distance to target"""
+        return math.sqrt((self.x - target.x)**2 + (self.y - target.y)**2)
+        
+    def _move_towards(self, target_x, target_y):
+        """Move towards target position"""
+        dx = target_x - self.x
+        dy = target_y - self.y
+        dist = math.sqrt(dx*dx + dy*dy)
+        
+        if dist > 0:
+            # Normalize and apply speed
+            self.x += (dx / dist) * self.speed
+            self.y += (dy / dist) * self.speed
+            
+    def take_damage(self, damage):
+        """Take damage from enemy attacks"""
+        self.health -= damage
+        
+    def draw(self, surface, camera):
+        """Draw the friendly ship"""
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        screen_size = self.size * camera.zoom
+        
+        if 0 <= screen_x <= surface.get_width() and 0 <= screen_y <= surface.get_height():
+            # Draw as a small blue triangle pointing towards movement direction
+            if hasattr(self, 'target') and self.target:
+                # Point towards target
+                dx = self.target.x - self.x
+                dy = self.target.y - self.y
+            else:
+                # Point towards hangar
+                dx = self.hangar.x - self.x
+                dy = self.hangar.y - self.y
+                
+            angle = math.atan2(dy, dx)
+            
+            # Triangle points
+            points = []
+            for i in range(3):
+                point_angle = angle + (i * 2 * math.pi / 3)
+                px = screen_x + screen_size * math.cos(point_angle)
+                py = screen_y + screen_size * math.sin(point_angle)
+                points.append((px, py))
+                
+            # Draw blue triangle with different color based on state
+            if self.is_orbiting:
+                # Brighter color when attacking/orbiting
+                ship_color = (150, 200, 255)
+                border_color = (200, 255, 255)
+            else:
+                # Normal color when seeking/returning
+                ship_color = (100, 150, 255)
+                border_color = (50, 100, 200)
+                
+            pygame.draw.polygon(surface, ship_color, points)
+            pygame.draw.polygon(surface, border_color, points, 2)
+            
+            # Draw targeting indicator when orbiting
+            if self.is_orbiting and self.target:
+                target_screen_x, target_screen_y = camera.world_to_screen(self.target.x, self.target.y)
+                orbit_radius_screen = self.orbit_radius * camera.zoom
+                # Draw orbit circle (faint)
+                if orbit_radius_screen > 5:  # Only draw if visible
+                    pygame.draw.circle(surface, (100, 150, 255), 
+                                     (int(target_screen_x), int(target_screen_y)), 
+                                     int(orbit_radius_screen), 1)
+            
+            # Draw health bar if damaged
+            if self.health < self.max_health:
+                health_ratio = self.health / self.max_health
+                bar_width = 30 * camera.zoom  # 2x larger
+                bar_height = 6 * camera.zoom  # 2x larger
+                bar_x = screen_x - bar_width // 2
+                bar_y = screen_y - screen_size - 8 * camera.zoom
+                
+                # Background
+                pygame.draw.rect(surface, (100, 0, 0), (bar_x, bar_y, bar_width, bar_height))
+                # Health
+                health_width = int(bar_width * health_ratio)
+                if health_width > 0:
+                    pygame.draw.rect(surface, (0, 150, 0), (bar_x, bar_y, health_width, bar_height))

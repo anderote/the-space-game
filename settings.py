@@ -36,11 +36,11 @@ FONT_WEIGHT = "light"  # Prefer light weight
 
 # Base configuration
 BASE_RADIUS = 40
-BASE_HEALTH = 200
+BASE_HEALTH = 450
 BASE_MAX_ENERGY = 100
 
 # Resource configuration
-STARTING_MINERALS = 500  # Decreased by 30% (was 1200)
+STARTING_MINERALS = 600  # Decreased by 30% (was 1200)
 STARTING_ENERGY = 50
 STARTING_MAX_ENERGY = 200
 
@@ -54,7 +54,8 @@ BUILD_COSTS = {
     'laser': 200,
     'superlaser': 500,  # New expensive long-range laser
     'repair': 120,
-    'converter': 90
+    'converter': 90,
+    'hangar': 250  # Hangar for friendly attack ships
 }
 
 # Building stats
@@ -78,8 +79,16 @@ REPAIR_RATE = 0.15  # per level per frame
 REPAIR_ENERGY_COST = 0.05  # energy per frame
 REPAIR_RANGE = 250  # base range
 CONVERTER_ENERGY_COST = 100
-CONVERTER_MINERAL_RATE = 5  # per level
-CONVERTER_INTERVAL = 300  # frames (10 sec)
+CONVERTER_MINERAL_RATE = 2  # minerals per conversion
+CONVERTER_INTERVAL = 120  # frames between conversions
+
+# Hangar stats
+HANGAR_ENERGY_COST = 0.5  # energy per frame to maintain
+HANGAR_LAUNCH_COOLDOWN = 300  # frames between ship launches (5 seconds)
+HANGAR_MAX_SHIPS = 4  # maximum ships per hangar
+HANGAR_SHIP_RANGE = 500  # range within which ships will engage
+HANGAR_RECALL_RANGE = 600  # range beyond which ships return
+HANGAR_REGEN_COOLDOWN = 1200  # frames between ship regeneration (20 seconds)
 
 # Power grid
 POWER_RANGE = 150
@@ -108,8 +117,8 @@ MOTHERSHIP_SPAWN_CHANCE = 0.15  # 15% chance per enemy to be mothership (for wav
 # Wave configuration
 WAVE_WAIT_TIME = 120  # frames between waves
 SPAWN_INTERVAL = 30  # frames between enemy spawns
-INITIAL_WAIT = 4800  # frames before first wave (80 seconds at 60fps)
-WAVE_GROWTH_FACTOR = 1.8  # Increased from default (faster wave growth)
+INITIAL_WAIT = 6600  # frames before first wave (110 seconds at 60fps) - added 30 seconds
+WAVE_GROWTH_FACTOR = 2.16  # Increased by 20% from 1.8 (faster wave growth)
 FORMATION_SIZE_THRESHOLD = 15  # Start using formations when wave has this many enemies
 MAX_FORMATIONS = 4  # Maximum number of formations per wave
 
@@ -133,8 +142,8 @@ POWERUP_COST = 50
 POWERUP_DURATION = 600  # frames (10 sec)
 
 # Asteroid configuration
-ASTEROID_CLUMPS_MIN = 6  # minimum number of asteroid clusters
-ASTEROID_CLUMPS_MAX = 12  # maximum number of asteroid clusters
+ASTEROID_CLUMPS_MIN = 4  # minimum number of asteroid clusters (reduced by 30%)
+ASTEROID_CLUMPS_MAX = 8  # maximum number of asteroid clusters (reduced by 30%)
 ASTEROIDS_PER_CLUMP = 4
 ASTEROID_MIN_DIST = 100
 ASTEROID_BASE_MINERALS = 2000
