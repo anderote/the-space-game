@@ -46,6 +46,12 @@ class Building:
     miner_image = None
     battery_image = None
     hospital_image = None
+    
+    def take_damage(self, damage):
+        """Take damage and reduce health"""
+        self.health -= damage
+        if self.health <= 0:
+            self.health = 0
 
     def draw(self, surface, camera_x=0, camera_y=0, zoom=1.0):
         # Calculate screen position with camera offset and zoom
@@ -190,8 +196,7 @@ class Building:
             pygame.draw.polygon(surface, color, points)
             # Selection indicators removed
         
-        # Health bar
-        # Health bar only if damaged (50% opacity)
+        # Enhanced health bar with gradient
         if self.health < self.max_health:
             health_ratio = self.health / self.max_health
             bar_width = screen_radius * 2
@@ -199,17 +204,34 @@ class Building:
             bar_x = screen_x - bar_width/2
             bar_y = screen_y - screen_radius - 10*zoom
             
-            # Create semi-transparent health bar
-            health_surface = pygame.Surface((bar_width, bar_height), pygame.SRCALPHA)
-            health_surface.fill((200, 0, 0, 127))  # Red background with 50% alpha
-            surface.blit(health_surface, (bar_x, bar_y))
+            # Background
+            pygame.draw.rect(surface, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
             
-            # Only create green surface if there's actual health to show
-            green_width = max(1, int(bar_width * health_ratio))
-            if green_width > 0:
-                green_surface = pygame.Surface((green_width, bar_height), pygame.SRCALPHA)
-                green_surface.fill((0, 200, 0, 127))  # Green with 50% alpha
-                surface.blit(green_surface, (bar_x, bar_y))
+            # Calculate gradient colors based on health ratio
+            if health_ratio > 0.6:
+                # Green to yellow
+                r = int(255 * (1 - health_ratio) * 2.5)
+                g = 255
+                b = 0
+            elif health_ratio > 0.3:
+                # Yellow to orange  
+                r = 255
+                g = int(255 * ((health_ratio - 0.3) / 0.3))
+                b = 0
+            else:
+                # Orange to red
+                r = 255
+                g = int(255 * (health_ratio / 0.3) * 0.5)
+                b = 0
+            
+            # Draw the health bar with gradient
+            health_width = int(bar_width * health_ratio)
+            if health_width > 0:
+                pygame.draw.rect(surface, (r, g, b), (bar_x, bar_y, health_width, bar_height))
+            
+            # Glass effect on health bar
+            pygame.draw.rect(surface, (255, 255, 255, 100), (bar_x, bar_y, bar_width, bar_height//2))
+            pygame.draw.rect(surface, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), 1)
         # Level text removed - stats will be shown in bottom left panel when selected
 
     def upgrade_cost(self, base_cost):
@@ -236,10 +258,13 @@ class Solar(Building):
     @property
     def prod_rate(self):
         return SOLAR_ENERGY_RATE * self.level
+    @property
+    def storage(self):
+        return 50 * self.level  # 50 base capacity per level
 
 class Connector(Building):
     def __init__(self, x, y):
-        super().__init__(x, y, (255, 180, 40), 10)
+        super().__init__(x, y, (255, 180, 40), 5)  # Reduced radius from 10 to 5 (50% smaller)
         self.type = "connector"
 
 class Battery(Building):

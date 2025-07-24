@@ -8,7 +8,7 @@ import math
 from settings import *
 
 class Enemy:
-    def __init__(self, x, y, health, speed=1.0):
+    def __init__(self, x, y, health, speed=1.0, enemy_type="basic"):
         self.x = x
         self.y = y
         self.radius = 8
@@ -22,6 +22,9 @@ class Enemy:
         self.orbit_speed = 0.05
         self.movement_angle = 0  # Direction of movement for triangle shape
         self.is_orbiting = False
+        self.enemy_type = enemy_type
+        self.last_shot_time = 0  # For laser timing
+        self.points = 1  # Default point value for basic enemies
     
     # Class variable for spaceship image (will be set from main.py)
     spaceship_image = None
@@ -319,14 +322,17 @@ class WaveManager:
     def start_wave(self):
         self.wave_active = True
         self.can_start_next_wave = False
-        # Faster wave growth
-        self.spawn_count = int(ENEMY_SPAWN_BASE * (WAVE_GROWTH_FACTOR ** (self.wave - 1)))
+        
+        # Point-based wave generation
+        self.wave_points = self.calculate_wave_points()
+        self.enemies_to_spawn = self.generate_enemy_composition()
         self.spawn_timer = 0
         
         # Set up formations for larger waves
-        if self.spawn_count >= FORMATION_SIZE_THRESHOLD:
-            num_formations = min(MAX_FORMATIONS, max(2, self.spawn_count // 8))
-            self.enemies_per_formation = self.spawn_count // num_formations
+        total_enemies = len(self.enemies_to_spawn)
+        if total_enemies >= FORMATION_SIZE_THRESHOLD:
+            num_formations = min(MAX_FORMATIONS, max(2, total_enemies // 8))
+            self.enemies_per_formation = total_enemies // num_formations
             
             # Create formation spawn points around the map edges
             self.formations = []
@@ -352,7 +358,75 @@ class WaveManager:
         else:
             # Small waves use single spawn points
             self.formations = []
-            self.enemies_per_formation = self.spawn_count
+            self.enemies_per_formation = total_enemies
+
+    def calculate_wave_points(self):
+        """Calculate total points for this wave using exponential growth"""
+        if self.wave <= 5:
+            # First 5 waves: only basic enemies (1 point each)
+            return min(3 + self.wave, 8)  # Waves 1-5: 4,5,6,7,8 points
+        else:
+            # Exponential growth after wave 5
+            base_points = 8
+            return int(base_points * (1.4 ** (self.wave - 5)))
+    
+    def generate_enemy_composition(self):
+        """Generate list of enemy types to spawn based on wave points"""
+        enemies_to_spawn = []
+        remaining_points = self.wave_points
+        
+        if self.wave <= 5:
+            # Waves 1-5: Only basic enemies
+            while remaining_points >= 1:
+                enemies_to_spawn.append("basic")
+                remaining_points -= 1
+        else:
+            # Later waves: Mix of enemy types
+            while remaining_points > 0:
+                # Choose enemy type based on remaining points and probability
+                if remaining_points >= 5 and random.random() < 0.2:  # 20% chance for large ship
+                    enemies_to_spawn.append("large")
+                    remaining_points -= 5
+                elif remaining_points >= 2 and random.random() < 0.3:  # 30% chance for kamikaze
+                    enemies_to_spawn.append("kamikaze") 
+                    remaining_points -= 2
+                elif remaining_points >= 1:
+                    enemies_to_spawn.append("basic")
+                    remaining_points -= 1
+                else:
+                    break
+                    
+        return enemies_to_spawn
+    
+    def get_spawn_position(self):
+        """Get spawn position based on formation or single spawn"""
+        if self.formations:
+            # Formation spawning with multiple directions
+            formation_x, formation_y = self.formations[self.current_formation]
+            # Add some spread within the formation
+            spread = 50
+            x = formation_x + random.uniform(-spread, spread)
+            y = formation_y + random.uniform(-spread, spread)
+            # Keep within world bounds
+            x = max(0, min(self.world_w, x))
+            y = max(0, min(self.world_h, y))
+            
+            # Move to next formation after spawning some enemies
+            if random.random() < 0.3:  # 30% chance to switch formations
+                self.current_formation = (self.current_formation + 1) % len(self.formations)
+            
+            return x, y
+        else:
+            # Traditional single-point spawning for small waves
+            side = random.choice(['left', 'right', 'top', 'bottom'])
+            if side == 'left':
+                return 0, random.randint(0, self.world_h)
+            elif side == 'right':
+                return self.world_w, random.randint(0, self.world_h)
+            elif side == 'top':
+                return random.randint(0, self.world_w), 0
+            else:
+                return random.randint(0, self.world_w), self.world_h
 
     def force_next_wave(self):
         """Manually start the next wave"""
@@ -367,47 +441,28 @@ class WaveManager:
             else:
                 self.start_wave()
         else:
-            if self.spawn_count > 0:
+            if self.enemies_to_spawn:
                 if self.spawn_timer <= 0:
-                    if self.formations:
-                        # Formation spawning
-                        formation_x, formation_y = self.formations[self.current_formation]
-                        # Add some spread within the formation
-                        spread = 50
-                        x = formation_x + random.uniform(-spread, spread)
-                        y = formation_y + random.uniform(-spread, spread)
-                        # Keep within world bounds
-                        x = max(0, min(self.world_w, x))
-                        y = max(0, min(self.world_h, y))
-                        
-                        # Move to next formation after spawning enough enemies
-                        enemies_spawned_in_formation = self.enemies_per_formation - (self.spawn_count % self.enemies_per_formation)
-                        if enemies_spawned_in_formation >= self.enemies_per_formation:
-                            self.current_formation = (self.current_formation + 1) % len(self.formations)
-                    else:
-                        # Traditional single-point spawning for small waves
-                        side = random.choice(['left', 'right', 'top', 'bottom'])
-                        if side == 'left':
-                            x, y = 0, random.randint(0, self.world_h)
-                        elif side == 'right':
-                            x, y = self.world_w, random.randint(0, self.world_h)
-                        elif side == 'top':
-                            x, y = random.randint(0, self.world_w), 0
+                    # Get spawn position
+                    x, y = self.get_spawn_position()
+                    
+                    # Spawn the next enemy type in the list
+                    enemy_type = self.enemies_to_spawn.pop(0)
+                    
+                    if enemy_type == "basic":
+                        health = ENEMY_HEALTH_BASE * self.wave
+                        if self.wave >= 3 and random.random() < MOTHERSHIP_SPAWN_CHANCE:
+                            # Spawn mothership with higher health
+                            mothership_health = health * MOTHERSHIP_HEALTH_MULTIPLIER
+                            self.enemies.append(Mothership(x, y, mothership_health))
                         else:
-                            x, y = random.randint(0, self.world_w), self.world_h
+                            # Spawn regular enemy
+                            self.enemies.append(Enemy(x, y, health))
+                    elif enemy_type == "large":
+                        self.enemies.append(LargeShip(x, y))
+                    elif enemy_type == "kamikaze":
+                        self.enemies.append(KamikazeShip(x, y))
                     
-                    health = ENEMY_HEALTH_BASE * self.wave
-                    
-                    # Spawn mothership or regular enemy
-                    if self.wave >= 3 and random.random() < MOTHERSHIP_SPAWN_CHANCE:
-                        # Spawn mothership with higher health
-                        mothership_health = health * MOTHERSHIP_HEALTH_MULTIPLIER
-                        self.enemies.append(Mothership(x, y, mothership_health))
-                    else:
-                        # Spawn regular enemy
-                        self.enemies.append(Enemy(x, y, health))
-                    
-                    self.spawn_count -= 1
                     self.spawn_timer = SPAWN_INTERVAL
                 else:
                     self.spawn_timer -= 1
@@ -423,4 +478,104 @@ class WaveManager:
 
     def draw_enemies(self, surface, camera):
         for e in self.enemies:
-            e.draw(surface, camera) 
+            e.draw(surface, camera)
+
+# New enemy types with point values
+class LargeShip(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y, health=200, speed=0.5, enemy_type="large")
+        self.radius = 15
+        self.size = 25
+        self.laser_range = 200
+        self.laser_damage = 15
+        self.shot_cooldown = 90  # 1.5 seconds at 60fps
+        self.points = 5  # Point value for wave generation
+        
+    def update(self, buildings, base_pos):
+        super().update(buildings, base_pos)
+        # Check if we can shoot at buildings
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_shot_time > self.shot_cooldown:
+            # Find nearest building in range
+            nearest_building = None
+            min_dist = float('inf')
+            
+            for building in buildings:
+                dist = math.hypot(building.x - self.x, building.y - self.y)
+                if dist <= self.laser_range and dist < min_dist:
+                    min_dist = dist
+                    nearest_building = building
+            
+            if nearest_building:
+                # Deal damage to building
+                nearest_building.take_damage(self.laser_damage)
+                self.last_shot_time = current_time
+                # Store laser target for visual effects
+                self.laser_target = nearest_building
+            else:
+                self.laser_target = None
+    
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
+            # Draw large blue rectangle ship
+            rect_width = int(self.size * camera.zoom)
+            rect_height = int(self.size * 0.6 * camera.zoom)
+            rect = pygame.Rect(screen_x - rect_width//2, screen_y - rect_height//2, rect_width, rect_height)
+            pygame.draw.rect(surface, (0, 100, 255), rect)  # Blue color
+            pygame.draw.rect(surface, (0, 150, 255), rect, 2)  # Lighter blue border
+            
+            # Health bar
+            bar_width = max(20, int(self.size * camera.zoom))
+            bar_height = max(2, int(3 * camera.zoom))
+            health_ratio = self.health / self.max_health
+            pygame.draw.rect(surface, (255, 0, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width, bar_height))
+            pygame.draw.rect(surface, (0, 255, 0), (screen_x - bar_width//2, screen_y - self.size - 8, bar_width * health_ratio, bar_height))
+
+class KamikazeShip(Enemy):
+    def __init__(self, x, y):
+        super().__init__(x, y, health=30, speed=2.5, enemy_type="kamikaze")
+        self.radius = 6
+        self.size = 10
+        self.damage = 100
+        self.points = 2  # Point value for wave generation
+        self.has_exploded = False
+        
+    def update(self, buildings, base_pos):
+        # Move toward nearest target aggressively
+        if not self.target:
+            self.find_nearest_target(buildings, base_pos)
+        
+        if self.target:
+            dx = self.target.x - self.x
+            dy = self.target.y - self.y
+            distance = math.hypot(dx, dy)
+            
+            if distance < 20 and not self.has_exploded:  # Close enough to explode
+                self.explode_on_target()
+            else:
+                # Move toward target at high speed
+                if distance > 0:
+                    self.x += (dx / distance) * self.speed
+                    self.y += (dy / distance) * self.speed
+    
+    def explode_on_target(self):
+        """Explode and damage the target"""
+        if self.target and hasattr(self.target, 'take_damage'):
+            self.target.take_damage(self.damage)
+        self.has_exploded = True
+        self.health = 0  # Dies after explosion
+        
+    def draw(self, surface, camera):
+        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
+            # Draw small red triangle (aggressive look)
+            points = []
+            for i in range(3):
+                angle = i * 2 * math.pi / 3 + self.movement_angle
+                px = screen_x + self.size * camera.zoom * math.cos(angle)
+                py = screen_y + self.size * camera.zoom * math.sin(angle)
+                points.append((px, py))
+            
+            pygame.draw.polygon(surface, (255, 50, 50), points)  # Bright red
+            pygame.draw.polygon(surface, (255, 100, 100), points, 2)  # Lighter red border 

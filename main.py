@@ -8,7 +8,7 @@ from resources import ResourceManager
 from asteroids import Asteroid, DamageNumber
 from buildings import Solar, Connector, Battery, Miner, Turret, Laser, SuperLaser, Repair, Converter, Building
 from power import PowerGrid
-from enemies import WaveManager, MothershipMissile
+from enemies import WaveManager, MothershipMissile, LargeShip, KamikazeShip
 import random
 import numpy as np
 import math
@@ -108,8 +108,8 @@ def spawn_asteroids():
     # Create asteroid network centered around base with connected chains
     # Start with clusters in 8 directions around base (reduced density)
     base_distance = 200  # Starting distance from base
-    chain_length = 2     # Reduced from 4 - fewer clusters per chain
-    num_chains = 6       # Reduced from 8 - fewer chains
+    chain_length = 3     # Increased from 2 - more clusters per chain
+    num_chains = 8       # Increased from 6 - more chains
     
     for chain in range(num_chains):
         # Calculate direction for this chain
@@ -148,6 +148,32 @@ def spawn_asteroids():
                     # Check distance from base
                     distance_from_base = ((asteroid_x - BASE_POS[0]) ** 2 + (asteroid_y - BASE_POS[1]) ** 2) ** 0.5
                     if distance_from_base > (BASE_RADIUS + 80):  # 80 pixel buffer from base
+                        asteroids.append(Asteroid(asteroid_x, asteroid_y))
+                        break
+    
+    # Add additional distant asteroid clumps scattered around the map
+    distant_clumps = 12  # Number of distant asteroid clumps
+    for clump in range(distant_clumps):
+        # Place clumps in outer regions of the map
+        clump_x = random.uniform(WORLD_WIDTH * 0.1, WORLD_WIDTH * 0.9)
+        clump_y = random.uniform(WORLD_HEIGHT * 0.1, WORLD_HEIGHT * 0.9)
+        
+        # Ensure clumps are far from base
+        distance_from_base = ((clump_x - BASE_POS[0]) ** 2 + (clump_y - BASE_POS[1]) ** 2) ** 0.5
+        if distance_from_base > 400:  # At least 400 pixels from base
+            # Generate 3-5 asteroids per distant clump
+            asteroids_per_clump = random.randint(3, 5)
+            for _ in range(asteroids_per_clump):
+                for attempt in range(8):
+                    # Moderate spread for clump cohesion
+                    offset_x = random.gauss(0, 40)
+                    offset_y = random.gauss(0, 40)
+                    asteroid_x = clump_x + offset_x
+                    asteroid_y = clump_y + offset_y
+                    
+                    # Keep within world bounds
+                    if (ASTEROID_MIN_DIST <= asteroid_x <= WORLD_WIDTH - ASTEROID_MIN_DIST and 
+                        ASTEROID_MIN_DIST <= asteroid_y <= WORLD_HEIGHT - ASTEROID_MIN_DIST):
                         asteroids.append(Asteroid(asteroid_x, asteroid_y))
                         break
 
@@ -196,23 +222,18 @@ def draw_base(surface, pos, radius, health, max_health, camera):
     pygame.draw.rect(surface, GREEN, (screen_x - bar_width/2, screen_y - screen_radius - 15*camera.zoom, bar_width * health_ratio, 8*camera.zoom))
 
 def draw_modern_building_panel(surface):
-    """Draw a modern vertical building panel on the right side"""
+    """Draw a modern vertical building panel on the right side with glass effect"""
     panel_width = 200
     panel_x = SCREEN_WIDTH - panel_width
     panel_height = SCREEN_HEIGHT
     
-    # Semi-transparent dark background
-    panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
-    panel_surface.fill((20, 25, 35, 220))  # Dark blue-gray with transparency
-    
-    # Gradient border effect
-    pygame.draw.rect(panel_surface, (60, 80, 120), (0, 0, panel_width, panel_height), 3)
-    pygame.draw.rect(panel_surface, (40, 60, 100), (3, 3, panel_width-6, panel_height-6), 1)
+    # Use glass panel effect
+    panel_surface = draw_glass_panel(surface, panel_x, 0, panel_width, panel_height, alpha=200)
     
     # Title
     title_text = title_font.render("BUILDINGS", True, (200, 220, 255))
     title_x = (panel_width - title_text.get_width()) // 2
-    panel_surface.blit(title_text, (title_x, 20))
+    surface.blit(title_text, (panel_x + title_x, 20))
     
     # Building buttons
     building_types = [
@@ -231,39 +252,67 @@ def draw_modern_building_panel(surface):
     button_margin = 8
     start_y = 60
     
+    # Get mouse position for hover effects
+    mouse_x, mouse_y = pygame.mouse.get_pos()
+    
     for i, (name, build_type, cost, hotkey) in enumerate(building_types):
         button_y = start_y + i * (button_height + button_margin)
-        button_rect = pygame.Rect(10, button_y, panel_width - 20, button_height)
+        button_x = panel_x + 10
+        button_width = panel_width - 20
         
-        # Button background - highlight if selected
-        if selected_build == build_type:
-            button_color = (80, 120, 160)  # Bright blue when selected
-            border_color = (120, 160, 200)
-        elif resources.minerals >= cost:
-            button_color = (50, 70, 90)   # Available
-            border_color = (70, 90, 120)
+        # Check if mouse is hovering over this button
+        is_hovered = (button_x <= mouse_x <= button_x + button_width and 
+                     button_y <= mouse_y <= button_y + button_height)
+        is_active = (selected_build == build_type)
+        is_affordable = (resources.minerals >= cost)
+        
+        # Glass button background
+        button_surface = pygame.Surface((button_width, button_height), pygame.SRCALPHA)
+        
+        if is_active:
+            base_color = (80, 120, 160, 200)
+            highlight_color = (100, 140, 180, 220)
+        elif is_hovered and is_affordable:
+            base_color = (60, 100, 140, 200)  
+            highlight_color = (80, 120, 160, 220)
+        elif is_affordable:
+            base_color = (40, 60, 100, 180)
+            highlight_color = (60, 80, 120, 200)
         else:
-            button_color = (30, 35, 45)   # Not affordable
-            border_color = (50, 55, 65)
+            base_color = (30, 35, 45, 160)
+            highlight_color = (40, 45, 55, 180)
         
-        pygame.draw.rect(panel_surface, button_color, button_rect)
-        pygame.draw.rect(panel_surface, border_color, button_rect, 2)
+        # Main button background
+        button_surface.fill(base_color)
+        
+        # Top highlight for glass effect
+        pygame.draw.rect(button_surface, highlight_color, (0, 0, button_width, button_height//3))
+        
+        # Border with glow for hovered buttons
+        border_color = (120, 160, 200, 220) if is_hovered else (80, 100, 140, 180)
+        pygame.draw.rect(button_surface, border_color, (0, 0, button_width, button_height), 2)
+        
+        # Hover glow effect
+        if is_hovered and is_affordable:
+            glow_surface = pygame.Surface((button_width + 6, button_height + 6), pygame.SRCALPHA)
+            pygame.draw.rect(glow_surface, (100, 150, 255, 40), (0, 0, button_width + 6, button_height + 6), 3)
+            surface.blit(glow_surface, (button_x - 3, button_y - 3))
+        
+        surface.blit(button_surface, (button_x, button_y))
         
         # Hotkey indicator
         hotkey_text = small_font.render(hotkey, True, (255, 255, 100))
-        panel_surface.blit(hotkey_text, (15, button_y + 5))
+        surface.blit(hotkey_text, (button_x + 5, button_y + 5))
         
         # Building name
-        name_color = (255, 255, 255) if resources.minerals >= cost else (150, 150, 150)
-        name_text = font.render(name, True, name_color)
-        panel_surface.blit(name_text, (35, button_y + 8))
+        name_color = (255, 255, 255) if is_affordable else (150, 150, 150)
+        name_text = hud_font.render(name, True, name_color)
+        surface.blit(name_text, (button_x + 25, button_y + 8))
         
         # Cost
-        cost_color = (255, 255, 100) if resources.minerals >= cost else (200, 150, 150)
+        cost_color = (255, 255, 100) if is_affordable else (200, 150, 150)
         cost_text = small_font.render(f"Cost: {cost}", True, cost_color)
-        panel_surface.blit(cost_text, (35, button_y + 28))
-    
-    surface.blit(panel_surface, (panel_x, 0))
+        surface.blit(cost_text, (button_x + 25, button_y + 28))
 
 def draw_range_indicator(surface, world_x, world_y, range_val, camera, color=(255, 255, 255, 100)):
     screen_x, screen_y = camera.world_to_screen(world_x, world_y)
@@ -272,6 +321,70 @@ def draw_range_indicator(surface, world_x, world_y, range_val, camera, color=(25
     # Draw range circle
     if screen_range > 5:  # Only draw if visible
         pygame.draw.circle(surface, color[:3], (int(screen_x), int(screen_y)), int(screen_range), 2)
+
+def draw_glass_panel(surface, x, y, width, height, alpha=180):
+    """Draw a glass-like panel with transparency and subtle highlights"""
+    # Create the main panel surface
+    panel_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+    
+    # Main glass background with transparency
+    panel_surface.fill((20, 25, 35, alpha))
+    
+    # Subtle gradient effect - lighter at top
+    for i in range(height // 3):
+        alpha_gradient = min(255, max(0, alpha + (30 - i)))
+        r = min(255, max(0, 30 + i//2))
+        g = min(255, max(0, 35 + i//2))
+        b = min(255, max(0, 45 + i//2))
+        gradient_color = (r, g, b, alpha_gradient)
+        pygame.draw.rect(panel_surface, gradient_color, (0, i, width, 1))
+    
+    # Glass highlight on top edge
+    pygame.draw.rect(panel_surface, (60, 80, 120, 200), (0, 0, width, 2))
+    
+    # Subtle side highlights
+    pygame.draw.rect(panel_surface, (40, 60, 100, 150), (0, 0, 2, height))
+    pygame.draw.rect(panel_surface, (40, 60, 100, 150), (width-2, 0, 2, height))
+    
+    # Bottom shadow
+    pygame.draw.rect(panel_surface, (10, 15, 25, 200), (0, height-2, width, 2))
+    
+    # Outer glass border
+    pygame.draw.rect(panel_surface, (80, 100, 140, 180), (0, 0, width, height), 2)
+    
+    surface.blit(panel_surface, (x, y))
+    return panel_surface
+
+def draw_gradient_health_bar(surface, x, y, width, height, health_ratio):
+    """Draw a health bar with red-to-green gradient"""
+    # Background
+    pygame.draw.rect(surface, (50, 50, 50), (x, y, width, height))
+    
+    # Calculate gradient colors based on health ratio
+    if health_ratio > 0.6:
+        # Green to yellow
+        r = int(255 * (1 - health_ratio) * 2.5)
+        g = 255
+        b = 0
+    elif health_ratio > 0.3:
+        # Yellow to orange  
+        r = 255
+        g = int(255 * ((health_ratio - 0.3) / 0.3))
+        b = 0
+    else:
+        # Orange to red
+        r = 255
+        g = int(255 * (health_ratio / 0.3) * 0.5)
+        b = 0
+    
+    # Draw the health bar with gradient
+    health_width = int(width * health_ratio)
+    if health_width > 0:
+        pygame.draw.rect(surface, (r, g, b), (x, y, health_width, height))
+    
+    # Glass effect on health bar
+    pygame.draw.rect(surface, (255, 255, 255, 100), (x, y, width, height//2))
+    pygame.draw.rect(surface, (100, 100, 100), (x, y, width, height), 1)
 
 def draw_minimap(surface, camera, asteroids, enemies, base_pos):
     """Draw a minimap in the top-left corner showing the full world"""
@@ -418,6 +531,110 @@ def draw_game_menu(surface):
     quit_text = font.render("Q - Quit Game", True, WHITE)
     surface.blit(quit_text, (menu_x + 50, menu_y + 200))
 
+# Particle system for enhanced visual effects
+class Particle:
+    def __init__(self, x, y, vx, vy, color, lifetime, size=2):
+        self.x = x
+        self.y = y
+        self.vx = vx
+        self.vy = vy
+        self.original_color = color
+        self.color = color
+        self.lifetime = lifetime
+        self.max_lifetime = lifetime
+        self.size = size
+    
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+        self.lifetime -= 1
+        # Fade out over time
+        fade_ratio = self.lifetime / self.max_lifetime
+        self.color = (
+            int(self.original_color[0] * fade_ratio),
+            int(self.original_color[1] * fade_ratio), 
+            int(self.original_color[2] * fade_ratio)
+        )
+    
+    def draw(self, surface, camera):
+        if self.lifetime > 0:
+            screen_x, screen_y = camera.world_to_screen(self.x, self.y)
+            if -50 <= screen_x <= SCREEN_WIDTH + 50 and -50 <= screen_y <= SCREEN_HEIGHT + 50:
+                pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), int(self.size))
+
+# Global particle list
+particles = []
+
+def add_particles(x, y, count, color, speed_range=(1, 3), lifetime_range=(30, 60)):
+    """Add particles at a position with random velocities"""
+    for _ in range(count):
+        angle = random.uniform(0, 2 * math.pi)
+        speed = random.uniform(*speed_range)
+        vx = math.cos(angle) * speed
+        vy = math.sin(angle) * speed
+        lifetime = random.randint(*lifetime_range)
+        size = random.uniform(1, 3)
+        particles.append(Particle(x, y, vx, vy, color, lifetime, size))
+
+class MiningLaser:
+    def __init__(self, start_x, start_y, target_x, target_y, duration=30):
+        self.start_x = start_x
+        self.start_y = start_y
+        # Add small random offset to target position
+        offset_radius = 15
+        angle = random.uniform(0, 2 * math.pi)
+        self.target_x = target_x + math.cos(angle) * random.uniform(0, offset_radius)
+        self.target_y = target_y + math.sin(angle) * random.uniform(0, offset_radius)
+        self.duration = duration
+        self.max_duration = duration
+        self.width = random.uniform(2, 4)  # Random beam width
+        
+    def update(self):
+        self.duration -= 1
+        return self.duration > 0
+    
+    def draw(self, surface, camera):
+        if self.duration <= 0:
+            return
+            
+        # Calculate screen positions
+        start_screen_x, start_screen_y = camera.world_to_screen(self.start_x, self.start_y)
+        target_screen_x, target_screen_y = camera.world_to_screen(self.target_x, self.target_y)
+        
+        # Fade effect based on remaining duration
+        fade_ratio = self.duration / self.max_duration
+        
+        # Draw main laser beam (green)
+        main_alpha = int(200 * fade_ratio)
+        main_color = (0, 255, 100, main_alpha)
+        
+        # Create laser surface for transparency
+        laser_surface = pygame.Surface((abs(target_screen_x - start_screen_x) + 20, 
+                                      abs(target_screen_y - start_screen_y) + 20), pygame.SRCALPHA)
+        
+        # Draw multiple beam layers for glow effect
+        beam_width = int(self.width * fade_ratio * camera.zoom)
+        if beam_width > 0:
+            # Outer glow (wider, more transparent)
+            glow_color = (50, 255, 150, int(100 * fade_ratio))
+            pygame.draw.line(surface, glow_color[:3], 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           max(1, beam_width + 4))
+            
+            # Main beam
+            pygame.draw.line(surface, main_color[:3], 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           max(1, beam_width))
+            
+            # Inner core (brighter)
+            core_color = (150, 255, 200, int(255 * fade_ratio))
+            pygame.draw.line(surface, core_color[:3], 
+                           (start_screen_x, start_screen_y), 
+                           (target_screen_x, target_screen_y), 
+                           max(1, beam_width // 2))
+
 # Game state
 class Missile:
     def __init__(self, x, y, target, damage, splash_radius=MISSILE_SPLASH_RADIUS):
@@ -448,6 +665,9 @@ class Missile:
         else:
             self.x += (dx / dist) * self.speed
             self.y += (dy / dist) * self.speed
+            # Add subtle trail particles
+            if random.random() < 0.3:  # 30% chance per frame
+                add_particles(self.x, self.y, 1, (255, 200, 100), speed_range=(0.2, 0.8), lifetime_range=(8, 15))
             
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
@@ -469,24 +689,6 @@ class Missile:
             pygame.draw.circle(surface, color, (int(screen_x), int(screen_y)), radius)
 
 # No missile image needed - using simple geometry
-
-class Particle:
-    def __init__(self, x, y, color, vx, vy, lifetime, size):
-        self.x = x
-        self.y = y
-        self.color = color
-        self.vx = vx
-        self.vy = vy
-        self.lifetime = lifetime
-        self.size = size
-    def update(self):
-        self.x += self.vx
-        self.y += self.vy
-        self.lifetime -= 1
-    def draw(self, surface, camera):
-        screen_x, screen_y = camera.world_to_screen(self.x, self.y)
-        if 0 <= screen_x <= SCREEN_WIDTH and 0 <= screen_y <= SCREEN_HEIGHT:
-            pygame.draw.circle(surface, self.color, (int(screen_x), int(screen_y)), max(1, int(self.size * camera.zoom)))
 
 # Game variables
 asteroids = spawn_asteroids()
@@ -524,6 +726,7 @@ damage_numbers = []
 kill_count = 0  # Track total kills
 global_mining_clock = 0  # Global clock for synchronized mining
 mothership_missiles = []  # Track mothership missiles
+mining_lasers = []  # Track active mining laser effects
 
 powerups = {
     'slow_time': {'name': 'Slow Time', 'active': False, 'timer': 0},
@@ -581,7 +784,7 @@ for _ in range(100):
     background_stars_near.append((x, y, brightness, size))
 
 def reset_game():
-    global buildings, asteroids, wave_manager, base_health, resources, missiles, particles, damage_numbers, selected_building, selected_build, game_over, max_buildings_ever, score, powerups, camera, kill_count, global_mining_clock, mothership_missiles
+    global buildings, asteroids, wave_manager, base_health, resources, missiles, particles, damage_numbers, selected_building, selected_build, game_over, max_buildings_ever, score, powerups, camera, kill_count, global_mining_clock, mothership_missiles, mining_lasers
     buildings.clear()
     asteroids[:] = spawn_asteroids()
     wave_manager.wave = 1
@@ -594,6 +797,7 @@ def reset_game():
     particles.clear()
     damage_numbers.clear()
     mothership_missiles.clear()
+    mining_lasers.clear()
     selected_building = None
     selected_build = None
     game_over = False
@@ -647,8 +851,8 @@ while running:
                         resources.spend_minerals(cost)
                         selected_building.upgrade()
                 if event.key == pygame.K_x and selected_building:  # X key for sell
-                    # Sell for (0.5 + level) * build_cost
-                    sell_price = int((0.5 + selected_building.level) * BUILD_COSTS[selected_building.type])
+                    # Sell for 50% of build_cost regardless of level
+                    sell_price = int(0.5 * BUILD_COSTS[selected_building.type])
                     resources.add_minerals(sell_price)
                     buildings.remove(selected_building)
                     selected_building = None
@@ -704,7 +908,7 @@ while running:
                         new_building = build_types[selected_build](world_x, world_y)
                         for existing in buildings:
                             distance = ((world_x - existing.x) ** 2 + (world_y - existing.y) ** 2) ** 0.5
-                            if distance < (new_building.radius + existing.radius + 1.4):  # 30% smaller buffer
+                            if distance < (new_building.radius + existing.radius + 0.8):  # Further reduced buffer for tighter building placement
                                 building_collision = True
                                 break
                         
@@ -795,8 +999,7 @@ while running:
                         base_health -= m.damage
                         damage_numbers.append(DamageNumber(BASE_POS[0], BASE_POS[1] - 20, -m.damage, (255, 0, 0)))
                     # Explosion particles
-                    for _ in range(15):
-                        particles.append(Particle(m.x, m.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-4,4), random.uniform(-4,4), random.randint(20,40), random.randint(3,6)))
+                    add_particles(m.x, m.y, 15, (255, 150, 0), speed_range=(2, 4), lifetime_range=(20, 40))
                     mothership_missiles.remove(m)
                 else:
                     # Remove if out of bounds
@@ -890,9 +1093,8 @@ while running:
                             b.laser_target = None
                         b.laser_target = nearest
 
-                        # Laser particles at enemy location
-                        for _ in range(2):
-                            particles.append(Particle(nearest.x + random.uniform(-8, 8), nearest.y + random.uniform(-8, 8), CYAN, random.uniform(-1,1), random.uniform(-1,1), 10, 2))
+                        # Enhanced laser impact particles
+                        add_particles(nearest.x, nearest.y, 3, (0, 255, 255), speed_range=(0.5, 2), lifetime_range=(8, 15))
                     else:
                         if hasattr(b, 'laser_target'):
                             b.laser_target = None
@@ -918,8 +1120,12 @@ while running:
                                 score += SCORE_PER_KILL
                                 kill_count += 1  # Increment kill counter
                                 resources.add_minerals(MINERALS_PER_KILL)
-                                for _ in range(20):
-                                    particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
+                                # Add explosion particles with enhanced effects
+                                add_particles(e.x, e.y, 15, (255, 150, 0), speed_range=(2, 5), lifetime_range=(20, 40))
+                                add_particles(e.x, e.y, 8, (255, 255, 0), speed_range=(1, 3), lifetime_range=(15, 30))
+                    # Add missile explosion particles
+                    add_particles(m.x, m.y, 12, (255, 100, 0), speed_range=(3, 6), lifetime_range=(25, 45))
+                    add_particles(m.x, m.y, 6, (255, 255, 255), speed_range=(1, 4), lifetime_range=(15, 25))
                     missiles.remove(m)
                 else:
                     # Remove if out of bounds
@@ -931,8 +1137,7 @@ while running:
                     score += SCORE_PER_KILL
                     kill_count += 1  # Increment kill counter for all enemy deaths
                     resources.add_minerals(MINERALS_PER_KILL)
-                    for _ in range(20):
-                        particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
+                    add_particles(e.x, e.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
                     wave_manager.enemies.remove(e)
             # Score for wave
             if not wave_manager.wave_active and not wave_manager.enemies:
@@ -943,18 +1148,29 @@ while running:
                 if p.lifetime <= 0:
                     particles.remove(p)
 
+            # Update mining lasers
+            for laser in mining_lasers[:]:
+                if not laser.update():
+                    mining_lasers.remove(laser)
+
             # Update damage numbers
             for dn in damage_numbers[:]:
                 dn.update()
                 if dn.lifetime <= 0:
                     damage_numbers.remove(dn)
             # Remove destroyed buildings
+            # Add explosion effects for destroyed buildings
+            destroyed_buildings = [b for b in buildings if b.health <= 0]
+            for building in destroyed_buildings:
+                add_particles(building.x, building.y, 20, (255, 100, 0), speed_range=(2, 6), lifetime_range=(30, 50))
+                add_particles(building.x, building.y, 10, (255, 255, 0), speed_range=(1, 4), lifetime_range=(20, 35))
+            
             buildings[:] = [b for b in buildings if b.health > 0]
             # Energy production from solars
             prod = sum(b.prod_rate for b in buildings if b.type == 'solar' and b.powered)
             resources.add_energy(prod)
             # Max energy from batteries
-            resources.max_energy = BASE_MAX_ENERGY + sum(b.storage for b in buildings if b.type == 'battery' and b.powered)
+            resources.max_energy = BASE_MAX_ENERGY + sum(b.storage for b in buildings if b.type in ['battery', 'solar'] and b.powered)
             # Synchronized Mining System
             global_mining_clock += 1
             if global_mining_clock >= MINING_CLOCK_INTERVAL:
@@ -1008,19 +1224,16 @@ while running:
                             if miner not in miners_that_worked:  # Avoid duplicates
                                 miners_that_worked.append(miner)
 
-                            # Create particle effects from miner
-                            for _ in range(2):  # Fewer particles per miner
-                                angle = random.uniform(0, 2 * math.pi)
-                                speed = random.uniform(1, 3)
-                                particles.append(Particle(
-                                    miner.x + random.uniform(-5, 5),
-                                    miner.y + random.uniform(-5, 5),
-                                    GREEN,
-                                    speed * math.cos(angle),
-                                    speed * math.sin(angle),
-                                    15,
-                                    random.randint(2, 4)
-                                ))
+                            # Create mining laser effect
+                            laser = MiningLaser(miner.x, miner.y, asteroid.x, asteroid.y, duration=45)
+                            mining_lasers.append(laser)
+
+                            # Enhanced mining particle effects
+                            add_particles(miner.x, miner.y, 3, (0, 255, 0), speed_range=(1, 3), lifetime_range=(12, 20))
+                            add_particles(asteroid.x, asteroid.y, 2, (100, 200, 100), speed_range=(0.5, 2), lifetime_range=(10, 18))
+                            
+                            # Add sparking particles at laser impact point
+                            add_particles(laser.target_x, laser.target_y, 5, (255, 255, 100), speed_range=(2, 4), lifetime_range=(20, 30))
 
                     # Update asteroid minerals and create single damage counter
                     if total_mined_from_asteroid > 0:
@@ -1054,8 +1267,7 @@ while running:
                         resources.add_minerals(b.conversion_rate)
                         b.convert_timer = b.conversion_interval
                         # Visual effect
-                        for _ in range(5):
-                            particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
+                        add_particles(b.x, b.y, 5, (255, 255, 0), speed_range=(1, 2), lifetime_range=(15, 25))
             # Remove depleted asteroids
             asteroids[:] = [a for a in asteroids if a.minerals > 0]
             max_buildings_ever = max(max_buildings_ever, len(buildings))
@@ -1080,26 +1292,12 @@ while running:
                                 # Score, minerals, particles
                                 score += SCORE_PER_KILL
                                 resources.add_minerals(MINERALS_PER_KILL)
-                                for _ in range(20):
-                                    particles.append(Particle(e.x, e.y, random.choice([YELLOW,ORANGE,RED]), random.uniform(-3,3), random.uniform(-3,3), random.randint(15,30), random.randint(2,4)))
+                                add_particles(e.x, e.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
                     missiles.remove(m)
                 else:
                     # Remove if out of bounds
                     if not (0 <= m.x <= WORLD_WIDTH and 0 <= m.y <= WORLD_HEIGHT):
                         missiles.remove(m)
-            # Converter logic
-            for b in buildings:
-                if b.type == 'converter' and b.powered:
-                    if not hasattr(b, 'convert_timer'):
-                        b.convert_timer = b.conversion_interval
-                    b.convert_timer -= 1
-                    if b.convert_timer <= 0 and resources.energy >= b.energy_cost:
-                        resources.spend_energy(b.energy_cost)
-                        resources.add_minerals(b.conversion_rate)
-                        b.convert_timer = b.conversion_interval
-                        # Visual effect
-                        for _ in range(5):
-                            particles.append(Particle(b.x, b.y, YELLOW, random.uniform(-2,2), random.uniform(-2,2), 20, 3))
             # Remove depleted asteroids
             asteroids[:] = [a for a in asteroids if a.minerals > 0]
             max_buildings_ever = max(max_buildings_ever, len(buildings))
@@ -1150,8 +1348,31 @@ while running:
     # Draw base
     draw_base(screen, BASE_POS, BASE_RADIUS, base_health, BASE_HEALTH, camera)
 
-    # Draw buildings (powered glow removed)
+    # Draw buildings with selection glow
     for building in buildings:
+        # Draw selection glow for selected building
+        if building is selected_building:
+            screen_x, screen_y = camera.world_to_screen(building.x, building.y)
+            glow_radius = int((building.radius + 10) * camera.zoom)
+            
+            # Pulsing glow effect
+            pulse = (pygame.time.get_ticks() / 500) % 2
+            pulse_intensity = 0.5 + 0.3 * abs(pulse - 1)
+            
+            # Create glow surface
+            glow_surface = pygame.Surface((glow_radius * 2 + 10, glow_radius * 2 + 10), pygame.SRCALPHA)
+            glow_color = (100, 200, 255, int(100 * pulse_intensity))
+            
+            # Draw multiple glow rings
+            for i in range(3):
+                ring_radius = glow_radius - i * 3
+                ring_alpha = int(glow_color[3] * (1 - i * 0.3))
+                if ring_radius > 0:
+                    pygame.draw.circle(glow_surface, (*glow_color[:3], ring_alpha), 
+                                     (glow_radius + 5, glow_radius + 5), ring_radius, 2 + i)
+            
+            screen.blit(glow_surface, (screen_x - glow_radius - 5, screen_y - glow_radius - 5))
+        
         building.draw(screen, camera.x, camera.y, camera.zoom)
 
     # Draw range for selected defensive buildings
@@ -1174,14 +1395,27 @@ while running:
             screen_x2, screen_y2 = camera.world_to_screen(building.laser_target.x, building.laser_target.y)
             
             if building.type == 'superlaser':
-                # Thicker, more intense purple beam for SuperLaser
+                # Thicker, more intense purple beam for SuperLaser with enhanced glow
                 pygame.draw.line(screen, (255, 255, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(2, int(6 * camera.zoom)))
                 pygame.draw.line(screen, (255, 100, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(4 * camera.zoom)))
                 pygame.draw.line(screen, (255, 200, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
+                # Add glowing particles along beam
+                beam_length = math.hypot(building.laser_target.x - building.x, building.laser_target.y - building.y)
+                for i in range(3):
+                    t = random.uniform(0.2, 0.8)  # Position along beam
+                    px = building.x + t * (building.laser_target.x - building.x)
+                    py = building.y + t * (building.laser_target.y - building.y)
+                    add_particles(px, py, 1, (255, 150, 255), speed_range=(0.3, 1), lifetime_range=(5, 12))
             else:
-                # Regular laser beam
+                # Regular laser beam with enhanced cyan glow
                 pygame.draw.line(screen, WHITE, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(5 * camera.zoom)))
                 pygame.draw.line(screen, CYAN, (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
+                # Add glowing particles along beam
+                for i in range(2):
+                    t = random.uniform(0.3, 0.7)  # Position along beam
+                    px = building.x + t * (building.laser_target.x - building.x)
+                    py = building.y + t * (building.laser_target.y - building.y)
+                    add_particles(px, py, 1, (0, 255, 255), speed_range=(0.2, 0.8), lifetime_range=(4, 10))
 
     # Draw range indicator when placing building
     if selected_build:
@@ -1202,6 +1436,22 @@ while running:
 
     # Draw enemies
     wave_manager.draw_enemies(screen, camera)
+    
+    # Draw large ship laser beams
+    for enemy in wave_manager.enemies:
+        if hasattr(enemy, 'laser_target') and enemy.laser_target and enemy.enemy_type == "large":
+            screen_x1, screen_y1 = camera.world_to_screen(enemy.x, enemy.y)
+            screen_x2, screen_y2 = camera.world_to_screen(enemy.laser_target.x, enemy.laser_target.y)
+            # Blue enemy laser beam
+            pygame.draw.line(screen, (100, 150, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(4 * camera.zoom)))
+            pygame.draw.line(screen, (150, 200, 255), (screen_x1, screen_y1), (screen_x2, screen_y2), max(1, int(2 * camera.zoom)))
+            # Add particles along the beam
+            beam_length = math.hypot(enemy.laser_target.x - enemy.x, enemy.laser_target.y - enemy.y)
+            for i in range(2):
+                t = random.uniform(0.3, 0.7)
+                px = enemy.x + t * (enemy.laser_target.x - enemy.x)
+                py = enemy.y + t * (enemy.laser_target.y - enemy.y)
+                add_particles(px, py, 1, (100, 150, 255), speed_range=(0.2, 0.6), lifetime_range=(5, 12))
 
     # Draw enemy lasers
     for x1, y1, x2, y2 in enemy_lasers:
@@ -1218,8 +1468,7 @@ while running:
         target_radius = BASE_RADIUS if isinstance(enemy_lasers, dict) else 25  # Default building radius
         perimeter_x = x2 - target_radius * math.cos(angle)
         perimeter_y = y2 - target_radius * math.sin(angle)
-        for _ in range(3):
-            particles.append(Particle(perimeter_x + random.uniform(-10, 10), perimeter_y + random.uniform(-10, 10), (255,100,100), random.uniform(-1,1), random.uniform(-1,1), 8, 2))
+        add_particles(perimeter_x, perimeter_y, 3, (255, 100, 100), speed_range=(0.5, 1.5), lifetime_range=(6, 10))
 
     # Draw missiles
     for m in missiles:
@@ -1232,6 +1481,10 @@ while running:
     # Draw particles
     for p in particles:
         p.draw(screen, camera)
+
+    # Draw mining lasers
+    for laser in mining_lasers:
+        laser.draw(screen, camera)
 
     # Draw damage numbers
     for dn in damage_numbers:
@@ -1257,60 +1510,49 @@ while running:
 
     # Modern HUD with styled panels
     
-    # Resource panel
-    resource_panel = pygame.Surface((350, 35), pygame.SRCALPHA)
-    resource_panel.fill((20, 25, 35, 180))
-    pygame.draw.rect(resource_panel, (60, 80, 120), (0, 0, 350, 35), 2)
+    # Resource panel with glass effect
+    draw_glass_panel(screen, 10, 45, 350, 35, alpha=160)
     
     minerals_text = font.render(f"⛏ {int(resources.minerals)}", True, (255, 215, 0))
     energy_text = font.render(f"⚡ {int(resources.energy)}/{int(resources.max_energy)}", True, (100, 200, 255))
-    resource_panel.blit(minerals_text, (10, 8))
-    resource_panel.blit(energy_text, (120, 8))
+    screen.blit(minerals_text, (20, 53))
+    screen.blit(energy_text, (130, 53))
     
-    # Energy bar
+    # Enhanced energy bar with gradient
     energy_ratio = resources.energy / resources.max_energy
     energy_bar_width = 100
-    energy_bar_x = 250
-    pygame.draw.rect(resource_panel, (50, 50, 50), (energy_bar_x, 12, energy_bar_width, 8))
-    pygame.draw.rect(resource_panel, (100, 200, 255), (energy_bar_x, 12, energy_bar_width * energy_ratio, 8))
+    energy_bar_x = 260
+    draw_gradient_health_bar(screen, energy_bar_x, 57, energy_bar_width, 8, energy_ratio)
     
-    screen.blit(resource_panel, (10, 45))
-    
-    # Stats panel
-    stats_panel = pygame.Surface((300, 35), pygame.SRCALPHA)
-    stats_panel.fill((20, 25, 35, 180))
-    pygame.draw.rect(stats_panel, (60, 80, 120), (0, 0, 300, 35), 2)
+    # Stats panel with glass effect
+    stats_x = SCREEN_WIDTH - 510
+    draw_glass_panel(screen, stats_x, 45, 300, 35, alpha=160)
     
     wave_text = font.render(f"Wave {wave_manager.wave}", True, (255, 100, 100))
     score_text = font.render(f"Score: {score}", True, (200, 220, 255))
     kill_text = font.render(f"Kills: {kill_count}", True, (255, 150, 100))
     
-    stats_panel.blit(wave_text, (10, 8))
-    stats_panel.blit(score_text, (100, 8))
-    stats_panel.blit(kill_text, (200, 8))
-    
-    screen.blit(stats_panel, (SCREEN_WIDTH - 510, 45))
+    screen.blit(wave_text, (stats_x + 10, 53))
+    screen.blit(score_text, (stats_x + 100, 53))
+    screen.blit(kill_text, (stats_x + 200, 53))
 
-    # Modern controls panel at bottom
-    controls_panel = pygame.Surface((SCREEN_WIDTH - 200, 60), pygame.SRCALPHA)
-    controls_panel.fill((20, 25, 35, 180))
-    pygame.draw.rect(controls_panel, (60, 80, 120), (0, 0, SCREEN_WIDTH - 200, 60), 2)
+    # Modern controls panel at bottom with glass effect
+    controls_width = SCREEN_WIDTH - 200
+    draw_glass_panel(screen, 0, SCREEN_HEIGHT - 60, controls_width, 60, alpha=160)
     
     # Controls text - using larger font for better readability
     camera_text = hud_font.render("🎯 Arrows: Pan | Scroll: Zoom", True, (200, 220, 255))
     speed_text = hud_font.render("⏯ Speed: 1-Pause 2-Normal 3-2x 4-3x", True, (200, 220, 255))
     
-    controls_panel.blit(camera_text, (10, 8))
-    controls_panel.blit(speed_text, (10, 28))
+    screen.blit(camera_text, (10, SCREEN_HEIGHT - 52))
+    screen.blit(speed_text, (10, SCREEN_HEIGHT - 32))
     
     # Current speed indicator - using larger font
     if game_speed == 0:
         speed_indicator = hud_font.render("⏸ PAUSED", True, (255, 255, 100))
     else:
         speed_indicator = hud_font.render(f"▶ {game_speed:.0f}x SPEED", True, (100, 255, 100))
-    controls_panel.blit(speed_indicator, (SCREEN_WIDTH - 350, 18))
-    
-    screen.blit(controls_panel, (0, SCREEN_HEIGHT - 60))
+    screen.blit(speed_indicator, (SCREEN_WIDTH - 350, SCREEN_HEIGHT - 42))
 
     # Show selected build type
     if selected_build:
@@ -1380,7 +1622,7 @@ while running:
             screen.blit(rate_text, (panel_x + 10, y_offset))
         
         # Sell and Upgrade buttons at bottom of panel
-        sell_price = int((0.5 + selected_building.level) * BUILD_COSTS[selected_building.type])
+        sell_price = int(0.5 * BUILD_COSTS[selected_building.type])
         upgrade_cost = selected_building.upgrade_cost(BUILD_COSTS[selected_building.type])
         
         sell_text = small_font.render(f"X - Sell: {sell_price}", True, (255, 200, 200))
