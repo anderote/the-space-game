@@ -310,7 +310,10 @@ class RenderSystem(System):
         enemy_colors = {
             'basic': (255, 0, 0),      # Red
             'large': (255, 100, 0),    # Orange
-            'kamikaze': (255, 50, 150) # Pink
+            'kamikaze': (255, 50, 150), # Pink
+            'assault': (255, 165, 0),  # Orange-yellow
+            'stealth': (128, 0, 128),  # Purple
+            'cruiser': (100, 100, 255) # Light blue
         }
         
         for enemy in enemies:
@@ -323,10 +326,14 @@ class RenderSystem(System):
                 # Size based on enemy type
                 if hasattr(enemy, 'is_mothership'):
                     size = 4  # Motherships largest
-                elif enemy_type == 'large':
-                    size = 3  # Large ships bigger
+                elif enemy_type == 'cruiser':
+                    size = 4  # Heavy cruisers largest
+                elif enemy_type in ['large', 'assault']:
+                    size = 3  # Large ships and assault ships bigger
                 elif enemy_type == 'kamikaze':
                     size = 1  # Kamikaze smallest
+                elif enemy_type == 'stealth':
+                    size = 1 if getattr(enemy, 'is_cloaked', False) else 2  # Smaller when cloaked
                 else:
                     size = 2  # Basic enemies medium
                 

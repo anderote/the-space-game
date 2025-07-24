@@ -252,5 +252,14 @@ class StateManager:
         elif data['type'] == 'toggle_pause':
             self.is_paused = not self.is_paused
             print(f"Game {'paused' if self.is_paused else 'resumed'}")
+        elif data['type'] == 'toggle_menu':
+            # Toggle between playing and menu state
+            if isinstance(self.current_state, PlayingState):
+                self.change_state(GameState.MENU)
+                print("Opened game menu")
+            else:
+                self.change_state(GameState.PLAYING)
+                print("Returned to game")
         elif data['type'] == 'quit':
-            self.quit() 
+            self.quit()
+            print("Quitting game...") 
