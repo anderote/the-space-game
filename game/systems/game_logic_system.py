@@ -136,7 +136,7 @@ class MiningLaser:
 
 
 class Missile:
-    """Missile projectile."""
+    """Missile projectile with smart targeting and lifetime."""
     def __init__(self, x, y, target, damage, splash_radius=MISSILE_SPLASH_RADIUS):
         self.x = x
         self.y = y
@@ -146,11 +146,34 @@ class Missile:
         self.speed = MISSILE_SPEED
         self.alive = True
         self.flash_timer = 0
+        self.lifetime = 1800  # 30 seconds at 60fps
+        self.retarget_cooldown = 0
         
     def update(self, game_logic):
+        # Decrease lifetime
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            self.alive = False
+            return
+            
+        # Decrease retarget cooldown
+        if self.retarget_cooldown > 0:
+            self.retarget_cooldown -= 1
+        
+        # Check if current target is still valid
+        if (not self.target or 
+            not hasattr(self.target, 'x') or 
+            not hasattr(self.target, 'health') or 
+            self.target.health <= 0):
+            # Try to find new target if cooldown is over
+            if self.retarget_cooldown <= 0:
+                self._find_new_target(game_logic)
+                self.retarget_cooldown = 30  # 0.5 second cooldown between retargets
+        
         if not self.target or not hasattr(self.target, 'x'):
             self.alive = False
             return
+            
         dx = self.target.x - self.x
         dy = self.target.y - self.y
         dist = math.hypot(dx, dy)
@@ -163,7 +186,22 @@ class Missile:
         else:
             self.x += (dx / dist) * self.speed
             self.y += (dy / dist) * self.speed
-            # Missile trail particles removed
+    
+    def _find_new_target(self, game_logic):
+        """Find a new target within reasonable range."""
+        max_retarget_range = 300  # Don't chase targets too far away
+        closest_enemy = None
+        closest_dist = float('inf')
+        
+        for enemy in game_logic.wave_manager.enemies:
+            if hasattr(enemy, 'health') and enemy.health > 0:
+                dist = math.hypot(enemy.x - self.x, enemy.y - self.y)
+                if dist < max_retarget_range and dist < closest_dist:
+                    closest_enemy = enemy
+                    closest_dist = dist
+        
+        if closest_enemy:
+            self.target = closest_enemy
     
     def draw(self, surface, camera):
         screen_x, screen_y = camera.world_to_screen(self.x, self.y)
@@ -378,8 +416,12 @@ class GameLogicSystem(System):
         self.wave_manager.update(self.buildings)
         self.wave_manager.update_enemies(self.buildings, self.friendly_ships)
         
+        # Handle mothership missile attacks
+        self._update_mothership_attacks()
+        
         # Update missiles
         self._update_missiles()
+        self._update_mothership_missiles()
         
         # Particle updates now handled by ParticleSystem
         self._update_mining_lasers()
@@ -732,7 +774,63 @@ class GameLogicSystem(System):
                     else:
                         self.add_particles(enemy.x, enemy.y, 20, (255, 150, 0), speed_range=(1, 3), lifetime_range=(15, 30))
     
-
+    def _update_mothership_attacks(self):
+        """Handle mothership missile attacks."""
+        for enemy in self.wave_manager.enemies:
+            if hasattr(enemy, 'is_mothership') and enemy.is_mothership:
+                if enemy.fire_missile():
+                    # Find target for missile
+                    if isinstance(enemy.target, dict) and enemy.target.get('type') == 'base':
+                        # Create a target object for the base
+                        target = type('BaseTarget', (), {
+                            'x': self.base_pos[0], 
+                            'y': self.base_pos[1],
+                            'health': 1  # Dummy health so missile doesn't retarget
+                        })()
+                    else:
+                        target = enemy.target
+                    
+                    if target:
+                        missile = MothershipMissile(enemy.x, enemy.y, target, MOTHERSHIP_MISSILE_DAMAGE)
+                        self.mothership_missiles.append(missile)
+    
+    def _update_mothership_missiles(self):
+        """Update mothership missiles."""
+        for missile in self.mothership_missiles[:]:
+            missile.update()
+            if not missile.alive:
+                # Handle explosion damage
+                self._handle_mothership_missile_explosion(missile)
+                self.mothership_missiles.remove(missile)
+            elif not (0 <= missile.x <= WORLD_WIDTH and 0 <= missile.y <= WORLD_HEIGHT):
+                # Remove if out of bounds
+                self.mothership_missiles.remove(missile)
+    
+    def _handle_mothership_missile_explosion(self, missile):
+        """Handle mothership missile explosion damage."""
+        # Play explosion sound
+        if self.audio_system:
+            self.audio_system.play_explosion(0.8)
+        
+        # Splash damage to buildings
+        for building in self.buildings:
+            distance = math.sqrt((building.x - missile.x) ** 2 + (building.y - missile.y) ** 2)
+            if distance < missile.splash_radius:
+                building.take_damage(missile.damage)
+                # Add damage number
+                self.damage_numbers.append(DamageNumber(building.x, building.y - 15, -missile.damage, (255, 0, 0)))
+        
+        # Damage to base
+        base_distance = math.sqrt((self.base_pos[0] - missile.x) ** 2 + (self.base_pos[1] - missile.y) ** 2)
+        if base_distance < missile.splash_radius:
+            self.base_health -= missile.damage
+            self.damage_numbers.append(DamageNumber(self.base_pos[0], self.base_pos[1] - 20, -missile.damage, (255, 0, 0)))
+        
+        # Explosion particles
+        if self.particle_system:
+            self.particle_system.add_explosion(missile.x, missile.y, intensity=0.8)
+        else:
+            self.add_particles(missile.x, missile.y, 15, (255, 150, 0), speed_range=(2, 4), lifetime_range=(20, 40))
     
     def _update_mining_lasers(self):
         """Update mining laser effects."""
@@ -1234,6 +1332,10 @@ class GameLogicSystem(System):
         
         # Draw missiles
         for missile in self.missiles:
+            missile.draw(render_system.screen, render_system.camera)
+        
+        # Draw mothership missiles
+        for missile in self.mothership_missiles:
             missile.draw(render_system.screen, render_system.camera)
         
         # Old particle drawing removed - now using ParticleSystem
