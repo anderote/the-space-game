@@ -12,7 +12,7 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config.config_loader import GameConfig
+from config.config_loader import SpaceGameConfig
 from game.core.engine import Panda3DGameEngine
 
 class SpaceGameApp(ShowBase):
@@ -26,7 +26,7 @@ class SpaceGameApp(ShowBase):
         
         # Load configuration
         try:
-            self.config = GameConfig("config/")
+            self.config = SpaceGameConfig("config/")
             print("✓ Configuration loaded successfully")
         except Exception as e:
             print(f"✗ Error loading configuration: {e}")

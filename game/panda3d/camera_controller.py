@@ -100,7 +100,8 @@ class Panda3DCamera:
         # Update lens for new zoom level
         self.update_lens_size()
         
-        # Position camera
+        # Position camera for pure top-down view
+        # Camera directly above looking straight down
         self.base.camera.setPos(self.x, self.y, camera_height)
         self.base.camera.lookAt(self.x, self.y, 0)
         
@@ -165,7 +166,8 @@ class Panda3DCamera:
         
         # Convert to screen coordinates (center of screen is 0,0)
         screen_x = rel_x + (self.screen_width / 2)
-        screen_y = rel_y + (self.screen_height / 2)
+        # Flip Y-axis: world Y increases upward, screen Y increases downward
+        screen_y = (-rel_y) + (self.screen_height / 2)
         
         return screen_x, screen_y
         
@@ -177,7 +179,8 @@ class Panda3DCamera:
         
         # Apply zoom and camera position
         world_x = (rel_x / self.zoom) + self.x
-        world_y = (rel_y / self.zoom) + self.y
+        # Flip Y-axis: screen Y increases downward, world Y increases upward
+        world_y = (-rel_y / self.zoom) + self.y
         
         return world_x, world_y
         

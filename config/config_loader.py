@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 
-class GameConfig:
+class SpaceGameConfig:
     """Main configuration manager for the game."""
     
     def __init__(self, config_dir: str = "config"):
@@ -261,10 +261,10 @@ class GameConfig:
 
 
 # Global configuration instance
-config: Optional[GameConfig] = None
+config: Optional[SpaceGameConfig] = None
 
 
-def initialize_config(config_dir: str = "config") -> GameConfig:
+def initialize_config(config_dir: str = "config") -> SpaceGameConfig:
     """Initialize the global configuration.
     
     Args:
@@ -274,11 +274,11 @@ def initialize_config(config_dir: str = "config") -> GameConfig:
         GameConfig instance
     """
     global config
-    config = GameConfig(config_dir)
+    config = SpaceGameConfig(config_dir)
     return config
 
 
-def get_config() -> GameConfig:
+def get_config() -> SpaceGameConfig:
     """Get the global configuration instance.
     
     Returns:

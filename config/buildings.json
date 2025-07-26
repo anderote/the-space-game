@@ -16,24 +16,27 @@
     "converter": 90,
     "hangar": 250,
     "missile_launcher": 300,
-    "force_field": 400
+    "force_field": 400,
+    "asteroid": 0
   },
   "building_types": {
     "solar": {
       "name": "Solar Panel",
-      "description": "Generates power from solar energy",
+      "description": "Generates energy from starlight",
       "cost": 50,
       "base_health": 100,
-      "radius": 25,
+      "radius": 15,
       "color": [
         255,
         255,
         0
       ],
       "power_generation": true,
-      "energy_rate": 0.1,
+      "energy_capacity": 50,
+      "energy_rate": 0.25,
       "energy_cost": 0,
-      "max_connections": 1,
+      "max_connections": 4,
+      "connection_range": 60,
       "hotkey": "S"
     },
     "connector": {
@@ -41,7 +44,25 @@
       "description": "Hub for power distribution",
       "cost": 30,
       "base_health": 80,
-      "radius": 20,
+      "radius": 5,
+      "color": [
+        100,
+        255,
+        100
+      ],
+      "power_generation": false,
+      "energy_rate": 0,
+      "energy_cost": 0,
+      "max_connections": 6,
+      "connection_range": 120,
+      "hotkey": "E"
+    },
+    "battery": {
+      "name": "Energy Storage",
+      "description": "Stores energy for later use",
+      "cost": 80,
+      "base_health": 120,
+      "radius": 22,
       "color": [
         0,
         255,
@@ -50,25 +71,10 @@
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0,
-      "max_connections": 6,
-      "hotkey": "C"
-    },
-    "battery": {
-      "name": "Battery",
-      "description": "Stores and provides backup power",
-      "cost": 80,
-      "base_health": 120,
-      "radius": 22,
-      "color": [
-        0,
-        255,
-        0
-      ],
-      "power_generation": false,
-      "energy_rate": 0,
-      "energy_cost": 0,
-      "storage_per_level": 120,
-      "max_connections": 1,
+      "energy_capacity": 200,
+      "energy_recharge_rate": 0.8,
+      "max_connections": 4,
+      "connection_range": 60,
       "hotkey": "B"
     },
     "miner": {
@@ -76,7 +82,7 @@
       "description": "Extracts minerals from nearby asteroids",
       "cost": 100,
       "base_health": 100,
-      "radius": 25,
+      "radius": 10,
       "color": [
         128,
         128,
@@ -90,6 +96,7 @@
       "mining_range": 80,
       "max_targets": 6,
       "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "M"
     },
     "turret": {
@@ -111,6 +118,7 @@
       "range": 350,
       "cooldown": 170,
       "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "T"
     },
     "laser": {
@@ -130,6 +138,7 @@
       "damage": 0.25,
       "range": 270,
       "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "L"
     },
     "superlaser": {
@@ -149,6 +158,7 @@
       "damage": 2.5,
       "range": 700,
       "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "X"
     },
     "repair": {
@@ -168,47 +178,51 @@
       "repair_rate": 0.15,
       "repair_range": 275,
       "max_connections": 1,
-      "hotkey": "R"
+      "connection_range": 120,
+      "hotkey": "Y"
     },
     "converter": {
-      "name": "Resource Converter",
-      "description": "Processes raw materials for advanced construction",
-      "cost": 90,
-      "base_health": 100,
-      "radius": 23,
+      "name": "Energy Converter",
+      "description": "Converts energy into minerals at 2:1 ratio",
+      "cost": 200,
+      "base_health": 80,
+      "radius": 12,
       "color": [
         255,
-        165,
+        128,
         0
       ],
       "power_generation": false,
-      "energy_rate": 0,
-      "energy_cost": 100,
-      "mineral_rate": 2,
-      "conversion_interval": 120,
-      "max_connections": 1,
+      "energy_rate": -2.0,
+      "energy_cost": 8,
+      "mineral_generation": 1.0,
+      "conversion_interval": 100,
+      "max_connections": 2,
+      "connection_range": 120,
       "hotkey": "V"
     },
     "hangar": {
-      "name": "Fighter Hangar",
-      "description": "Launches up to 4 friendly attack ships",
-      "cost": 250,
+      "name": "Ship Hangar",
+      "description": "Deploys and maintains defensive ships",
+      "cost": 350,
       "base_health": 150,
-      "radius": 30,
+      "radius": 15,
       "color": [
         100,
-        150,
+        100,
         255
       ],
       "power_generation": false,
       "energy_rate": 0,
-      "energy_cost": 0.025,
-      "max_ships": 4,
-      "launch_cooldown": 300,
-      "ship_range": 500,
-      "recall_range": 600,
-      "regen_cooldown": 1200,
-      "max_connections": 2,
+      "energy_cost": 0.5,
+      "ship_capacity": 4,
+      "ship_range": 400,
+      "ship_speed": 100,
+      "ship_damage": 8,
+      "ship_health": 25,
+      "production_time": 1200,
+      "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "H"
     },
     "missile_launcher": {
@@ -216,7 +230,7 @@
       "description": "Heavy missile defense system",
       "cost": 300,
       "base_health": 140,
-      "radius": 32,
+      "radius": 25,
       "color": [
         200,
         100,
@@ -235,46 +249,60 @@
     },
     "force_field": {
       "name": "Force Field Generator",
-      "description": "Provides energy shields to nearby buildings",
-      "cost": 400,
-      "base_health": 180,
-      "radius": 30,
+      "description": "Creates protective energy barriers",
+      "cost": 200,
+      "base_health": 80,
+      "radius": 25,
       "color": [
         0,
-        200,
+        255,
         255
       ],
       "power_generation": false,
       "energy_rate": 0,
-      "energy_cost": 2.0,
+      "energy_cost": 0.8,
       "shield_range": 200,
       "shield_strength": 50,
       "shield_regen": 0.5,
       "max_connections": 1,
+      "connection_range": 120,
       "hotkey": "F"
     },
     "starting_base": {
       "name": "Command Center",
-      "description": "Main command center - your base of operations",
-      "cost": 0,
-      "base_health": 500,
+      "description": "Main base that produces power and serves as the central hub",
+      "cost": {
+        "minerals": 0,
+        "energy": 0
+      },
+      "base_health": 1000,
       "radius": 40,
-      "color": [
-        0,
-        100,
-        200
-      ],
-      "power_generation": true,
-      "base_power_generation": 20,
-      "energy_rate": 0.2,
-      "energy_cost": 0,
-      "max_connections": 4,
+      "color": [0.5, 0.5, 1.0, 1.0],
+      "power_generation": 0.5,
+      "energy_capacity": 200,
+      "energy_rate": 0.0,
+      "energy_cost": 0.0,
+      "max_connections": 6,
       "connection_range": 120,
-      "range": 0,
-      "damage": 0,
-      "fire_rate": 0,
-      "construction_time": 0,
-      "construction_energy_cost": 0
+      "hotkey": "B"
+    },
+    "asteroid": {
+      "name": "Asteroid",
+      "description": "Mineable asteroid containing valuable minerals",
+      "cost": 0,
+      "base_health": 1000,
+      "radius": 30,
+      "color": [0.6, 0.5, 0.3, 1.0],
+      "power_generation": false,
+      "energy_capacity": 0,
+      "energy_rate": 0.0,
+      "energy_cost": 0.0,
+      "max_connections": 0,
+      "connection_range": 0,
+      "hotkey": "",
+      "is_asteroid": true,
+      "mineable": true,
+      "mineral_value": 3000
     }
   }
 }

@@ -54,13 +54,17 @@ class Panda3DGameEngine:
         game_config = self.config.game.get("resources", {})
         self.minerals = game_config.get("starting_minerals", 600)
         self.energy = game_config.get("starting_energy", 50)
+        self.max_energy = 100  # Starting base capacity
         
         # Game progression
         self.wave_number = 1
         self.score = 0
         
         # Initialize building system (Phase 3)
-        self.building_system = BuildingSystem(self.base, self.config, self.scene_manager)
+        self.building_system = BuildingSystem(self.base, self.config, self.scene_manager, self)
+        
+        # Connect HUD system to building system for UI updates
+        self.building_system.hud_system = self.hud_system
         
         # Entity collections (Phase 3 - building system manages buildings now)
         self.enemies = []
@@ -69,6 +73,9 @@ class Panda3DGameEngine:
         
         # Create starting base
         self._create_starting_base()
+        
+        # Generate asteroids as buildings
+        self.create_asteroid_fields()
         
         print("✓ Core game systems initialized (Phase 3)")
         print(f"  Starting resources: {self.minerals} minerals, {self.energy} energy")
@@ -86,8 +93,79 @@ class Panda3DGameEngine:
             # Make starting base instantly operational
             base_building.state = BuildingState.OPERATIONAL
             base_building.construction_progress = 1.0
-            base_building.powered = True  # Starting base is always powered
+            # Note: powered is now computed automatically based on building_type
             print(f"✓ Starting base established at ({world_center_x:.0f}, {world_center_y:.0f})")
+        
+    def create_asteroid_fields(self):
+        """Generate asteroid fields as buildings through the building system"""
+        # Get world dimensions and base position from config
+        display_config = self.config.game.get("display", {})
+        world_width = display_config.get("world_width", 4800)
+        world_height = display_config.get("world_height", 2700)
+        
+        # Base is at world center
+        base_x = world_width / 2
+        base_y = world_height / 2
+        
+        # Generate asteroid data
+        asteroid_data = self.scene_manager.entity_visualizer.generate_enhanced_asteroid_fields(
+            base_x, base_y, world_width, world_height
+        )
+        
+        # Create each asteroid as a building
+        for data in asteroid_data:
+            # Create building with custom properties for asteroid
+            from ..entities.building import Building, BuildingState
+            asteroid = Building(
+                building_type="asteroid",
+                x=data['x'], 
+                y=data['y'], 
+                config=self.config,
+                completion_callback=None,  # Asteroids don't construct
+                game_engine=self
+            )
+            
+            # Override properties for asteroid
+            asteroid.radius = data['radius']
+            asteroid.current_health = data['health']
+            asteroid.base_max_health = data['health']  # Store original health
+            asteroid.mineral_value = data['minerals']
+            asteroid.state = BuildingState.OPERATIONAL  # Asteroids are always "operational"
+            
+            # Create visual representation using asteroid visual
+            asteroid.visual_node = self.scene_manager.entity_visualizer.create_3d_asteroid(
+                data['x'], data['y'], data['radius']
+            )
+            
+            # Store in building system
+            self.building_system.buildings[asteroid.building_id] = asteroid
+            
+            # Add to type index
+            if "asteroid" not in self.building_system.buildings_by_type:
+                self.building_system.buildings_by_type["asteroid"] = []
+            self.building_system.buildings_by_type["asteroid"].append(asteroid)
+        
+        print(f"✓ Generated {len(asteroid_data)} asteroids as buildings")
+        
+    def remove_building(self, building):
+        """Remove a building from the game (used for depleted asteroids)"""
+        if hasattr(self.building_system, 'remove_building'):
+            self.building_system.remove_building(building)
+        else:
+            # Manual removal if building system doesn't have the method
+            if building.building_id in self.building_system.buildings:
+                del self.building_system.buildings[building.building_id]
+            
+            # Remove from type index
+            if building.building_type in self.building_system.buildings_by_type:
+                if building in self.building_system.buildings_by_type[building.building_type]:
+                    self.building_system.buildings_by_type[building.building_type].remove(building)
+            
+            # Remove visual
+            if hasattr(building, 'visual_node') and building.visual_node:
+                building.visual_node.removeNode()
+                
+            print(f"✓ Removed {building.building_type} at ({building.x:.0f}, {building.y:.0f})")
         
     def update(self, dt):
         """Main game loop update"""
@@ -103,6 +181,12 @@ class Panda3DGameEngine:
             
     def update_game_logic(self, dt):
         """Update core game logic (Phase 3 implementation)"""
+        # Update power generation from buildings
+        self.update_power_generation(dt)
+        
+        # Update energy capacity when buildings change
+        self.update_energy_capacity()
+        
         # Update building system
         self.building_system.update(dt)
         
@@ -169,9 +253,24 @@ class Panda3DGameEngine:
         
         return building is not None
         
-    def select_building_at(self, world_x: float, world_y: float):
-        """Select building at world coordinates"""
-        return self.building_system.select_building_at(world_x, world_y)
+    def select_building_at(self, x: float, y: float) -> bool:
+        """Select building at the given position"""
+        building = self.building_system.get_building_at_position(x, y)
+        if building:
+            self.building_system.select_building(building)
+            print(f"✓ Selected {building.building_type} at ({building.x:.0f}, {building.y:.0f})")
+            return True
+        return False
+        
+    def clear_building_selection(self):
+        """Clear current building selection"""
+        if self.building_system.selected_building:
+            print(f"Cleared selection of {self.building_system.selected_building.building_type}")
+        self.building_system.clear_building_selection()
+        
+    def get_building_at_position(self, x: float, y: float):
+        """Get building at the given position"""
+        return self.building_system.get_building_at_position(x, y)
         
     def get_selected_building(self):
         """Get currently selected building"""
@@ -184,6 +283,72 @@ class Panda3DGameEngine:
     def can_afford_building(self, building_type: str):
         """Check if player can afford a building"""
         return self.building_system.can_afford_building(building_type, self.minerals, self.energy)
+    
+    def consume_energy(self, amount: float) -> bool:
+        """Consume energy from the power network. Returns True if successful."""
+        if self.energy >= amount:
+            self.energy -= amount
+            return True
+        return False
+    
+    def generate_energy(self, amount: float):
+        """Generate energy to the power network"""
+        self.energy += amount
+    
+    def get_current_resources(self) -> dict:
+        """Get current resource levels"""
+        return {
+            "minerals": self.minerals,
+            "energy": self.energy
+        }
+        
+    def get_power_generation_rate(self) -> float:
+        """Calculate total power generation from all buildings"""
+        total_generation = 0.0
+        for building in self.building_system.buildings.values():
+            if building.state.name == "OPERATIONAL" and not building.disabled:  # Only operational and enabled buildings generate power
+                # Use the building's effective energy generation (which includes level bonuses)
+                if building.building_type == "solar":
+                    power_gen = building.get_effective_energy_generation()
+                elif building.building_type == "starting_base":
+                    power_gen = 0.2  # Base power rate from starting base
+                else:
+                    # For other buildings, use config value
+                    building_config = self.config.buildings.get("building_types", {}).get(building.building_type, {})
+                    power_gen = building_config.get("power_generation", 0.0)
+                
+                total_generation += power_gen
+        return total_generation
+    
+    def get_total_energy_capacity(self) -> float:
+        """Calculate total energy storage capacity from all buildings"""
+        total_capacity = 100  # Starting base provides 100 base capacity
+        for building in self.building_system.buildings.values():
+            if building.state.name == "OPERATIONAL" and not building.disabled:  # Only operational and enabled buildings provide capacity
+                # Use the building's effective energy capacity (which includes level bonuses)
+                if building.building_type in ["solar", "battery"]:
+                    capacity = building.get_effective_energy_capacity()
+                else:
+                    # For other buildings, use config value
+                    building_config = self.config.buildings.get("building_types", {}).get(building.building_type, {})
+                    capacity = building_config.get("energy_capacity", 0.0)
+                
+                total_capacity += capacity
+        return total_capacity
+    
+    def update_energy_capacity(self):
+        """Update maximum energy based on operational buildings"""
+        self.max_energy = self.get_total_energy_capacity()  # Already includes starting base minimum
+        # Cap current energy to max capacity
+        if self.energy > self.max_energy:
+            self.energy = self.max_energy
+    
+    def update_power_generation(self, dt: float):
+        """Update power generation from buildings"""
+        generation_rate = self.get_power_generation_rate()
+        if generation_rate > 0:
+            energy_generated = generation_rate * dt
+            self.generate_energy(energy_generated)
         
     def get_camera_position(self):
         """Get current camera position"""

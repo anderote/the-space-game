@@ -34,25 +34,25 @@
     },
     
     "building_hotkeys": {
-      "connector": ["C"],
-      "solar": ["S"],
+      "connector": ["E"],
+      "solar": ["Q"],
       "battery": ["B"],
       "miner": ["M"],
       "turret": ["T"],
       "laser": ["L"],
-      "repair": ["R"],
+      "repair": ["Y"],
       "converter": ["V"],
-      "superlaser": ["X"],
+      "superlaser": ["K"],
       "hangar": ["H"],
-      "missile_launcher": ["Q"],
+      "missile_launcher": ["J"],
       "force_field": ["F"]
     },
     
     "building_management": {
       "upgrade": ["U"],
-      "sell": ["X"],
-      "toggle_power": ["E"],
-      "repair": ["R"],
+      "recycle": ["DELETE"],
+      "disable": ["G"],
+      "repair_selected": ["Y"],
       "cancel_selection": ["ESC", "RIGHT_CLICK"]
     }
   },
