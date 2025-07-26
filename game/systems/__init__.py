@@ -1,16 +1,15 @@
 """
-Game systems package.
-Contains all specialized game systems.
+Game systems for Arcade implementation.
 """
 
-from .render_system import RenderSystem
-from .ui_system import UISystem
-from .input_system import InputSystem
-from .game_logic_system import GameLogicSystem
+from .render_system import ArcadeRenderSystem
+from .particle_system import ArcadeParticleSystem
+from .input_system import ArcadeInputSystem
+from .game_logic import ArcadeGameLogic
 
 __all__ = [
-    'RenderSystem',
-    'UISystem', 
-    'InputSystem',
-    'GameLogicSystem'
+    'ArcadeRenderSystem',
+    'ArcadeParticleSystem',
+    'ArcadeInputSystem',
+    'ArcadeGameLogic'
 ] 

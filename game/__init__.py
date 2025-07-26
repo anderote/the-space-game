@@ -1,19 +1,15 @@
 """
-Space Game Clone - Refactored Architecture
-A modular real-time strategy defense game.
+Space Game - Arcade Implementation
+A modern space defense game using Arcade with OpenGL shaders.
 """
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 __author__ = "Space Game Team"
 
-from .core.engine import GameEngine
-from .core.state_manager import StateManager
-from .systems.render_system import RenderSystem
-from .systems.ui_system import UISystem
+from .core.window import SpaceGameWindow
+from .core.engine import ArcadeGameEngine
 
 __all__ = [
-    'GameEngine',
-    'StateManager', 
-    'RenderSystem',
-    'UISystem'
+    'SpaceGameWindow',
+    'ArcadeGameEngine'
 ] 

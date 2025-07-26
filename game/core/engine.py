@@ -1,244 +1,217 @@
 """
-Main game engine that orchestrates all systems and manages the game loop.
+Arcade game engine that manages all game systems and logic.
 """
 
-import pygame
-import sys
-from game.core.system_manager import SystemManager
-from game.core.state_manager import (
-    StateManager, GameStateType, MenuState, PlayingState, 
-    PausedState, GameOverState
-)
-from game.core.event_system import event_system
-from game.systems.render_system import RenderSystem
-from game.systems.ui_system import UISystem
-from game.systems.input_system import InputSystem
-from game.systems.game_logic_system import GameLogicSystem
-from game.systems.audio_system import AudioSystem
-from game.systems.particle_system import ParticleSystem
-from game.utils.camera import Camera
-from settings import *
+import arcade
+import arcade.gl as gl
+from typing import Optional, List, Dict
+from .camera import ArcadeCamera
+from ..systems.render_system import ArcadeRenderSystem
+from ..systems.particle_system import ArcadeParticleSystem
+from ..systems.input_system import ArcadeInputSystem
+from ..systems.game_logic import ArcadeGameLogic
+from ..ui.hud import ArcadeHUD
 
 
-class GameEngine:
-    """Main game engine that manages all systems and the game loop."""
+class ArcadeGameEngine:
+    """Main game engine for Arcade implementation."""
     
-    def __init__(self):
-        # Initialize pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Space Game Clone - Refactored")
-        self.clock = pygame.time.Clock()
+    def __init__(self, window):
+        self.window = window
+        self.ctx = window.ctx
         
-        # Initialize core systems
-        self.camera = Camera()
-        self.system_manager = SystemManager()
-        self.state_manager = StateManager()
-        
-        # Initialize game systems
-        self.render_system = None
-        self.ui_system = None
-        self.input_system = None
-        self.game_logic_system = None
-        self.audio_system = None
-        self.particle_system = None
+        # Core systems
+        self.camera: Optional[ArcadeCamera] = None
+        self.render_system: Optional[ArcadeRenderSystem] = None
+        self.particle_system: Optional[ArcadeParticleSystem] = None
+        self.input_system: Optional[ArcadeInputSystem] = None
+        self.game_logic: Optional[ArcadeGameLogic] = None
+        self.hud: Optional[ArcadeHUD] = None
         
         # Game state
+        self.game_state = "menu"  # menu, playing, paused, game_over
         self.running = True
-        self.high_score = 0
-    
-    def initialize(self):
-        """Initialize the game engine and all systems."""
-        print("Initializing Space Game Clone...")
         
-        # Create and add systems in priority order
-        # Audio and particles first (lowest priority - updated last)
-        self.audio_system = AudioSystem()
-        self.particle_system = ParticleSystem()
+        # Performance tracking
+        self.frame_count = 0
+        self.update_time = 0.0
+        self.render_time = 0.0
         
-        self.game_logic_system = GameLogicSystem(self.camera, self.audio_system, self.particle_system)
-        self.system_manager.add_system(self.game_logic_system, priority=5)
+    def setup(self):
+        """Initialize all game systems."""
+        print("Setting up Arcade game engine...")
         
-        self.input_system = InputSystem(self.camera)
-        self.system_manager.add_system(self.input_system, priority=10)
+        # Create camera
+        self.camera = ArcadeCamera(self.window.width, self.window.height)
         
-        self.render_system = RenderSystem(self.screen, self.camera)
-        self.system_manager.add_system(self.render_system, priority=30)
+        # Create systems
+        self.render_system = ArcadeRenderSystem(self.ctx, self.camera)
+        self.particle_system = ArcadeParticleSystem(self.ctx, self.camera, self.window.particle_shader)
+        self.input_system = ArcadeInputSystem(self.camera)
+        self.game_logic = ArcadeGameLogic(self.camera, self.particle_system)
+        self.hud = ArcadeHUD(self.window.width, self.window.height)
         
-        self.ui_system = UISystem(self.render_system, self.game_logic_system)
-        self.system_manager.add_system(self.ui_system, priority=8)  # Higher priority than input but created after render
+        # Setup systems
+        self.render_system.setup()
+        self.particle_system.setup()
+        self.input_system.setup()
+        self.game_logic.setup()
+        self.hud.setup()
         
-        # Initialize all systems
-        self.system_manager.initialize_all()
+        print("Arcade game engine setup complete!")
         
-        # Create and setup game states
-        self._setup_states()
+    def update(self, delta_time: float):
+        """Update all game systems."""
+        import time
+        start_time = time.perf_counter()
         
-        # Start with menu state
-        self.state_manager.change_state(GameStateType.MENU)
-        
-        print("Game engine initialized successfully!")
-    
-    def _setup_states(self):
-        """Setup all game states."""
-        # Create game systems dict for playing state
-        game_systems = {
-            'game_logic': self.game_logic_system,
-            'render': self.render_system,
-            'ui': self.ui_system,
-            'input': self.input_system,
-            'audio': self.audio_system
-        }
-        
-        # Create states
-        menu_state = MenuState(self.state_manager)
-        playing_state = PlayingState(self.state_manager, game_systems)
-        paused_state = PausedState(self.state_manager)
-        game_over_state = GameOverState(self.state_manager)
-        
-        # Add states to manager
-        self.state_manager.add_state(GameStateType.MENU, menu_state)
-        self.state_manager.add_state(GameStateType.PLAYING, playing_state)
-        self.state_manager.add_state(GameStateType.PAUSED, paused_state)
-        self.state_manager.add_state(GameStateType.GAME_OVER, game_over_state)
-    
-    def run(self):
-        """Main game loop."""
-        print("Starting game loop...")
-        
-        while self.running and self.state_manager.running:
-            dt = self.clock.tick(FPS) / 1000.0  # Delta time in seconds
+        # Update based on game state
+        if self.game_state == "playing":
+            self._update_playing(delta_time)
+        elif self.game_state == "menu":
+            self._update_menu(delta_time)
+        elif self.game_state == "paused":
+            self._update_paused(delta_time)
             
-            # Process events
-            self._handle_events()
-            
-            # Update current state
-            self.state_manager.update(dt)
-            
-            # Update particle system
-            self.particle_system.update()
-            
-            # Update systems
-            self.system_manager.update_all(dt)
-            
-            # Process game events
-            event_system.process_game_events()
-            
-            # Render
-            self._render()
+        self.update_time = time.perf_counter() - start_time
+        self.frame_count += 1
         
-        self._shutdown()
-    
-    def _handle_events(self):
-        """Handle pygame events."""
-        pygame_events = event_system.process_pygame_events()
+    def _update_playing(self, delta_time: float):
+        """Update game systems during gameplay."""
+        # Update input
+        self.input_system.update(delta_time)
         
-        for event in pygame_events:
-            if event.type == pygame.QUIT:
+        # Update game logic
+        self.game_logic.update(delta_time)
+        
+        # Update particles
+        self.particle_system.update(delta_time)
+        
+        # Update camera
+        self.camera.update(delta_time)
+        
+    def _update_menu(self, delta_time: float):
+        """Update systems during menu state."""
+        self.input_system.update(delta_time)
+        
+    def _update_paused(self, delta_time: float):
+        """Update systems during paused state."""
+        self.input_system.update(delta_time)
+        
+    def render(self):
+        """Render all game content."""
+        import time
+        start_time = time.perf_counter()
+        
+        # Clear the screen
+        self.ctx.clear(0.0, 0.0, 0.0, 1.0)
+        
+        # Render based on game state
+        if self.game_state == "playing":
+            self._render_playing()
+        elif self.game_state == "menu":
+            self._render_menu()
+        elif self.game_state == "paused":
+            self._render_paused()
+            
+        self.render_time = time.perf_counter() - start_time
+        
+    def _render_playing(self):
+        """Render game content during gameplay."""
+        # Set up camera view
+        self.camera.apply()
+        
+        # Render background stars
+        self.render_system.render_background()
+        
+        # Render game objects
+        self.game_logic.render(self.render_system)
+        
+        # Render particles
+        self.particle_system.render()
+        
+        # Reset camera for UI
+        self.camera.reset()
+        
+        # Render UI
+        self.hud.render(self.game_logic.get_game_data())
+        
+    def _render_menu(self):
+        """Render menu content."""
+        self.hud.render_menu()
+        
+    def _render_paused(self):
+        """Render paused game with overlay."""
+        # Render the game world first
+        self._render_playing()
+        
+        # Render pause overlay
+        self.hud.render_pause_overlay()
+        
+    def on_key_press(self, key: int, modifiers: int):
+        """Handle key press events."""
+        if self.input_system:
+            self.input_system.on_key_press(key, modifiers)
+            
+        # Global key handling
+        if key == arcade.key.ESCAPE:
+            if self.game_state == "playing":
+                self.game_state = "paused"
+            elif self.game_state == "paused":
+                self.game_state = "playing"
+            elif self.game_state == "menu":
                 self.running = False
-            else:
-                # Let state manager handle the event
-                if not self.state_manager.handle_event(event):
-                    self.running = False
-    
-    def _render(self):
-        """Render the current frame."""
-        current_state = self.state_manager.current_state
-        
-        if not current_state:
-            return
-        
-        # Clear screen
-        self.render_system.clear_screen()
-        
-        # Render based on current state
-        if isinstance(current_state, MenuState):
-            self.ui_system.draw_menu()
-        
-        elif isinstance(current_state, PlayingState):
-            # Draw game world
-            self.render_system.draw_background_stars()
+                
+    def on_key_release(self, key: int, modifiers: int):
+        """Handle key release events."""
+        if self.input_system:
+            self.input_system.on_key_release(key, modifiers)
             
-            # Draw all game objects
-            self.game_logic_system.draw_world_objects(self.render_system)
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse press events."""
+        if self.input_system:
+            self.input_system.on_mouse_press(x, y, button, modifiers)
             
-            # Draw particles
-            self.particle_system.draw(self.render_system.screen, 
-                                    self.render_system.camera.x, 
-                                    self.render_system.camera.y, 
-                                    self.render_system.camera.zoom)
+    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse release events."""
+        if self.input_system:
+            self.input_system.on_mouse_release(x, y, button, modifiers)
             
-            # Draw UI overlay
-            energy_ratio = self.game_logic_system.resources.energy / self.game_logic_system.resources.max_energy
-            self.ui_system.draw_hud(
-                self.game_logic_system.resources,
-                self.game_logic_system.wave_manager,
-                self.game_logic_system.score,
-                self.game_logic_system.kill_count,
-                self.game_logic_system.selected_building,
-                energy_ratio,
-                self.game_logic_system.current_energy_production,
-                self.game_logic_system.solar_panel_count,
-                self.game_logic_system.solar_panel_levels,
-                self.game_logic_system.research_system
-            )
-            self.ui_system.draw_building_panel(
-                self.game_logic_system.selected_build,
-                self.game_logic_system.resources
-            )
-        
-        elif isinstance(current_state, PausedState):
-            # Draw game world (frozen)
-            self.render_system.draw_background_stars()
-            self.game_logic_system.draw_world_objects(self.render_system)
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+        """Handle mouse motion events."""
+        if self.input_system:
+            self.input_system.on_mouse_motion(x, y, dx, dy)
             
-            # Draw UI overlay
-            energy_ratio = self.game_logic_system.resources.energy / self.game_logic_system.resources.max_energy
-            self.ui_system.draw_hud(
-                self.game_logic_system.resources,
-                self.game_logic_system.wave_manager,
-                self.game_logic_system.score,
-                self.game_logic_system.kill_count,
-                self.game_logic_system.selected_building,
-                energy_ratio,
-                self.game_logic_system.current_energy_production,
-                self.game_logic_system.solar_panel_count,
-                self.game_logic_system.solar_panel_levels
-            )
-            self.ui_system.draw_building_panel(
-                self.game_logic_system.selected_build,
-                self.game_logic_system.resources
-            )
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+        """Handle mouse scroll events."""
+        if self.input_system:
+            self.input_system.on_mouse_scroll(x, y, scroll_x, scroll_y)
             
-            # Draw pause overlay
-            self.ui_system.draw_pause_overlay()
+    def on_resize(self, width: int, height: int):
+        """Handle window resize events."""
+        if self.camera:
+            self.camera.resize(width, height)
+        if self.hud:
+            self.hud.resize(width, height)
+        if self.render_system:
+            self.render_system.resize(width, height)
+            
+    def change_game_state(self, new_state: str):
+        """Change the current game state."""
+        old_state = self.game_state
+        self.game_state = new_state
         
-        elif isinstance(current_state, GameOverState):
-            self.ui_system.draw_game_over(current_state.final_score, self.high_score)
-        
-        # Present the frame
-        self.render_system.present()
-    
-    def _shutdown(self):
-        """Cleanup and shutdown."""
-        print("Shutting down game engine...")
-        
-        # Shutdown systems
-        self.system_manager.shutdown_all()
-        
-        # Shutdown audio system
-        if self.audio_system:
-            self.audio_system.shutdown()
-        
-        # Clear event system
-        event_system.clear_handlers()
-        event_system.clear_queue()
-        
-        # Quit pygame
-        pygame.quit()
-        
-        print("Game engine shutdown complete!")
-    
-    def get_system(self, name):
-        """Get a system by name."""
-        return self.system_manager.get_system(name) 
+        # Handle state transitions
+        if new_state == "playing" and old_state == "menu":
+            self.game_logic.start_new_game()
+        elif new_state == "menu" and old_state == "playing":
+            self.game_logic.reset_game()
+            
+    def get_performance_stats(self) -> Dict:
+        """Get performance statistics."""
+        return {
+            "fps": 1.0 / (self.update_time + self.render_time) if (self.update_time + self.render_time) > 0 else 0,
+            "update_time": self.update_time * 1000,  # Convert to milliseconds
+            "render_time": self.render_time * 1000,
+            "frame_count": self.frame_count
+        } 
