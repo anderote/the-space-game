@@ -51,8 +51,7 @@ class Building:
     def take_damage(self, damage):
         """Take damage and reduce health"""
         self.health -= damage
-        if self.health <= 0:
-            self.health = 0
+        # Allow health to go negative so buildings can be destroyed even while being healed
 
     def draw(self, surface, camera_x=0, camera_y=0, zoom=1.0):
         # Calculate screen position with camera offset and zoom

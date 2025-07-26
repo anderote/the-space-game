@@ -61,6 +61,8 @@ class InputSystem(System):
     
     def _handle_keydown(self, key):
         """Handle keyboard input."""
+        from game.core.event_system import event_system, EventType
+        
         # Building selection
         if key in self.build_keys:
             build_type = self.build_keys[key]
@@ -94,7 +96,7 @@ class InputSystem(System):
         elif key == pygame.K_SPACE:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_pause'})
         
-        # ESC key functionality - cancel building selection
+        # ESC key functionality - cancel building selection only
         elif key == pygame.K_ESCAPE:
             if self.selected_build:
                 # Cancel building placement mode
@@ -102,9 +104,7 @@ class InputSystem(System):
                 # Notify game logic system to cancel building selection
                 event_system.emit(EventType.BUILDING_PLACED, {'type': 'cancel_selection'})
                 print("🚫 Cancelled building selection")
-            else:
-                # If no building selected, toggle menu
-                event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
+            # No longer toggles menu - ESC only cancels building selection
         
         # Wave control
         elif key == pygame.K_n:
@@ -112,8 +112,7 @@ class InputSystem(System):
             print("⏭ Skipping to next wave...")
         
         # Menu and quit controls
-        elif key == pygame.K_o:
-            event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
+        # 'O' key now handled by UI system for popup menu
         elif key == pygame.K_p:
             event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'quit'})
     

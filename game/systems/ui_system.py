@@ -9,16 +9,66 @@ from settings import *
 
 
 class UISystem(System):
-    """System responsible for all user interface rendering and interactions."""
+    """User interface system."""
     
-    def __init__(self, render_system):
-        super().__init__("UISystem")
+    def __init__(self, render_system, game_logic_system):
+        super().__init__("UISystem")  # Pass the required name parameter
         self.render_system = render_system
-        self.current_state = None
+        self.game_logic_system = game_logic_system
+        self.show_popup_menu = False  # New popup menu state
+        
+        # Subscribe to UI events
+        from game.core.event_system import event_system, EventType
+        event_system.subscribe(EventType.UI_ACTION, self._handle_ui_action)
+    
+    def _handle_ui_action(self, event):
+        """Handle UI action events."""
+        action = event.data.get('action')
+        if action == 'toggle_popup_menu':
+            self.show_popup_menu = not self.show_popup_menu
+            print(f"{'Opened' if self.show_popup_menu else 'Closed'} popup menu")
     
     def initialize(self):
         """Initialize the UI system."""
-        pass
+        print("UI system initialized!")
+    
+    def handle_event(self, event):
+        """Handle UI-related events."""
+        if event.type == pygame.KEYDOWN:
+            from game.core.event_system import event_system, EventType
+            
+            # Handle 'O' key for popup menu toggle (always handled here)
+            if event.key == pygame.K_o:
+                if self.show_popup_menu:
+                    # Close popup menu
+                    self.show_popup_menu = False
+                    print("Closed popup menu")
+                else:
+                    # Open popup menu
+                    self.show_popup_menu = True
+                    print("Opened popup menu")
+                return True  # Consume the event
+            
+            # Handle other keys only when popup menu is open
+            elif self.show_popup_menu:
+                if event.key == pygame.K_r:
+                    # Restart game
+                    self.show_popup_menu = False
+                    # Reset game logic
+                    self.game_logic_system.reset_game()
+                    print("🔄 Game restarted")
+                elif event.key == pygame.K_m:
+                    # Go to main menu
+                    self.show_popup_menu = False
+                    event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'toggle_menu'})
+                    print("🏠 Returning to main menu")
+                elif event.key == pygame.K_p:
+                    # Quit game
+                    event_system.emit(EventType.GAME_STATE_CHANGE, {'type': 'quit'})
+                    print("👋 Quitting game")
+                return True  # Consume the event so it doesn't propagate
+        
+        return False  # Let other systems handle the event
     
     def update(self, dt):
         """Update UI system."""
@@ -312,6 +362,9 @@ class UISystem(System):
         # Research panel
         if research_system:
             self.draw_research_panel(research_system, resources)
+        
+        # Draw popup menu overlay (must be last to appear on top)
+        self.draw_popup_menu()
     
     def draw_building_panel(self, selected_build, resources):
         """Draw the building selection panel."""
@@ -517,3 +570,55 @@ class UISystem(System):
             desc_text = desc_text[:22] + "..."
         desc_render = self.render_system.small_font.render(desc_text, True, (200, 200, 200))
         self.render_system.screen.blit(desc_render, (x + 5, y + 40)) 
+
+    def draw_popup_menu(self):
+        """Draw popup menu overlay."""
+        if not self.show_popup_menu:
+            return
+        
+        # Semi-transparent overlay
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))  # Dark semi-transparent background
+        self.render_system.screen.blit(overlay, (0, 0))
+        
+        # Menu panel
+        menu_width = 500
+        menu_height = 400
+        menu_x = (SCREEN_WIDTH - menu_width) // 2
+        menu_y = (SCREEN_HEIGHT - menu_height) // 2
+        
+        # Draw menu background with border
+        menu_surface = pygame.Surface((menu_width, menu_height), pygame.SRCALPHA)
+        menu_surface.fill((20, 25, 35, 240))  # Dark blue-gray background
+        pygame.draw.rect(menu_surface, (100, 120, 150), (0, 0, menu_width, menu_height), 3)
+        self.render_system.screen.blit(menu_surface, (menu_x, menu_y))
+        
+        # Title
+        title_text = self.render_system.title_font.render("GAME MENU", True, WHITE)
+        title_x = menu_x + (menu_width - title_text.get_width()) // 2
+        self.render_system.screen.blit(title_text, (title_x, menu_y + 30))
+        
+        # Menu options
+        options = [
+            "O - Close Menu",
+            "R - Restart Game", 
+            "M - Main Menu",
+            "P - Quit Game",
+            "",
+            "Controls:",
+            "S/C/B/M/T/L/R/V/H/F - Buildings",
+            "ESC - Cancel building selection",
+            "U - Upgrade | X - Sell | D - Toggle",
+            "Arrow keys - Pan camera",
+            "Mouse wheel - Zoom",
+            "1/2/3/4 - Speed (Pause/1x/2x/3x)",
+            "N - Skip wave"
+        ]
+        
+        y_offset = menu_y + 90
+        for option in options:
+            if option:  # Skip empty lines
+                text = self.render_system.hud_font.render(option, True, WHITE)
+                text_x = menu_x + 30
+                self.render_system.screen.blit(text, (text_x, y_offset))
+            y_offset += 25 

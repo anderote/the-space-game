@@ -65,8 +65,8 @@ class GameEngine:
         self.render_system = RenderSystem(self.screen, self.camera)
         self.system_manager.add_system(self.render_system, priority=30)
         
-        self.ui_system = UISystem(self.render_system)
-        self.system_manager.add_system(self.ui_system, priority=40)
+        self.ui_system = UISystem(self.render_system, self.game_logic_system)
+        self.system_manager.add_system(self.ui_system, priority=8)  # Higher priority than input but created after render
         
         # Initialize all systems
         self.system_manager.initialize_all()

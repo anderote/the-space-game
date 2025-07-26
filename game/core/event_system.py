@@ -19,6 +19,7 @@ class EventType(Enum):
     POWER_GRID_UPDATED = "power_grid_updated"
     GAME_OVER = "game_over"
     GAME_STATE_CHANGE = "game_state_change"
+    UI_ACTION = "ui_action"
 
 
 @dataclass

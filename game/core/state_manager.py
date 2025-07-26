@@ -110,8 +110,7 @@ class PlayingState(GameState):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 self.state_manager.change_state(GameStateType.PAUSED)
-            elif event.key == pygame.K_o:
-                self.state_manager.change_state(GameStateType.MENU)
+            # Removed pygame.K_o handler - popup menu is handled by InputSystem now
             elif event.key == pygame.K_1:
                 self.game_speed = 0.0  # Pause
             elif event.key == pygame.K_2:
