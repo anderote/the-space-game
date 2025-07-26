@@ -1,1 +1,0 @@
-# Panda3D-specific systems package 
