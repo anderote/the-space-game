@@ -3,7 +3,6 @@ Arcade camera system for handling view transformations and zoom.
 """
 
 import arcade
-import arcade.gl as gl
 from typing import Tuple
 import math
 
@@ -15,84 +14,83 @@ class ArcadeCamera:
         self.width = width
         self.height = height
         
-        # Camera position and zoom
-        self.x = 0.0
-        self.y = 0.0
+        # World bounds
+        self.world_width = 4800
+        self.world_height = 2700
+        
+        # Camera position and zoom - start at world center
+        self.x = 2400.0  # Center of world width
+        self.y = 1350.0  # Center of world height
         self.zoom = 1.0
-        self.min_zoom = 0.5
-        self.max_zoom = 5.0
+        self.min_zoom = 0.3
+        self.max_zoom = 3.0
         
-        # Camera movement
-        self.target_x = 0.0
-        self.target_y = 0.0
+        # Camera movement smoothing
+        self.target_x = self.x
+        self.target_y = self.y
         self.target_zoom = 1.0
-        self.camera_speed = 10.0
-        self.zoom_speed = 0.1
+        self.camera_speed = 8.0
+        self.zoom_speed = 0.15
         
-        # View matrices
-        self.view_matrix = None
-        self.projection_matrix = None
-        self._update_matrices()
+        print(f"Camera initialized at ({self.x}, {self.y}) with zoom {self.zoom}")
         
-    def _update_matrices(self):
-        """Update view and projection matrices."""
-        # Create projection matrix (orthographic)
-        half_width = self.width / (2.0 * self.zoom)
-        half_height = self.height / (2.0 * self.zoom)
-        
-        self.projection_matrix = arcade.create_orthogonal_projection(
-            -half_width, half_width,
-            -half_height, half_height,
-            -1, 1
-        )
-        
-        # Create view matrix (translation)
-        self.view_matrix = arcade.create_translation_matrix(
-            -self.x, -self.y, 0
-        )
-        
-    def update(self, delta_time: float):
-        """Update camera position and zoom with smooth interpolation."""
+    def update(self, dt: float):
+        """Update camera with smooth interpolation."""
         # Smooth camera movement
-        dx = self.target_x - self.x
-        dy = self.target_y - self.y
-        dz = self.target_zoom - self.zoom
+        lerp_factor = min(1.0, self.camera_speed * dt)
         
-        move_speed = self.camera_speed * delta_time
-        zoom_speed = self.zoom_speed * delta_time
+        old_x, old_y = self.x, self.y
         
-        if abs(dx) > 0.1:
-            self.x += dx * move_speed
-        if abs(dy) > 0.1:
-            self.y += dy * move_speed
-        if abs(dz) > 0.01:
-            self.zoom += dz * zoom_speed
-            
+        self.x += (self.target_x - self.x) * lerp_factor
+        self.y += (self.target_y - self.y) * lerp_factor
+        self.zoom += (self.target_zoom - self.zoom) * lerp_factor
+        
         # Clamp zoom
         self.zoom = max(self.min_zoom, min(self.max_zoom, self.zoom))
         
-        # Update matrices
-        self._update_matrices()
+        # Clamp position to world bounds
+        half_width = self.width / (2 * self.zoom)
+        half_height = self.height / (2 * self.zoom)
+        
+        self.x = max(half_width, min(self.world_width - half_width, self.x))
+        self.y = max(half_height, min(self.world_height - half_height, self.y))
+        
+        # Update targets to match clamped values
+        self.target_x = self.x
+        self.target_y = self.y
+        self.target_zoom = self.zoom
+        
+        # Debug camera movement
+        if abs(old_x - self.x) > 1 or abs(old_y - self.y) > 1:
+            print(f"Camera moved to ({self.x:.1f}, {self.y:.1f})")
+    
+    def follow_target(self, x: float, y: float):
+        """Set camera to follow a target position."""
+        self.target_x = x
+        self.target_y = y
+    
+    def set_zoom(self, zoom: float):
+        """Set target zoom level."""
+        self.target_zoom = max(self.min_zoom, min(self.max_zoom, zoom))
+    
+    def zoom_in(self, amount: float = 0.1):
+        """Zoom in by amount."""
+        self.set_zoom(self.zoom + amount)
+    
+    def zoom_out(self, amount: float = 0.1):
+        """Zoom out by amount."""
+        self.set_zoom(self.zoom - amount)
         
     def apply(self):
-        """Apply camera transformation to the current context."""
-        if self.projection_matrix and self.view_matrix:
-            # Set projection matrix
-            arcade.gl.glMatrixMode(arcade.gl.GL_PROJECTION)
-            arcade.gl.glLoadMatrixf(self.projection_matrix)
-            
-            # Set view matrix
-            arcade.gl.glMatrixMode(arcade.gl.GL_MODELVIEW)
-            arcade.gl.glLoadMatrixf(self.view_matrix)
+        """Apply camera transformation (no-op for now, we'll handle translation manually)."""
+        # For now, we'll handle camera translation in each render call
+        # This avoids complex OpenGL projection matrix issues
+        pass
             
     def reset(self):
-        """Reset camera to identity transformation for UI rendering."""
-        arcade.gl.glMatrixMode(arcade.gl.GL_PROJECTION)
-        arcade.gl.glLoadIdentity()
-        arcade.gl.glOrtho(0, self.width, 0, self.height, -1, 1)
-        
-        arcade.gl.glMatrixMode(arcade.gl.GL_MODELVIEW)
-        arcade.gl.glLoadIdentity()
+        """Reset camera transformation (no-op for now)."""
+        # No-op since we're handling translation manually
+        pass
         
     def world_to_screen(self, world_x: float, world_y: float) -> Tuple[float, float]:
         """Convert world coordinates to screen coordinates."""
@@ -112,43 +110,14 @@ class ArcadeCamera:
         self.y = y
         self.target_x = x
         self.target_y = y
-        self._update_matrices()
+        print(f"Camera position set to ({self.x}, {self.y})")
         
-    def set_target_position(self, x: float, y: float):
-        """Set target camera position for smooth movement."""
-        self.target_x = x
-        self.target_y = y
-        
-    def set_zoom(self, zoom: float):
-        """Set camera zoom level."""
-        self.zoom = max(self.min_zoom, min(self.max_zoom, zoom))
-        self.target_zoom = self.zoom
-        self._update_matrices()
-        
-    def set_target_zoom(self, zoom: float):
-        """Set target zoom level for smooth zooming."""
-        self.target_zoom = max(self.min_zoom, min(self.max_zoom, zoom))
-        
-    def zoom_in(self, factor: float = 1.2):
-        """Zoom in by the given factor."""
-        self.set_target_zoom(self.zoom * factor)
-        
-    def zoom_out(self, factor: float = 1.2):
-        """Zoom out by the given factor."""
-        self.set_target_zoom(self.zoom / factor)
-        
+    def get_position(self) -> Tuple[float, float]:
+        """Get current camera position."""
+        return self.x, self.y
+    
     def resize(self, width: int, height: int):
         """Handle window resize."""
         self.width = width
         self.height = height
-        self._update_matrices()
-        
-    def is_visible(self, x: float, y: float, radius: float) -> bool:
-        """Check if a world object is visible in the camera view."""
-        screen_x, screen_y = self.world_to_screen(x, y)
-        screen_radius = radius * self.zoom
-        
-        return (screen_x + screen_radius >= 0 and 
-                screen_x - screen_radius <= self.width and
-                screen_y + screen_radius >= 0 and 
-                screen_y - screen_radius <= self.height) 
+        print(f"Camera resized to {width}x{height}") 

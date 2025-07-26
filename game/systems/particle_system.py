@@ -23,6 +23,6 @@ class ArcadeParticleSystem:
         """Update particle system."""
         pass
         
-    def render(self):
+    def render(self, camera=None):
         """Render particles."""
         pass 

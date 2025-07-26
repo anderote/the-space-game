@@ -16,175 +16,148 @@ from ..ui.hud import ArcadeHUD
 class ArcadeGameEngine:
     """Main game engine for Arcade implementation."""
     
-    def __init__(self, window):
-        self.window = window
-        self.ctx = window.ctx
+    def __init__(self, ctx, width: int, height: int):
+        """Initialize the game engine with Arcade systems."""
+        self.ctx = ctx
+        self.state = "menu"
         
-        # Core systems
-        self.camera: Optional[ArcadeCamera] = None
-        self.render_system: Optional[ArcadeRenderSystem] = None
-        self.particle_system: Optional[ArcadeParticleSystem] = None
-        self.input_system: Optional[ArcadeInputSystem] = None
-        self.game_logic: Optional[ArcadeGameLogic] = None
-        self.hud: Optional[ArcadeHUD] = None
+        # Initialize camera centered on world center where starting base will be
+        self.camera = ArcadeCamera(width, height)
+        self.camera.world_width = 4800
+        self.camera.world_height = 2700
+        self.camera.x = 2400  # Center of world width
+        self.camera.y = 1350  # Center of world height
+        self.camera.zoom = 1.0
+        
+        # Initialize all systems with context
+        self.render_system = ArcadeRenderSystem(ctx, width, height)
+        self.particle_system = ArcadeParticleSystem(ctx, self.camera)
+        self.game_logic = ArcadeGameLogic(self.camera)
+        self.input_system = ArcadeInputSystem(self.camera, self.game_logic)
+        self.hud = ArcadeHUD(width, height)
         
         # Game state
-        self.game_state = "menu"  # menu, playing, paused, game_over
-        self.running = True
-        
-        # Performance tracking
-        self.frame_count = 0
-        self.update_time = 0.0
-        self.render_time = 0.0
+        self.delta_time = 0.0
         
     def setup(self):
-        """Initialize all game systems."""
+        """Setup all systems."""
         print("Setting up Arcade game engine...")
-        
-        # Create camera
-        self.camera = ArcadeCamera(self.window.width, self.window.height)
-        
-        # Create systems
-        self.render_system = ArcadeRenderSystem(self.ctx, self.camera)
-        self.particle_system = ArcadeParticleSystem(self.ctx, self.camera, self.window.particle_shader)
-        self.input_system = ArcadeInputSystem(self.camera)
-        self.game_logic = ArcadeGameLogic(self.camera, self.particle_system)
-        self.hud = ArcadeHUD(self.window.width, self.window.height)
-        
-        # Setup systems
         self.render_system.setup()
         self.particle_system.setup()
         self.input_system.setup()
         self.game_logic.setup()
         self.hud.setup()
-        
         print("Arcade game engine setup complete!")
-        
-    def update(self, delta_time: float):
-        """Update all game systems."""
-        import time
-        start_time = time.perf_counter()
-        
-        # Update based on game state
-        if self.game_state == "playing":
-            self._update_playing(delta_time)
-        elif self.game_state == "menu":
-            self._update_menu(delta_time)
-        elif self.game_state == "paused":
-            self._update_paused(delta_time)
-            
-        self.update_time = time.perf_counter() - start_time
-        self.frame_count += 1
-        
-    def _update_playing(self, delta_time: float):
-        """Update game systems during gameplay."""
-        # Update input
-        self.input_system.update(delta_time)
-        
-        # Update game logic
-        self.game_logic.update(delta_time)
-        
-        # Update particles
-        self.particle_system.update(delta_time)
+    
+    def update(self, dt: float):
+        """Update the game engine based on current state."""
+        self.delta_time = dt
         
         # Update camera
-        self.camera.update(delta_time)
+        self.camera.update(dt)
         
-    def _update_menu(self, delta_time: float):
-        """Update systems during menu state."""
-        self.input_system.update(delta_time)
+        # Update input system
+        self.input_system.update(dt)
         
-    def _update_paused(self, delta_time: float):
-        """Update systems during paused state."""
-        self.input_system.update(delta_time)
-        
+        # Update based on state
+        if self.state == "playing":
+            self.game_logic.update(dt)
+            self.particle_system.update(dt)
+        elif self.state == "menu":
+            pass  # Menu doesn't need game logic updates
+        elif self.state == "paused":
+            pass  # Paused state doesn't update game logic
+    
     def render(self):
-        """Render all game content."""
-        import time
-        start_time = time.perf_counter()
-        
-        # Clear the screen
-        self.ctx.clear(0.0, 0.0, 0.0, 1.0)
-        
-        # Render based on game state
-        if self.game_state == "playing":
-            self._render_playing()
-        elif self.game_state == "menu":
+        """Render the current game state."""
+        if self.state == "menu":
             self._render_menu()
-        elif self.game_state == "paused":
-            self._render_paused()
-            
-        self.render_time = time.perf_counter() - start_time
-        
+        elif self.state == "playing":
+            self._render_playing()
+        elif self.state == "paused":
+            self._render_playing()  # Still show the game
+            self._render_pause_overlay()
+    
+    def _render_menu(self):
+        """Render the main menu."""
+        self.hud.render_menu()
+    
     def _render_playing(self):
-        """Render game content during gameplay."""
-        # Set up camera view
+        """Render the playing state."""
+        # Apply camera transformation for world rendering
         self.camera.apply()
         
-        # Render background stars
-        self.render_system.render_background()
+        # Render background with camera
+        self.render_system.render_background(self.camera)
         
-        # Render game objects
-        self.game_logic.render(self.render_system)
+        # Render game entities (these are in world space)
+        self.game_logic.render(self.camera)
         
         # Render particles
-        self.particle_system.render()
+        self.particle_system.render(self.camera)
         
-        # Reset camera for UI
+        # Render construction preview (in world space)
+        self.input_system.draw_construction_preview(self.camera)
+        
+        # Reset camera transformation for UI rendering
         self.camera.reset()
         
-        # Render UI
-        self.hud.render(self.game_logic.get_game_data())
-        
-    def _render_menu(self):
-        """Render menu content."""
-        self.hud.render_menu()
-        
+        # Render HUD (in screen space)
+        game_data = self.game_logic.get_game_data()
+        game_data['camera_zoom'] = self.camera.zoom
+        self.hud.render("playing", game_data)
+    
     def _render_paused(self):
-        """Render paused game with overlay."""
-        # Render the game world first
+        """Render the paused state."""
+        # Render the game state first
         self._render_playing()
         
-        # Render pause overlay
+        # Then render pause overlay
         self.hud.render_pause_overlay()
-        
+    
+    def _render_pause_overlay(self):
+        """Render pause overlay on top of the game."""
+        self.hud.render_pause_overlay()
+    
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
-        if self.input_system:
-            self.input_system.on_key_press(key, modifiers)
-            
-        # Global key handling
-        if key == arcade.key.ESCAPE:
-            if self.game_state == "playing":
-                self.game_state = "paused"
-            elif self.game_state == "paused":
-                self.game_state = "playing"
-            elif self.game_state == "menu":
-                self.running = False
-                
+        if self.state == "menu":
+            if key == arcade.key.SPACE:
+                self.state = "playing"
+        elif self.state == "playing":
+            if key == arcade.key.ESCAPE:
+                self.state = "paused"
+            else:
+                self.input_system.on_key_press(key, modifiers)
+        elif self.state == "paused":
+            if key == arcade.key.ESCAPE:
+                self.state = "playing"
+            elif key == arcade.key.Q:
+                arcade.close_window()
+    
     def on_key_release(self, key: int, modifiers: int):
         """Handle key release events."""
-        if self.input_system:
+        if self.state == "playing":
             self.input_system.on_key_release(key, modifiers)
-            
-    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        """Handle mouse press events."""
-        if self.input_system:
-            self.input_system.on_mouse_press(x, y, button, modifiers)
-            
-    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
-        """Handle mouse release events."""
-        if self.input_system:
-            self.input_system.on_mouse_release(x, y, button, modifiers)
-            
+    
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
-        """Handle mouse motion events."""
-        if self.input_system:
+        """Handle mouse motion."""
+        if self.state == "playing":
             self.input_system.on_mouse_motion(x, y, dx, dy)
-            
+    
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse press."""
+        if self.state == "playing":
+            self.input_system.on_mouse_press(x, y, button, modifiers)
+    
+    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse release."""
+        if self.state == "playing":
+            self.input_system.on_mouse_release(x, y, button, modifiers)
+    
     def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
-        """Handle mouse scroll events."""
-        if self.input_system:
+        """Handle mouse scroll."""
+        if self.state == "playing":
             self.input_system.on_mouse_scroll(x, y, scroll_x, scroll_y)
             
     def on_resize(self, width: int, height: int):

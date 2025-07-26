@@ -14,6 +14,10 @@ class SpaceGameWindow(arcade.Window):
     def __init__(self, width: int, height: int, title: str):
         super().__init__(width, height, title, resizable=True)
         
+        # Store dimensions as attributes to avoid property conflicts
+        self._width = width
+        self._height = height
+        
         # Game engine
         self.game_engine: Optional[ArcadeGameEngine] = None
         
@@ -35,23 +39,24 @@ class SpaceGameWindow(arcade.Window):
         arcade.set_background_color(arcade.color.BLACK)
         
     def setup(self):
-        """Initialize the game window and all systems."""
+        """Setup the game window and systems."""
         print("Setting up Space Game - Arcade Edition...")
         
-        # Initialize shaders
-        self._setup_shaders()
+        # Load shaders
+        self._load_particle_shader()
+        self._load_post_process_shader()
+        self._load_lighting_shader()
+        print("Shaders loaded successfully")
         
-        # Initialize framebuffers
+        # Setup framebuffers
         self._setup_framebuffers()
         
-        # Create game engine
-        self.game_engine = ArcadeGameEngine(self)
-        
-        # Setup game engine
+        # Initialize game engine
+        self.game_engine = ArcadeGameEngine(self.ctx, self._width, self._height)
         self.game_engine.setup()
         
         print("Space Game setup complete!")
-        
+    
     def _setup_shaders(self):
         """Initialize shader programs."""
         try:
@@ -211,30 +216,64 @@ class SpaceGameWindow(arcade.Window):
         """Setup framebuffers for post-processing effects."""
         # Main framebuffer for rendering
         self.main_framebuffer = self.ctx.framebuffer(
-            color_attachments=[self.ctx.texture((self.width, self.height), 4)]
+            color_attachments=[self.ctx.texture((self.width, self.height))]
         )
         
         # Bloom framebuffer for glow effects
         self.bloom_framebuffer = self.ctx.framebuffer(
-            color_attachments=[self.ctx.texture((self.width, self.height), 4)]
+            color_attachments=[self.ctx.texture((self.width, self.height))]
         )
         
     def on_draw(self):
-        """Main rendering loop with post-processing."""
-        # Clear the screen
+        """Main drawing function."""
         self.clear()
+        self._render_game()
+    
+    def on_update(self, delta_time: float):
+        """Main update function."""
+        self.game_engine.update(delta_time)
+    
+    def on_key_press(self, key: int, modifiers: int):
+        """Handle key press events."""
+        self.game_engine.on_key_press(key, modifiers)
+    
+    def on_key_release(self, key: int, modifiers: int):
+        """Handle key release events."""
+        self.game_engine.on_key_release(key, modifiers)
+    
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+        """Handle mouse motion events."""
+        self.game_engine.on_mouse_motion(x, y, dx, dy)
+    
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse press events."""
+        self.game_engine.on_mouse_press(x, y, button, modifiers)
+    
+    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
+        """Handle mouse release events."""
+        self.game_engine.on_mouse_release(x, y, button, modifiers)
+    
+    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
+        """Handle mouse scroll events."""
+        self.game_engine.on_mouse_scroll(x, y, scroll_x, scroll_y)
+    
+    def on_resize(self, width: int, height: int):
+        """Handle window resize."""
+        super().on_resize(width, height)
+        self._width = width  # Use _width instead of width to avoid property setter
+        self._height = height  # Use _height instead of height to avoid property setter
         
-        # Render to main framebuffer
-        with self.main_framebuffer.bind():
-            self.clear()
-            self._render_game()
+        # Update camera
+        if hasattr(self, 'game_engine') and self.game_engine.camera:
+            self.game_engine.camera.resize(width, height)
+        
+        # Update HUD
+        if hasattr(self, 'game_engine') and self.game_engine.hud:
+            self.game_engine.hud.resize(width, height)
+        
+        # Recreate framebuffers
+        self._setup_framebuffers()
             
-        # Apply post-processing effects
-        self._apply_post_processing()
-        
-        # Update performance counters
-        self._update_performance_counters()
-        
     def _render_game(self):
         """Render the main game content."""
         if self.game_engine:
@@ -242,32 +281,8 @@ class SpaceGameWindow(arcade.Window):
             
     def _apply_post_processing(self):
         """Apply post-processing effects like bloom."""
-        if not self.post_process_shader:
-            # Fallback: just draw the main framebuffer
-            self.ctx.screen.use()
-            self.main_framebuffer.color_attachments[0].use(0)
-            return
-            
-        # Apply bloom effect
-        with self.bloom_framebuffer.bind():
-            self.clear()
-            self.post_process_shader.use()
-            self.post_process_shader["screenTexture"] = 0
-            self.post_process_shader["bloom_threshold"] = 0.8
-            self.post_process_shader["bloom_intensity"] = 1.5
-            
-            self.main_framebuffer.color_attachments[0].use(0)
-            self._draw_fullscreen_quad()
-            
-        # Combine main and bloom
-        self.ctx.screen.use()
-        self.main_framebuffer.color_attachments[0].use(0)
-        self.bloom_framebuffer.color_attachments[0].use(1)
-        
-        # Simple additive blending for bloom
-        self.ctx.blend_func = self.ctx.ONE, self.ctx.ONE
-        self._draw_fullscreen_quad()
-        self.ctx.blend_func = self.ctx.SRC_ALPHA, self.ctx.ONE_MINUS_SRC_ALPHA
+        # TODO: Implement post-processing effects
+        pass
         
     def _draw_fullscreen_quad(self):
         """Draw a fullscreen quad for post-processing."""
@@ -278,60 +293,6 @@ class SpaceGameWindow(arcade.Window):
         )])
         geometry.render(self.post_process_shader)
         
-    def on_update(self, delta_time: float):
-        """Update game logic."""
-        if self.game_engine:
-            self.game_engine.update(delta_time)
-            
-        self.frame_count += 1
-        
-    def on_key_press(self, key: int, modifiers: int):
-        """Handle key press events."""
-        if self.game_engine:
-            self.game_engine.on_key_press(key, modifiers)
-            
-    def on_key_release(self, key: int, modifiers: int):
-        """Handle key release events."""
-        if self.game_engine:
-            self.game_engine.on_key_release(key, modifiers)
-            
-    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        """Handle mouse press events."""
-        if self.game_engine:
-            self.game_engine.on_mouse_press(x, y, button, modifiers)
-            
-    def on_mouse_release(self, x: int, y: int, button: int, modifiers: int):
-        """Handle mouse release events."""
-        if self.game_engine:
-            self.game_engine.on_mouse_release(x, y, button, modifiers)
-            
-    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
-        """Handle mouse motion events."""
-        if self.game_engine:
-            self.game_engine.on_mouse_motion(x, y, dx, dy)
-            
-    def on_mouse_scroll(self, x: int, y: int, scroll_x: int, scroll_y: int):
-        """Handle mouse scroll events."""
-        if self.game_engine:
-            self.game_engine.on_mouse_scroll(x, y, scroll_x, scroll_y)
-            
-    def on_resize(self, width: int, height: int):
-        """Handle window resize events."""
-        super().on_resize(width, height)
-        
-        # Recreate framebuffers with new size
-        if self.main_framebuffer:
-            self.main_framebuffer = self.ctx.framebuffer(
-                color_attachments=[self.ctx.texture((width, height), 4)]
-            )
-        if self.bloom_framebuffer:
-            self.bloom_framebuffer = self.ctx.framebuffer(
-                color_attachments=[self.ctx.texture((width, height), 4)]
-            )
-            
-        if self.game_engine:
-            self.game_engine.on_resize(width, height)
-            
     def _update_performance_counters(self):
         """Update FPS and performance counters."""
         import time
