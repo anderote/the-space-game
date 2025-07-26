@@ -1,0 +1,259 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Space Game Clone - Research Configuration",
+    "last_updated": "2025-01-25"
+  },
+  
+  "research_categories": {
+    "energy": {
+      "name": "Energy Systems",
+      "description": "Improve power generation and storage",
+      "color": [255, 255, 0],
+      "icon": "⚡"
+    },
+    
+    "weapons": {
+      "name": "Weapons Technology", 
+      "description": "Enhance combat capabilities",
+      "color": [255, 0, 0],
+      "icon": "⚔️"
+    },
+    
+    "defense": {
+      "name": "Defense Systems",
+      "description": "Improve shields and armor",
+      "color": [0, 0, 255],
+      "icon": "🛡️"
+    },
+    
+    "mining": {
+      "name": "Mining Technology",
+      "description": "Enhance resource extraction",
+      "color": [128, 128, 128],
+      "icon": "⛏️"
+    },
+    
+    "engineering": {
+      "name": "Engineering",
+      "description": "Advanced building technologies",
+      "color": [0, 255, 0],
+      "icon": "🔧"
+    }
+  },
+  
+  "research_tree": {
+    "improved_solar": {
+      "name": "Improved Solar Panels",
+      "description": "Increase solar panel energy generation by 25%",
+      "category": "energy",
+      "cost": 100,
+      "research_time": 300,
+      "prerequisites": [],
+      "effects": {
+        "solar_energy_rate": 1.25
+      }
+    },
+    
+    "battery_efficiency": {
+      "name": "Battery Efficiency",
+      "description": "Increase battery storage capacity by 50%",
+      "category": "energy",
+      "cost": 150,
+      "research_time": 450,
+      "prerequisites": ["improved_solar"],
+      "effects": {
+        "battery_storage": 1.5
+      }
+    },
+    
+    "power_distribution": {
+      "name": "Advanced Power Distribution",
+      "description": "Increase connector capacity to 8 connections",
+      "category": "energy",
+      "cost": 200,
+      "research_time": 600,
+      "prerequisites": ["battery_efficiency"],
+      "effects": {
+        "max_connections": 8
+      }
+    },
+    
+    "enhanced_turrets": {
+      "name": "Enhanced Turrets",
+      "description": "Increase turret damage by 30%",
+      "category": "weapons",
+      "cost": 120,
+      "research_time": 360,
+      "prerequisites": [],
+      "effects": {
+        "turret_damage": 1.3
+      }
+    },
+    
+    "rapid_fire": {
+      "name": "Rapid Fire",
+      "description": "Reduce turret cooldown by 25%",
+      "category": "weapons",
+      "cost": 180,
+      "research_time": 540,
+      "prerequisites": ["enhanced_turrets"],
+      "effects": {
+        "turret_cooldown": 0.75
+      }
+    },
+    
+    "laser_focus": {
+      "name": "Laser Focus",
+      "description": "Increase laser damage by 40%",
+      "category": "weapons",
+      "cost": 160,
+      "research_time": 480,
+      "prerequisites": ["enhanced_turrets"],
+      "effects": {
+        "laser_damage": 1.4
+      }
+    },
+    
+    "advanced_targeting": {
+      "name": "Advanced Targeting",
+      "description": "Increase weapon range by 20%",
+      "category": "weapons",
+      "cost": 250,
+      "research_time": 750,
+      "prerequisites": ["rapid_fire", "laser_focus"],
+      "effects": {
+        "weapon_range": 1.2
+      }
+    },
+    
+    "reinforced_armor": {
+      "name": "Reinforced Armor",
+      "description": "Increase building health by 25%",
+      "category": "defense",
+      "cost": 140,
+      "research_time": 420,
+      "prerequisites": [],
+      "effects": {
+        "building_health": 1.25
+      }
+    },
+    
+    "shield_generators": {
+      "name": "Shield Generators",
+      "description": "Buildings regenerate health over time",
+      "category": "defense",
+      "cost": 220,
+      "research_time": 660,
+      "prerequisites": ["reinforced_armor"],
+      "effects": {
+        "health_regeneration": 0.1
+      }
+    },
+    
+    "adaptive_armor": {
+      "name": "Adaptive Armor",
+      "description": "Buildings take 15% less damage",
+      "category": "defense",
+      "cost": 300,
+      "research_time": 900,
+      "prerequisites": ["shield_generators"],
+      "effects": {
+        "damage_reduction": 0.85
+      }
+    },
+    
+    "efficient_mining": {
+      "name": "Efficient Mining",
+      "description": "Increase mining rate by 30%",
+      "category": "mining",
+      "cost": 110,
+      "research_time": 330,
+      "prerequisites": [],
+      "effects": {
+        "mining_rate": 1.3
+      }
+    },
+    
+    "deep_extraction": {
+      "name": "Deep Extraction",
+      "description": "Miners can target 2 additional asteroids",
+      "category": "mining",
+      "cost": 170,
+      "research_time": 510,
+      "prerequisites": ["efficient_mining"],
+      "effects": {
+        "miner_max_targets": 8
+      }
+    },
+    
+    "mineral_processing": {
+      "name": "Mineral Processing",
+      "description": "Reduce mining energy cost by 25%",
+      "category": "mining",
+      "cost": 200,
+      "research_time": 600,
+      "prerequisites": ["deep_extraction"],
+      "effects": {
+        "mining_energy_cost": 0.75
+      }
+    },
+    
+    "modular_construction": {
+      "name": "Modular Construction",
+      "description": "Reduce building costs by 15%",
+      "category": "engineering",
+      "cost": 160,
+      "research_time": 480,
+      "prerequisites": [],
+      "effects": {
+        "building_cost": 0.85
+      }
+    },
+    
+    "advanced_materials": {
+      "name": "Advanced Materials",
+      "description": "Buildings upgrade 20% faster",
+      "category": "engineering",
+      "cost": 240,
+      "research_time": 720,
+      "prerequisites": ["modular_construction"],
+      "effects": {
+        "upgrade_speed": 1.2
+      }
+    },
+    
+    "automation": {
+      "name": "Automation",
+      "description": "Repair nodes work 50% faster",
+      "category": "engineering",
+      "cost": 280,
+      "research_time": 840,
+      "prerequisites": ["advanced_materials"],
+      "effects": {
+        "repair_rate": 1.5
+      }
+    }
+  },
+  
+  "research_mechanics": {
+    "research_points_sources": {
+      "enemy_kills": 5,
+      "wave_completion": 25,
+      "building_upgrades": 10,
+      "mining_operations": 1
+    },
+    
+    "research_speed_modifiers": {
+      "base_speed": 1.0,
+      "multiple_labs": 1.2,
+      "advanced_labs": 1.5
+    },
+    
+    "research_costs": {
+      "tier_1": [100, 150],
+      "tier_2": [180, 250],
+      "tier_3": [280, 350]
+    }
+  }
+} 

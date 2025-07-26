@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Space Game Clone - Controls Configuration",
+    "last_updated": "2025-01-25"
+  },
+  
+  "keyboard_controls": {
+    "camera_movement": {
+      "up": ["UP", "W"],
+      "down": ["DOWN", "S"],
+      "left": ["LEFT", "A"],
+      "right": ["RIGHT", "D"]
+    },
+    
+    "camera_controls": {
+      "zoom_in": ["PLUS", "EQUALS"],
+      "zoom_out": ["MINUS", "UNDERSCORE"],
+      "zoom_reset": ["0"]
+    },
+    
+    "game_controls": {
+      "pause": ["SPACE"],
+      "menu": ["O"],
+      "quit": ["P"],
+      "select_all_buildings": ["CTRL+A"]
+    },
+    
+    "speed_controls": {
+      "slow_motion": ["1"],
+      "normal_speed": ["2"],
+      "fast_speed": ["3"],
+      "very_fast_speed": ["4"]
+    },
+    
+    "building_hotkeys": {
+      "connector": ["C"],
+      "solar": ["S"],
+      "battery": ["B"],
+      "miner": ["M"],
+      "turret": ["T"],
+      "laser": ["L"],
+      "repair": ["R"],
+      "converter": ["V"],
+      "superlaser": ["X"],
+      "hangar": ["H"],
+      "missile_launcher": ["Q"],
+      "force_field": ["F"]
+    },
+    
+    "building_management": {
+      "upgrade": ["U"],
+      "sell": ["X"],
+      "toggle_power": ["E"],
+      "repair": ["R"],
+      "cancel_selection": ["ESC", "RIGHT_CLICK"]
+    }
+  },
+  
+  "mouse_controls": {
+    "camera": {
+      "zoom_in": "SCROLL_UP",
+      "zoom_out": "SCROLL_DOWN",
+      "pan": "MIDDLE_DRAG"
+    },
+    
+    "selection": {
+      "select_building": "LEFT_CLICK",
+      "deselect": "RIGHT_CLICK",
+      "multi_select": "CTRL+LEFT_CLICK"
+    },
+    
+    "building": {
+      "place_building": "LEFT_CLICK",
+      "cancel_placement": "RIGHT_CLICK",
+      "rotate_building": "SCROLL_WHEEL"
+    },
+    
+    "combat": {
+      "target_enemies": "LEFT_CLICK",
+      "force_attack": "SHIFT+LEFT_CLICK"
+    }
+  },
+  
+  "ui_settings": {
+    "hud": {
+      "show_fps": true,
+      "show_debug_info": false,
+      "show_grid": false,
+      "show_range_indicators": true,
+      "show_power_connections": true
+    },
+    
+    "building_panel": {
+      "position": "right",
+      "width": 250,
+      "show_costs": true,
+      "show_hotkeys": true,
+      "show_descriptions": true
+    },
+    
+    "minimap": {
+      "enabled": true,
+      "position": "bottom_left",
+      "size": 200,
+      "zoom_factor": 0.1,
+      "show_enemies": true,
+      "show_buildings": true,
+      "show_camera_view": true
+    },
+    
+    "notifications": {
+      "wave_warnings": true,
+      "building_destroyed": true,
+      "low_power": true,
+      "low_resources": true,
+      "research_complete": true
+    },
+    
+    "graphics": {
+      "particle_effects": true,
+      "screen_shake": true,
+      "health_bars": true,
+      "damage_numbers": true,
+      "laser_effects": true
+    }
+  },
+  
+  "accessibility": {
+    "colorblind_support": {
+      "enabled": false,
+      "type": "deuteranopia"
+    },
+    
+    "input_assistance": {
+      "key_repeat_delay": 250,
+      "key_repeat_rate": 50,
+      "mouse_sensitivity": 1.0
+    },
+    
+    "visual_assistance": {
+      "high_contrast": false,
+      "large_fonts": false,
+      "reduced_motion": false
+    }
+  },
+  
+  "game_speed_multipliers": {
+    "pause": 0.0,
+    "slow": 0.5,
+    "normal": 1.0,
+    "fast": 2.0,
+    "very_fast": 3.0
+  },
+  
+  "context_menus": {
+    "building_menu": {
+      "upgrade": "Upgrade Building",
+      "sell": "Sell Building (50% refund)",
+      "repair": "Repair Building",
+      "toggle_power": "Toggle Power",
+      "set_priority": "Set Priority"
+    },
+    
+    "empty_space_menu": {
+      "build_solar": "Build Solar Panel",
+      "build_turret": "Build Turret",
+      "build_connector": "Build Connector"
+    }
+  }
+} 

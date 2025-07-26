@@ -1,0 +1,160 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "description": "Space Game Clone - Wave Configuration",
+    "last_updated": "2025-01-25"
+  },
+  
+  "wave_timing": {
+    "wait_time": 120,
+    "spawn_interval": 30,
+    "initial_wait": 9600,
+    "growth_factor": 1.6,
+    "formation_size_threshold": 20,
+    "max_formations": 8
+  },
+  
+  "wave_types": {
+    "normal": {
+      "name": "Normal Wave",
+      "description": "Standard mixed enemy composition",
+      "point_formula": "base * growth_factor^wave",
+      "frequency": "default"
+    },
+    
+    "formation": {
+      "name": "Formation Wave",
+      "description": "Massive coordinated assault from all directions",
+      "trigger": "every_6_waves",
+      "point_multiplier": 2.5,
+      "spawn_points": "multi_directional",
+      "enemy_count": "30 * (1 + 0.8 * wave)",
+      "description_text": "MASSIVE FORMATION WAVE"
+    },
+    
+    "elite": {
+      "name": "Elite Wave",
+      "description": "Fewer but much stronger enemies",
+      "trigger": "random_chance",
+      "chance": 0.15,
+      "enemy_count": "max(8, 10 + wave * 2)",
+      "enemy_types": ["large", "cruiser", "mothership"],
+      "description_text": "ELITE WAVE"
+    },
+    
+    "swarm": {
+      "name": "Swarm Wave",
+      "description": "Overwhelming numbers of weak enemies",
+      "trigger": "random_chance", 
+      "chance": 0.12,
+      "enemy_count": "40 + wave * 6",
+      "enemy_types": ["basic", "kamikaze"],
+      "description_text": "SWARM WAVE"
+    },
+    
+    "boss": {
+      "name": "Boss Wave",
+      "description": "Single massive enemy with escorts",
+      "trigger": "random_chance",
+      "chance": 0.08,
+      "enemy_count": "max(5, 8 + wave)",
+      "boss_enemy": "mothership",
+      "escort_types": ["assault", "stealth"],
+      "description_text": "BOSS WAVE"
+    }
+  },
+  
+  "wave_composition": {
+    "early_game": {
+      "wave_range": [1, 5],
+      "enemy_distribution": {
+        "basic": 0.6,
+        "kamikaze": 0.3,
+        "assault": 0.1
+      },
+      "max_enemy_types": 2
+    },
+    
+    "mid_game": {
+      "wave_range": [6, 15],
+      "enemy_distribution": {
+        "basic": 0.4,
+        "kamikaze": 0.2,
+        "assault": 0.2,
+        "large": 0.15,
+        "stealth": 0.05
+      },
+      "max_enemy_types": 4
+    },
+    
+    "late_game": {
+      "wave_range": [16, 30],
+      "enemy_distribution": {
+        "basic": 0.25,
+        "kamikaze": 0.15,
+        "assault": 0.2,
+        "large": 0.2,
+        "stealth": 0.1,
+        "cruiser": 0.1
+      },
+      "max_enemy_types": 5
+    },
+    
+    "end_game": {
+      "wave_range": [31, 999],
+      "enemy_distribution": {
+        "basic": 0.2,
+        "kamikaze": 0.1,
+        "assault": 0.2,
+        "large": 0.2,
+        "stealth": 0.15,
+        "cruiser": 0.15
+      },
+      "max_enemy_types": 6,
+      "mothership_chance": 0.15
+    }
+  },
+  
+  "spawn_patterns": {
+    "single_point": {
+      "description": "Single spawn location for small waves",
+      "locations": 1,
+      "distribution": "random_edge"
+    },
+    
+    "multi_point": {
+      "description": "Multiple spawn points for larger waves", 
+      "locations": "calculated",
+      "distribution": "around_perimeter",
+      "max_locations": 8
+    },
+    
+    "formation": {
+      "description": "Coordinated multi-directional assault",
+      "locations": "16_max",
+      "distribution": "all_sides",
+      "coordination": true
+    }
+  },
+  
+  "difficulty_scaling": {
+    "health_scaling": {
+      "base": 24,
+      "per_wave": 24,
+      "formula": "base * wave"
+    },
+    
+    "point_scaling": {
+      "base_points": 10,
+      "growth_factor": 1.6,
+      "formula": "base_points * (growth_factor ^ wave)"
+    },
+    
+    "special_wave_frequency": {
+      "formation_waves": "every_6_waves",
+      "elite_chance": 0.15,
+      "swarm_chance": 0.12,
+      "boss_chance": 0.08
+    }
+  }
+} 
