@@ -1,10 +1,11 @@
 """
-Panda3D Scene Manager - Phase 2 Implementation
-Manages the 3D scene, lighting, and entity visualization
+Panda3D Scene Manager - Phase 3 Implementation
+Manages the 3D scene, lighting, starfield background, and entity visualization
 """
 
 from panda3d.core import AmbientLight, DirectionalLight, Vec3
 from .entity_visualizer import EntityVisualizer
+from .starfield import StarfieldSystem
 
 class SceneManager:
     """Manages the 3D scene and visual elements"""
@@ -14,6 +15,9 @@ class SceneManager:
         self.config = config
         self.lights = {}
         
+        # Initialize starfield system
+        self.starfield = StarfieldSystem(base, config)
+        
         # Initialize entity visualizer
         self.entity_visualizer = EntityVisualizer(base)
         
@@ -21,21 +25,21 @@ class SceneManager:
         
     def setup_scene(self):
         """Set up the complete 3D scene"""
-        print("Setting up Phase 2 scene...")
+        print("Setting up Phase 3 scene...")
         
         self.setup_background()
         self.setup_basic_lighting()
         
-        # Create test entities for Phase 2 visualization
-        self.entity_visualizer.create_test_entities()
+        # Create test entities for Phase 2 visualization (will be replaced by real buildings)
+        # self.entity_visualizer.create_test_entities()
         
-        print("✓ Phase 2 scene setup complete")
+        print("✓ Phase 3 scene setup complete")
         
     def setup_background(self):
         """Set up the scene background"""
-        # Set background color to dark space-like blue
-        self.base.setBackgroundColor(0.05, 0.1, 0.2, 1.0)
-        print("✓ Background color set to space blue")
+        # Set background color to dark space (15, 15, 32) normalized to 0-1
+        self.base.setBackgroundColor(15/255, 15/255, 32/255, 1.0)
+        print("✓ Background color set to dark space")
         
     def setup_basic_lighting(self):
         """Set up basic lighting for visibility"""
@@ -80,14 +84,27 @@ class SceneManager:
         return self.entity_visualizer.create_range_indicator(radius, color)
         
     def update(self, dt):
-        """Update scene elements (for Phase 3+ will handle animations)"""
-        # For Phase 2, scene is static
-        # In Phase 3+, this will update entity positions, animations, etc.
+        """Update scene elements"""
+        # Starfield parallax is updated by camera system
         pass
+        
+    def update_starfield_parallax(self, camera_x, camera_y):
+        """Update starfield parallax based on camera position"""
+        if self.starfield:
+            self.starfield.update_parallax(camera_x, camera_y)
+            
+    def set_starfield_camera_position(self, camera_x, camera_y):
+        """Set initial starfield camera position"""
+        if self.starfield:
+            self.starfield.set_camera_position(camera_x, camera_y)
         
     def cleanup(self):
         """Clean up scene resources"""
         print("Cleaning up scene...")
+        
+        # Clean up starfield
+        if hasattr(self, 'starfield') and self.starfield:
+            self.starfield.cleanup()
         
         # Clean up entity visualizer
         self.entity_visualizer.cleanup()

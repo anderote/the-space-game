@@ -9,9 +9,10 @@ import math
 class Panda3DCamera:
     """Camera controller for top-down view with interactive controls"""
     
-    def __init__(self, base, config):
+    def __init__(self, base, config, scene_manager=None):
         self.base = base
         self.config = config
+        self.scene_manager = scene_manager
         
         # Camera state
         self.x = 0
@@ -102,6 +103,10 @@ class Panda3DCamera:
         # Position camera
         self.base.camera.setPos(self.x, self.y, camera_height)
         self.base.camera.lookAt(self.x, self.y, 0)
+        
+        # Update starfield parallax
+        if self.scene_manager:
+            self.scene_manager.update_starfield_parallax(self.x, self.y)
         
     def move_camera(self, dx, dy, dt):
         """Move camera by delta amounts with bounds checking"""

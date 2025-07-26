@@ -135,17 +135,19 @@ class HUDSystem:
             
     def get_construction_text(self):
         """Get text for construction mode"""
-        input_system = self.game_engine.input_system
+        construction_info = self.game_engine.get_construction_info()
         
-        if input_system.construction_mode and input_system.selected_building_type:
-            cost = self.game_engine.get_building_cost(input_system.selected_building_type)
+        if construction_info['active']:
+            building_type = construction_info['building_type']
+            cost = construction_info['cost']
+            can_afford = construction_info['can_afford']
+            
             minerals_cost = cost.get('minerals', 0)
             energy_cost = cost.get('energy', 0)
             
-            can_afford = self.game_engine.can_afford_building(input_system.selected_building_type)
             afford_text = "✓" if can_afford else "✗"
             
-            return f"Building: {input_system.selected_building_type.title()} | Cost: {minerals_cost}M {energy_cost}E {afford_text} | Left-click to place, Right-click to cancel"
+            return f"Building: {building_type.title()} | Cost: {minerals_cost}M {energy_cost}E {afford_text} | Left-click to place, Right-click to cancel"
         else:
             return ""
             

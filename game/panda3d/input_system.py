@@ -163,17 +163,34 @@ class Panda3DInputSystem(DirectObject):
             
     def handle_left_click(self, world_x, world_y):
         """Handle left mouse click for building placement or selection"""
-        if self.construction_mode and self.selected_building_type:
-            # Try to place building (Phase 3 will implement this)
-            print(f"Would place {self.selected_building_type} at ({world_x:.0f}, {world_y:.0f})")
+        if self.game_engine.state != "playing":
+            return
+            
+        # Check if we're in construction mode
+        construction_info = self.game_engine.get_construction_info()
+        if construction_info['active']:
+            # Try to place building
+            success = self.game_engine.place_building_at_cursor(world_x, world_y)
+            if success:
+                print(f"✓ Building placed successfully")
+            else:
+                print(f"✗ Cannot place building at this location")
         else:
-            # Select existing building or entity (Phase 3 will implement this)
-            print(f"Would select entity at ({world_x:.0f}, {world_y:.0f})")
+            # Try to select existing building
+            selected_building = self.game_engine.select_building_at(world_x, world_y)
+            if selected_building:
+                print(f"✓ Selected {selected_building.building_type}")
+            else:
+                print(f"No building at ({world_x:.0f}, {world_y:.0f})")
             
     def handle_right_click(self, world_x, world_y):
         """Handle right mouse click for canceling actions"""
-        if self.construction_mode:
-            self.cancel_construction()
+        if self.game_engine.state != "playing":
+            return
+            
+        construction_info = self.game_engine.get_construction_info()
+        if construction_info['active']:
+            self.game_engine.cancel_building_construction()
         else:
             print(f"Right click at ({world_x:.0f}, {world_y:.0f})")
             
@@ -217,20 +234,16 @@ class Panda3DInputSystem(DirectObject):
         if self.game_engine.state != "playing":
             return
             
-        self.selected_building_type = building_type
-        self.construction_mode = True
-        print(f"Selected building type: {building_type}")
-        print("Move mouse to position, left-click to place, right-click to cancel")
+        success = self.game_engine.start_building_construction(building_type)
+        if success:
+            print("Move mouse to position, left-click to place, right-click to cancel")
         
     def cancel_construction(self):
         """Cancel building construction mode"""
-        self.construction_mode = False
-        self.selected_building_type = None
-        self.valid_placement = False
-        print("Construction cancelled")
+        self.game_engine.cancel_building_construction()
         
     def update_building_preview(self):
-        """Update building placement preview (Phase 3 will implement visuals)"""
+        """Update building placement preview"""
         if not self.base.mouseWatcherNode.hasMouse():
             return
             
@@ -239,8 +252,13 @@ class Panda3DInputSystem(DirectObject):
         screen_y = (1 - self.mouse_y) * self.game_engine.camera.screen_height / 2
         world_x, world_y = self.game_engine.camera.screen_to_world(screen_x, screen_y)
         
-        # Validate placement (Phase 3 will implement proper validation)
-        self.valid_placement = True  # For now, always valid
+        # Validate placement using building system
+        construction_info = self.game_engine.get_construction_info()
+        if construction_info['active']:
+            can_place, reason = self.game_engine.building_system.can_place_building(
+                construction_info['building_type'], world_x, world_y
+            )
+            self.valid_placement = can_place and construction_info['can_afford']
         
     def get_mouse_world_position(self):
         """Get current mouse position in world coordinates"""

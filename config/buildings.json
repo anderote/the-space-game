@@ -4,7 +4,6 @@
     "description": "Space Game Clone - Building Configuration",
     "last_updated": "2025-01-25"
   },
-  
   "building_costs": {
     "solar": 50,
     "connector": 30,
@@ -19,7 +18,6 @@
     "missile_launcher": 300,
     "force_field": 400
   },
-  
   "building_types": {
     "solar": {
       "name": "Solar Panel",
@@ -27,35 +25,45 @@
       "cost": 50,
       "base_health": 100,
       "radius": 25,
-      "color": [255, 255, 0],
+      "color": [
+        255,
+        255,
+        0
+      ],
       "power_generation": true,
       "energy_rate": 0.1,
       "energy_cost": 0,
       "max_connections": 1,
       "hotkey": "S"
     },
-    
     "connector": {
       "name": "Power Connector",
       "description": "Hub for power distribution",
       "cost": 30,
       "base_health": 80,
       "radius": 20,
-      "color": [0, 255, 255],
+      "color": [
+        0,
+        255,
+        255
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0,
       "max_connections": 6,
       "hotkey": "C"
     },
-    
     "battery": {
       "name": "Battery",
       "description": "Stores and provides backup power",
       "cost": 80,
       "base_health": 120,
       "radius": 22,
-      "color": [0, 255, 0],
+      "color": [
+        0,
+        255,
+        0
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0,
@@ -63,14 +71,17 @@
       "max_connections": 1,
       "hotkey": "B"
     },
-    
     "miner": {
       "name": "Asteroid Miner",
       "description": "Extracts minerals from nearby asteroids",
       "cost": 100,
       "base_health": 100,
       "radius": 25,
-      "color": [128, 128, 128],
+      "color": [
+        128,
+        128,
+        128
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 6,
@@ -81,14 +92,17 @@
       "max_connections": 1,
       "hotkey": "M"
     },
-    
     "turret": {
       "name": "Defense Turret",
       "description": "Basic projectile defense system",
       "cost": 150,
       "base_health": 120,
       "radius": 28,
-      "color": [255, 0, 0],
+      "color": [
+        255,
+        0,
+        0
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 4,
@@ -99,14 +113,17 @@
       "max_connections": 1,
       "hotkey": "T"
     },
-    
     "laser": {
       "name": "Laser Turret",
       "description": "Advanced energy weapon system",
       "cost": 125,
       "base_health": 110,
       "radius": 26,
-      "color": [255, 100, 100],
+      "color": [
+        255,
+        100,
+        100
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0.12,
@@ -115,14 +132,17 @@
       "max_connections": 1,
       "hotkey": "L"
     },
-    
     "superlaser": {
       "name": "Super Laser",
       "description": "Ultimate long-range defense weapon",
       "cost": 500,
       "base_health": 200,
       "radius": 35,
-      "color": [255, 0, 255],
+      "color": [
+        255,
+        0,
+        255
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 1.2,
@@ -131,14 +151,17 @@
       "max_connections": 1,
       "hotkey": "X"
     },
-    
     "repair": {
       "name": "Repair Node",
       "description": "Automatically repairs nearby damaged buildings",
       "cost": 120,
       "base_health": 100,
       "radius": 24,
-      "color": [0, 255, 0],
+      "color": [
+        0,
+        255,
+        0
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0.15,
@@ -147,14 +170,17 @@
       "max_connections": 1,
       "hotkey": "R"
     },
-    
     "converter": {
       "name": "Resource Converter",
       "description": "Processes raw materials for advanced construction",
       "cost": 90,
       "base_health": 100,
       "radius": 23,
-      "color": [255, 165, 0],
+      "color": [
+        255,
+        165,
+        0
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 100,
@@ -163,14 +189,17 @@
       "max_connections": 1,
       "hotkey": "V"
     },
-    
     "hangar": {
       "name": "Fighter Hangar",
       "description": "Launches up to 4 friendly attack ships",
       "cost": 250,
       "base_health": 150,
       "radius": 30,
-      "color": [100, 150, 255],
+      "color": [
+        100,
+        150,
+        255
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 0.025,
@@ -182,14 +211,17 @@
       "max_connections": 2,
       "hotkey": "H"
     },
-    
     "missile_launcher": {
       "name": "Missile Launcher",
       "description": "Heavy missile defense system",
       "cost": 300,
       "base_health": 140,
       "radius": 32,
-      "color": [200, 100, 0],
+      "color": [
+        200,
+        100,
+        0
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 8,
@@ -201,14 +233,17 @@
       "max_connections": 1,
       "hotkey": "Q"
     },
-    
     "force_field": {
       "name": "Force Field Generator",
       "description": "Provides energy shields to nearby buildings",
       "cost": 400,
       "base_health": 180,
       "radius": 30,
-      "color": [0, 200, 255],
+      "color": [
+        0,
+        200,
+        255
+      ],
       "power_generation": false,
       "energy_rate": 0,
       "energy_cost": 2.0,
@@ -217,6 +252,29 @@
       "shield_regen": 0.5,
       "max_connections": 1,
       "hotkey": "F"
+    },
+    "starting_base": {
+      "name": "Command Center",
+      "description": "Main command center - your base of operations",
+      "cost": 0,
+      "base_health": 500,
+      "radius": 40,
+      "color": [
+        0,
+        100,
+        200
+      ],
+      "power_generation": true,
+      "base_power_generation": 20,
+      "energy_rate": 0.2,
+      "energy_cost": 0,
+      "max_connections": 4,
+      "connection_range": 120,
+      "range": 0,
+      "damage": 0,
+      "fire_rate": 0,
+      "construction_time": 0,
+      "construction_energy_cost": 0
     }
   }
-} 
+}
