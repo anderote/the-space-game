@@ -1,241 +1,170 @@
-# 🚀 Space Game Clone
+# Space Game Clone - Panda3D Edition
 
-A real-time strategy space defense game built with Python and Pygame. Defend your base by building energy infrastructure, mining operations, and powerful defense systems against waves of increasingly challenging enemy ships.
+## 🎮 About
 
-## 🎮 Game Overview
+This is a real-time strategy tower defense game built with **Panda3D**, featuring a unique power network system where buildings must be connected to power sources to operate. Players defend their base against increasingly difficult waves of enemies by strategically placing buildings and managing resources.
 
-Space Game Clone is an engaging tower defense / RTS hybrid where you must:
-- **Build and manage** a power grid to support your operations
-- **Mine asteroids** for resources to expand your infrastructure 
-- **Defend your base** against escalating enemy waves
-- **Strategic planning** is key - balance economy, defense, and expansion
+## 🌟 Key Features
 
-## ✨ Key Features
+### 🔌 **Unique Power Network System**
+- Buildings require power connections to operate
+- Strategic network topology affects vulnerability
+- Hub vs. ring vs. grid building patterns create emergent gameplay
 
-### 🏗️ **Building System**
-- **Modular Construction**: Place buildings anywhere with intelligent connection system
-- **Interactive Management**: Click buildings to view detailed stats and control options
-- **Power Grid Management**: Buildings must be connected to power sources to function
-- **Resource Economy**: Mine asteroids to gather minerals for construction
-- **Strategic Placement**: Buildings have interference zones requiring tactical positioning
-- **Upgrade & Sell**: Enhance buildings or sell them for resource management
+### 🏗️ **12 Building Types**
+- **Power Infrastructure**: Solar panels, connectors, batteries
+- **Resource Extraction**: Miners, converters  
+- **Defense Systems**: Turrets, lasers, super lasers, missile launchers
+- **Support Systems**: Repair nodes, hangars, force fields
 
-### ⚡ **Power Grid System**
-- **Automatic Connections**: Buildings automatically connect to nearby structures
-- **Power Sources**: Solar panels and batteries provide energy
-- **Connection Limits**: Different building types have varying connection capacities
-- **Visual Feedback**: Blue lines show active power connections
+### 👾 **7 Enemy Types** 
+- From basic fighters to massive motherships
+- Each with unique AI behaviors and special abilities
+- Adaptive targeting and swarm intelligence
 
-### 🛡️ **Defense Systems**
-- **Multiple Weapon Types**: Turrets, lasers, and superlasers with different capabilities
-- **Targeting AI**: Automatic enemy detection and engagement
-- **Range Visualization**: See weapon ranges during building placement
-- **Upgrade Paths**: More powerful weapons for late-game threats
+### 🌊 **5 Wave Types**
+- Normal, Formation, Elite, Swarm, and Boss waves
+- Exponential difficulty scaling (1.6x growth factor)
+- Dynamic enemy composition based on game phase
 
-### 👾 **Enemy Waves**
-- **Progressive Difficulty**: Waves get larger and more complex over time
-- **Diverse Enemy Types**: Fighters, assault ships, stealth units, heavy cruisers
-- **Formation Flying**: Enemies spawn in tactical grid formations
-- **Balanced Composition**: Mix of fast attackers and heavy hitters
+## 🚀 Quick Start
 
-### 🎯 **Advanced Features**
-- **Minimap**: Real-time overview of battlefield in lower-left corner
-- **Speed Control**: Adjust game speed (0.5x to 3x) for tactical planning
-- **Enhanced Graphics**: Modern UI with glass panels and visual effects
-- **Asteroid Variety**: Multiple asteroid types with different mineral yields
+### Prerequisites
+- Python 3.8+
+- Virtual environment support
 
-## 🎮 Controls
-
-### **Core Controls**
-| Key | Action |
-|-----|--------|
-| **Arrow Keys** | Move camera around the battlefield |
-| **Mouse** | Select buildings, place structures |
-| **Mouse Wheel** | Zoom in/out |
-
-### **Building Hotkeys**
-| Key | Building Type | Cost | Function |
-|-----|---------------|------|----------|
-| **C** | Connector | 30 | Power distribution hub (6 connections) |
-| **S** | Solar Panel | 50 | Generates power during operation |
-| **B** | Battery | 80 | Stores and provides power |
-| **M** | Miner | 100 | Extracts minerals from nearby asteroids |
-| **T** | Turret | 150 | Basic projectile defense |
-| **L** | Laser | 200 | Advanced energy weapon |
-| **R** | Repair Node | 120 | Repairs nearby damaged buildings |
-| **V** | Converter | 200 | Advanced resource processing |
-| **X** | Superlaser | 500 | Ultimate defense weapon |
-| **H** | Hangar | 250 | Launches 4 friendly attack ships |
-
-### **Building Management**
-| Key | Function |
-|-----|----------|
-| **Mouse Click** | Select building (shows detailed info panel) |
-| **U** | Upgrade selected building |
-| **X** | Sell selected building (50% refund) |
-| **Right Click** | Deselect building/cancel placement |
-
-### **Game Speed & Controls**
-| Key | Function |
-|-----|----------|
-| **1** | 0.5x game speed (slow motion) |
-| **2** | 1x game speed (normal) |
-| **3** | 2x game speed (fast) |
-| **4** | 3x game speed (very fast) |
-| **Spacebar** | Pause/unpause game |
-| **O** | Open/close game menu |
-| **P** | Quit game |
-
-## 🏗️ Building Types & Strategy
-
-### **Power Infrastructure**
-- **Solar Panels**: Primary power source, essential for all operations
-- **Batteries**: Store power and provide backup during low generation
-- **Connectors**: Hub nodes that distribute power efficiently (up to 6 connections)
-
-### **Resource Gathering**
-- **Miners**: Extract minerals from asteroids (1 connection, up to 5 targets)
-- **Converters**: Process raw materials for advanced construction
-
-### **Defense Network**
-- **Turrets**: Cost-effective early game defense (1 connection)
-- **Lasers**: High-damage energy weapons (1 connection) 
-- **Superlasers**: Ultimate late-game defense (1 connection)
-
-### **Support Systems**
-- **Repair Nodes**: Maintain your infrastructure automatically
-- **Hangars**: Deploy up to 4 friendly fighter squadrons with auto-regeneration
-
-## ⚔️ Enemy Types
-
-| Enemy | Health | Speed | Special Ability | Points |
-|-------|--------|-------|-----------------|--------|
-| **Fighter** | Low | Medium | Basic attacks | 1 |
-| **Kamikaze** | Very Low | Very High | Suicide attacks | 2 |
-| **Assault Ship** | Medium | Medium | Machine gun bursts | 3 |
-| **Stealth Ship** | Low | High | Cloaking, EMP burst | 4 |
-| **Large Ship** | High | Low | Heavy missiles | 5 |
-| **Heavy Cruiser** | Very High | Very Low | Plasma cannon | 6 |
-
-## 🎯 Gameplay Tips
-
-### **Early Game (Waves 1-5)**
-1. **Build power first**: Place solar panels and connectors near your base
-2. **Start mining**: Place miners near dense asteroid clusters
-3. **Basic defense**: A few turrets can handle early waves
-4. **Expand carefully**: Don't overextend your power grid
-
-### **Mid Game (Waves 6-15)**
-1. **Scale up mining**: More miners = more resources for defense
-2. **Upgrade weapons**: Lasers become essential for stronger enemies
-3. **Power management**: Batteries help during peak demand
-4. **Strategic placement**: Use terrain and range optimization
-
-### **Late Game (Waves 16+)**
-1. **Superlasers**: Ultimate weapons for massive enemy formations
-2. **Hangars**: Deploy up to 4 fighter squadrons with 20-second regeneration
-3. **Redundancy**: Multiple power sources and repair capabilities
-4. **Advanced tactics**: Speed control for micro-management
-
-## 🎨 Visual Features
-
-- **Modern UI**: Glass-panel interface with transparency effects
-- **Enhanced Graphics**: Glowing weapons, particle effects, laser beams
-- **Minimap**: Color-coded overview with buildings, enemies, asteroids
-- **Visual Feedback**: Building ranges, connection lines, health bars
-- **Smooth Animations**: Rotating buildings, moving enemies, weapon effects
-
-## 🔧 Technical Features
-
-- **Modular Architecture**: Clean system-based design for extensibility
-- **Event-Driven**: Decoupled systems communicate through events
-- **Scalable Performance**: Efficient rendering and collision detection
-- **Save System**: Persistent game state and configuration
-- **Cross-Platform**: Runs on Windows, macOS, and Linux
-
-## 🚀 Installation & Setup
-
-### **Prerequisites**
-- Python 3.8 or higher
-- Pygame-CE library
-
-### **Quick Start**
+### Installation & Setup
 ```bash
-# Clone the repository
+# Clone and enter the repository
 git clone <repository-url>
 cd SpaceGame
 
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Create and activate virtual environment  
+python3 -m venv panda3d_env
+source panda3d_env/bin/activate  # On Windows: panda3d_env\Scripts\activate
 
 # Install dependencies
-pip install pygame-ce
+pip install -r panda3d_requirements.txt
+
+# Verify installation
+python test_phase1.py
 
 # Run the game
-python3 main.py
+python main.py
 ```
 
-## 🎮 Development
+## 🎮 Controls
 
-### **Project Structure**
+- **ESC** - Quit game
+- **SPACE** - Start/toggle game state
+- **P** - Pause/resume game
+- **WASD** - Camera movement (Phase 2+)
+- **Mouse** - Building placement (Phase 2+)
+
+## 📊 Game Mechanics
+
+### Resources
+- **Minerals** (600 starting): Construction currency
+- **Energy** (50 starting): Operational currency for building actions  
+- **Power**: Real-time generation/consumption for building operation
+
+### Victory Condition
+- **Survival Challenge**: Survive as many waves as possible
+- **Infinite Scaling**: No traditional victory, difficulty scales infinitely
+
+### Strategic Depth
+- **Multi-Resource Economy**: Minerals, energy, and power create meaningful trade-offs
+- **Infrastructure Vulnerability**: Network attacks can disable large areas
+- **Emergent Tactics**: Simple rules create complex decision spaces
+
+## 🏗️ Architecture
+
 ```
-SpaceGame/
-├── main.py              # Game entry point
-├── settings.py          # Game configuration
-├── power.py            # Power grid system
-├── enemies.py          # Enemy types and AI
-├── buildings.py        # Building definitions
-├── asteroids.py        # Asteroid generation
-├── game/               # Modular game systems
-│   ├── core/          # Engine and state management
-│   └── systems/       # Game logic, rendering, input
-└── assets/            # Images and resources
+Project Structure:
+├── main.py                    # Panda3D application entry point
+├── config/                    # JSON configuration files (all game balance)
+├── docs/                      # Complete technical documentation  
+├── game/
+│   ├── core/                 # Game engine and state management
+│   ├── panda3d/             # Panda3D-specific rendering systems
+│   ├── systems/             # Game logic systems (ready for Phase 3)
+│   └── entities/            # Game objects (ready for Phase 3)
+├── assets/                   # 3D models, textures, shaders (Phase 4)
+└── tests/                    # Test utilities
 ```
 
-### **Adding New Features**
-The modular architecture makes it easy to extend:
-- **New building types**: Add to `buildings.py` and register in systems
-- **Enemy varieties**: Extend the enemy classes in `enemies.py`
-- **Visual effects**: Enhance the render system with new particle types
-- **Game modes**: Implement new states in the state management system
+## 📈 Development Status
 
-## 🏆 Advanced Strategies
+### ✅ **Phase 1 Complete: Foundation**
+- ✅ Panda3D application with 3D scene
+- ✅ Configuration system with all game balance preserved
+- ✅ Basic input handling and window management
+- ✅ Orthographic top-down camera system
 
-### **Power Grid Mastery**
-- **Redundant Connections**: Multiple power paths prevent single-point failures
-- **Efficient Layout**: Minimize connector usage while maximizing coverage
-- **Strategic Positioning**: Place power infrastructure away from combat zones
+### 🔄 **Upcoming Phases**
+- **Phase 2**: Camera controls and basic entity rendering
+- **Phase 3**: Complete game logic integration  
+- **Phase 4**: Enhanced 3D visuals and models
+- **Phase 5**: Polish and optimization
 
-### **Economic Optimization**
-- **Asteroid Selection**: Prioritize high-yield asteroids for mining
-- **Build Order**: Balance immediate defense needs with long-term economy
-- **Resource Banking**: Maintain mineral reserves for emergency construction
+## 📚 Documentation
 
-### **Combat Tactics**
-- **Layered Defense**: Multiple weapon types at different ranges
-- **Focus Fire**: Concentrate defenses on main attack routes
-- **Adaptive Building**: Counter specific enemy types with appropriate weapons
+Comprehensive technical documentation available in [`docs/`](docs/):
 
-## 🎯 Victory Conditions
+- **[Game Specification](docs/GAME_SPECIFICATION.md)** - High-level overview and core concepts
+- **[Power Network System](docs/POWER_NETWORK_SYSTEM.md)** - The game's unique core mechanic
+- **[Building System](docs/BUILDING_SYSTEM.md)** - Complete building mechanics and types
+- **[Enemy AI System](docs/ENEMY_AI_SYSTEM.md)** - Enemy types, behaviors, and combat
+- **[Wave System](docs/WAVE_SYSTEM.md)** - Wave generation and difficulty progression
+- **[Migration Plan](docs/PANDA3D_MIGRATION_PLAN.md)** - Complete 5-phase migration strategy
 
-- **Survive** all enemy waves to achieve victory
-- **Protect your base** - if it's destroyed, the game ends
-- **Resource management** is key to building adequate defenses
-- **Adapt your strategy** as enemy waves become more challenging
+## ⚙️ Configuration
 
-## 🔄 Recent Updates
+All game balance and mechanics are externalized in JSON files in [`config/`](config/):
 
-- **Simplified Power Grid**: Automatic building connections with clear limits
-- **Enhanced Enemy AI**: New ship types with unique abilities and formations
-- **Visual Improvements**: Better graphics, minimap, and UI effects
-- **Control Refinements**: Safer key mappings and speed control
-- **Performance Optimization**: Smoother gameplay and better frame rates
+- `game_config.json` - Core settings, display, resources
+- `buildings.json` - All building types and stats  
+- `enemies.json` - Enemy types and AI behaviors
+- `waves.json` - Wave generation and difficulty
+- `research.json` - Technology tree and upgrades
+- `controls.json` - Input mapping and UI settings
+
+## 🎯 Design Philosophy
+
+### **Emergent Complexity**
+Simple rules create complex strategic situations through the interaction of:
+- Power network dependencies
+- Resource management trade-offs  
+- Exponential difficulty scaling
+- Multiple valid strategies
+
+### **Strategic Depth**  
+- **Network Topology Strategy**: Hub vs. ring vs. grid patterns
+- **Infrastructure Risk**: Network attacks create cascade failures
+- **Resource Tension**: Meaningful trade-offs between spending options
+- **Escalating Challenge**: Difficulty grows faster than player power
+
+## 🧪 Testing
+
+Run the verification suite:
+```bash
+python test_phase1.py
+```
+
+Expected result: All tests pass with green checkmarks ✅
 
 ## 🤝 Contributing
 
-This project welcomes contributions! Whether you're fixing bugs, adding features, or improving documentation, your help is appreciated.
+This project preserves a carefully balanced game design through:
+- **Configuration-driven balance**: Easy tweaks through JSON files
+- **Complete documentation**: Technical specs enable faithful reimplementation  
+- **Modular architecture**: Clean separation of systems
+- **Comprehensive testing**: Verification of all mechanics
+
+## 📝 License
+
+[Add your license information here]
 
 ---
 
-**Defend your base, expand your empire, and survive the endless waves!** 🚀⚡🛡️ 
+**Built with Panda3D for enhanced 3D graphics while preserving the strategic depth and unique gameplay mechanics that make this tower defense game engaging and challenging.** 
