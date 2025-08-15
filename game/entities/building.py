@@ -4,6 +4,7 @@ Core building classes that integrate with Panda3D visualization
 """
 
 import time
+import random
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 import math
@@ -20,6 +21,7 @@ class BuildingType(Enum):
     """Building type enumeration matching configuration"""
     STARTING_BASE = "starting_base"
     SOLAR = "solar"
+    NUCLEAR = "nuclear"
     CONNECTOR = "connector"
     BATTERY = "battery"
     MINER = "miner"
@@ -69,7 +71,14 @@ class Building:
         
         # Power and connection properties
         power_gen = building_config.get("power_generation", False)
-        self.power_generation = building_config.get("base_power_generation", 5) if power_gen else 0
+        if power_gen:
+            # Use effective energy generation for power buildings
+            if self.building_type in ["solar", "nuclear"]:
+                self.power_generation = 0  # Will be set correctly after initialization
+            else:
+                self.power_generation = building_config.get("base_power_generation", 5)
+        else:
+            self.power_generation = 0
         self.power_consumption = building_config.get("power_consumption", 0)
         self.max_connections = building_config.get("max_connections", 0)
         self.connection_range = building_config.get("connection_range", 100)
@@ -78,6 +87,10 @@ class Building:
         self.range = building_config.get("range", 0)  # For turrets, miners, etc.
         self.damage = building_config.get("damage", 0)
         self.fire_rate = building_config.get("fire_rate", 1.0)
+        
+        # Energy storage (for batteries and power buildings)
+        self.energy_capacity = building_config.get("energy_capacity", 0)
+        self.energy_storage = self.energy_capacity  # Initialize energy storage
         
         # Construction properties
         self.construction_time = building_config.get("construction_time", 3.0)
@@ -155,6 +168,9 @@ class Building:
             # Update conversion for converter buildings  
             elif self.building_type == "converter" and self.powered:
                 self._update_conversion(dt)
+            # Update combat for turret buildings
+            elif self.building_type in ["turret", "laser", "superlaser", "missile_launcher"] and self.powered:
+                self._update_turret_combat(dt)
             
     def _update_construction(self, dt: float):
         """Handle energy-based construction progress"""
@@ -166,6 +182,13 @@ class Building:
             if not self.construction_paused:
                 self.construction_paused = True
                 print(f"⏸️  Construction paused for {self.building_type} - building disabled")
+            return
+            
+        # Pause construction if building has 0 health (needs repair)
+        if self.current_health <= 0:
+            if not self.construction_paused:
+                self.construction_paused = True
+                print(f"⏸️  Construction paused for {self.building_type} - needs repair (0 health)")
             return
             
         # Check if building is connected to a powered network
@@ -217,9 +240,16 @@ class Building:
                 if self.construction_progress >= 1.0:
                     self.state = BuildingState.OPERATIONAL
                     
+                    # Update energy-related stats when becoming operational
+                    if self.building_type in ["solar", "nuclear"]:
+                        self.power_generation = self.get_effective_energy_generation()
+                        self.energy_storage = self.get_effective_energy_capacity()
+                    elif self.building_type == "battery":
+                        self.energy_storage = self.get_effective_energy_capacity()
+                    
                     if self.is_upgrading:
                         # Update energy-related stats after upgrade completion
-                        if self.building_type == "solar":
+                        if self.building_type in ["solar", "nuclear"]:
                             self.power_generation = self.get_effective_energy_generation()
                             self.energy_storage = self.get_effective_energy_capacity()
                         elif self.building_type == "battery":
@@ -379,24 +409,39 @@ class Building:
         other_building.connections.discard(self.building_id)
         
     def take_damage(self, amount: int):
-        """Apply damage to building (for asteroids, this represents mining)"""
+        """Apply damage to building"""
         self.current_health = max(0, self.current_health - amount)
         
         if self.current_health <= 0:
-            self.state = BuildingState.DESTROYED
-            if self.building_type == "asteroid":
-                print(f"⛏️ Asteroid fully mined at ({self.x:.0f}, {self.y:.0f})")
-                # For asteroids, destruction means depletion - remove from game
+            # Only destroy operational buildings, not those under construction
+            if self.state == BuildingState.OPERATIONAL:
+                self.state = BuildingState.DESTROYED
+                
+                if self.building_type == "asteroid":
+                    print(f"⛏️ Asteroid fully mined at ({self.x:.0f}, {self.y:.0f})")
+                else:
+                    print(f"💥 {self.building_type.title()} destroyed at ({self.x:.0f}, {self.y:.0f})")
+                
+                # Remove destroyed building from game
                 if hasattr(self, 'game_engine') and self.game_engine:
                     self.game_engine.remove_building(self)
             else:
-                print(f"✗ {self.building_type.title()} destroyed at ({self.x:.0f}, {self.y:.0f})")
+                # Buildings under construction with 0 health just pause construction
+                # but don't get destroyed (they can be repaired)
+                if self.state == BuildingState.UNDER_CONSTRUCTION:
+                    print(f"⚠️ {self.building_type.title()} under construction damaged to 0 health")
         elif self.current_health < self.max_health * 0.5:
             self.state = BuildingState.DAMAGED
             
     def repair(self, amount: int):
         """Repair building damage"""
+        old_health = self.current_health
         self.current_health = min(self.max_health, self.current_health + amount)
+        
+        # If building was at 0 health during construction and got repaired, resume construction
+        if (old_health == 0 and self.current_health > 0 and 
+            self.state == BuildingState.UNDER_CONSTRUCTION):
+            print(f"🔧 {self.building_type.title()} construction can resume - health restored")
         
         if self.current_health > self.max_health * 0.5 and self.state == BuildingState.DAMAGED:
             self.state = BuildingState.OPERATIONAL if self.powered else BuildingState.UNPOWERED
@@ -675,51 +720,93 @@ class Building:
                     print(f"⚠️  Converter needs {abs(energy_cost)} energy for conversion") 
 
     def get_effective_health(self):
-        """Get health with level bonuses applied"""
+        """Get health with level and research bonuses applied"""
         level_bonus = (self.level - 1) * 0.5  # 50% per level above 1
-        return self.base_max_health * (1.0 + level_bonus)
+        research_bonus = 1.0
+        if self.game_engine and hasattr(self.game_engine, 'research_system'):
+            research_bonus = self.game_engine.research_system.get_bonus("building_health_multiplier")
+        return self.base_max_health * (1.0 + level_bonus) * research_bonus
     
     def get_effective_range(self):
-        """Get range with level bonuses applied"""
+        """Get range with level and research bonuses applied"""
         if self.building_type in ["miner", "turret", "laser", "superlaser", "repair", "missile_launcher"]:
             level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
             building_config = self.config.buildings.get("building_types", {}).get(self.building_type, {})
             
-            # Get the appropriate range key for each building type
+            # Get the appropriate range value for each building type
             if self.building_type == "miner":
                 base_range = building_config.get("mining_range", 80)
             elif self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
-                base_range = building_config.get("attack_range", 100)
+                # For combat buildings, use the "range" property from config (attack range)
+                base_range = building_config.get("range", 100)
             elif self.building_type == "repair":
                 base_range = building_config.get("healing_range", 60)
             else:
-                base_range = 80  # Default fallback
+                base_range = self.range or 80  # Fallback to loaded range or default
+            
+            # Apply research bonuses
+            research_bonus = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                if self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
+                    research_bonus = self.game_engine.research_system.get_bonus("turret_range_multiplier")
+                elif self.building_type == "miner":
+                    research_bonus = self.game_engine.research_system.get_bonus("connection_range_multiplier")  # Could add mining_range_multiplier later
+                else:
+                    research_bonus = self.game_engine.research_system.get_bonus("connection_range_multiplier")
                 
-            return base_range * (1.0 + level_bonus)
+            return base_range * (1.0 + level_bonus) * research_bonus
         return 0
     
     def get_effective_damage(self):
-        """Get damage with level bonuses applied"""
+        """Get damage with level and research bonuses applied"""
         if self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
             level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
             base_damage = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("damage", 10)
-            return base_damage * (1.0 + level_bonus)
+            
+            # Apply research bonus
+            research_bonus = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                research_bonus = self.game_engine.research_system.get_bonus("turret_damage_multiplier")
+                
+            return base_damage * (1.0 + level_bonus) * research_bonus
         return 0
     
     def get_effective_mining_rate(self):
-        """Get mining rate with level bonuses applied"""
+        """Get mining rate with level and research bonuses applied"""
         if self.building_type == "miner":
             level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
             base_rate = 2.0  # Base mining rate
-            return base_rate * (1.0 + level_bonus)
+            
+            # Apply research bonus
+            research_bonus = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                research_bonus = self.game_engine.research_system.get_bonus("mining_rate_multiplier")
+                
+            return base_rate * (1.0 + level_bonus) * research_bonus
         return 0
     
     def get_effective_energy_generation(self):
-        """Get energy generation with level bonuses applied"""
+        """Get energy generation with level and research bonuses applied"""
         if self.building_type == "solar":
             level_bonus = (self.level - 1) * 0.5  # 50% per level above 1
-            base_generation = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_generation", 0.1)
-            return base_generation * (1.0 + level_bonus)
+            base_generation = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_rate", 0.1)
+            
+            # Apply research bonus
+            research_bonus = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                research_bonus = self.game_engine.research_system.get_bonus("solar_power_multiplier")
+                
+            return base_generation * (1.0 + level_bonus) * research_bonus
+        elif self.building_type == "nuclear":
+            level_bonus = (self.level - 1) * 0.5  # 50% per level above 1
+            base_generation = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_rate", 25.0)
+            
+            # Apply research bonus
+            research_bonus = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                research_bonus = self.game_engine.research_system.get_bonus("nuclear_power_multiplier")
+                
+            return base_generation * (1.0 + level_bonus) * research_bonus
         return self.power_generation
     
     def get_effective_energy_capacity(self):
@@ -741,3 +828,135 @@ class Building:
             base_cost = 1.0  # Base energy cost per zap
             return base_cost * (1.0 + level_bonus)
         return 1.0 
+    
+    def _update_turret_combat(self, dt: float):
+        """Update turret combat - search for enemies and fire"""
+        import time
+        
+        if not hasattr(self, 'game_engine') or not self.game_engine:
+            return
+            
+        current_time = time.time()
+        
+        # Check fire rate cooldown
+        fire_rate = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("fire_rate", 2.0)
+        # Laser turrets fire in bursts - much faster fire rate
+        if self.building_type in ["laser", "superlaser"]:
+            fire_rate *= 3.0  # 3x faster for continuous beam effect
+        
+        fire_cooldown = 1.0 / fire_rate  # Convert to seconds between shots
+        
+        if current_time - self.last_fire_time < fire_cooldown:
+            return
+            
+        # Find nearest enemy in range
+        turret_range = self.get_effective_range()
+        nearest_enemy = None
+        nearest_distance = turret_range + 1
+        
+        if hasattr(self.game_engine, 'enemies'):
+            for enemy in self.game_engine.enemies:
+                if not enemy.is_alive():
+                    continue
+                    
+                distance = ((enemy.x - self.x)**2 + (enemy.y - self.y)**2)**0.5
+                if distance <= turret_range and distance < nearest_distance:
+                    nearest_enemy = enemy
+                    nearest_distance = distance
+        
+        # Fire at nearest enemy
+        if nearest_enemy:
+            self._fire_at_enemy(nearest_enemy)
+            self.last_fire_time = current_time
+    
+    def _fire_at_enemy(self, enemy):
+        """Fire weapon at target enemy"""
+        try:
+            # Get turret stats
+            damage = self.get_effective_damage()
+            
+            if self.building_type == "missile_launcher":
+                # Fire homing missile
+                self._fire_missile(enemy, damage)
+            elif self.building_type == "turret":
+                # Fire bullet projectile
+                self._fire_bullet(enemy, damage)
+            else:
+                # Fire laser (instant hit) for laser and superlaser
+                self._fire_laser(enemy, damage)
+            
+        except Exception as e:
+            print(f"Error in turret fire: {e}")
+    
+    def _fire_missile(self, target_enemy, damage):
+        """Fire a homing missile at target"""
+        try:
+            from .projectile import Missile
+            
+            # Create missile
+            missile = Missile(
+                x=self.x,
+                y=self.y,
+                damage=damage,
+                max_range=self.get_effective_range(),
+                speed=150,  # Missile speed
+                owner=self,
+                game_engine=self.game_engine
+            )
+            
+            # Add missile to game engine projectiles
+            if hasattr(self.game_engine, 'projectiles'):
+                self.game_engine.projectiles.append(missile)
+            
+            print(f"🚀 {self.building_type.title()} launched missile (damage: {damage:.1f})")
+            
+        except Exception as e:
+            print(f"Error firing missile: {e}")
+    
+    def _fire_bullet(self, target_enemy, damage):
+        """Fire a bullet projectile at target"""
+        try:
+            from .projectile import Projectile, ProjectileType
+            
+            # Create bullet projectile
+            bullet = Projectile(
+                projectile_type=ProjectileType.BULLET,
+                x=self.x,
+                y=self.y,
+                target_x=target_enemy.x,
+                target_y=target_enemy.y,
+                speed=300,  # Fast bullet speed
+                damage=damage,
+                max_range=self.get_effective_range(),
+                owner=self,
+                game_engine=self.game_engine
+            )
+            
+            # Add bullet to game engine projectiles
+            if hasattr(self.game_engine, 'projectiles'):
+                self.game_engine.projectiles.append(bullet)
+            
+            print(f"🔫 {self.building_type.title()} fired bullet (damage: {damage:.1f})")
+            
+        except Exception as e:
+            print(f"Error firing bullet: {e}")
+    
+    def _fire_laser(self, target_enemy, damage):
+        """Fire a laser beam at target (instant hit with continuous beam effect)"""
+        try:
+            # Instant damage to enemy
+            target_enemy.take_damage(damage)
+            
+            # Create visual laser beam effect
+            if hasattr(self, 'game_engine') and self.game_engine:
+                scene_manager = getattr(self.game_engine, 'scene_manager', None)
+                if scene_manager and hasattr(scene_manager, 'entity_visualizer'):
+                    scene_manager.entity_visualizer.create_turret_attack_effect(
+                        self.x, self.y, target_enemy.x, target_enemy.y, self.building_type
+                    )
+            
+            print(f"⚡ {self.building_type.title()} hit {target_enemy.enemy_type} for {damage:.1f} damage")
+            
+        except Exception as e:
+            print(f"Error firing laser: {e}")
+

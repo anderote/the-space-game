@@ -8,7 +8,7 @@
   "enemy_base_stats": {
     "spawn_base": 15,
     "speed_multiplier": 0.7,
-    "health_base": 24,
+    "health_base": 48,
     "laser_range": 120,
     "laser_damage": 0.025,
     "laser_width": 1.5,
@@ -35,7 +35,7 @@
     "kamikaze": {
       "name": "Kamikaze Ship",
       "description": "Fast suicide attacker",
-      "base_health": 30,
+      "base_health": 60,
       "speed": 1.25,
       "radius": 6,
       "size": 10,
@@ -50,7 +50,7 @@
     "large": {
       "name": "Large Ship",
       "description": "Heavy ship with powerful weapons",
-      "base_health": 200,
+      "base_health": 400,
       "speed": 0.25,
       "radius": 15,
       "size": 25,
@@ -66,7 +66,7 @@
     "assault": {
       "name": "Assault Ship",
       "description": "Rapid-fire machine gun attacker",
-      "base_health": 120,
+      "base_health": 240,
       "speed": 0.75,
       "radius": 12,
       "size": 18,
@@ -84,7 +84,7 @@
     "stealth": {
       "name": "Stealth Ship",
       "description": "Cloaking ship with EMP weapons",
-      "base_health": 80,
+      "base_health": 160,
       "speed": 1.0,
       "radius": 8,
       "size": 12,
@@ -102,7 +102,7 @@
     "cruiser": {
       "name": "Heavy Cruiser",
       "description": "Massive ship with charging plasma cannon",
-      "base_health": 300,
+      "base_health": 600,
       "speed": 0.4,
       "radius": 18,
       "size": 30,

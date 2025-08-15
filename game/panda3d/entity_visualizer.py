@@ -38,13 +38,13 @@ class EntityVisualizer:
         }
         
         self.enemy_colors = {
-            'basic': (0.8, 0.8, 0.8, 1.0),           # Light Gray
+            'basic': (1.0, 0.0, 0.0, 1.0),           # Red (Fighter)
             'kamikaze': (1.0, 0.2, 0.2, 1.0),        # Red
             'large': (0.0, 0.4, 1.0, 1.0),           # Blue
             'assault': (0.6, 0.3, 0.0, 1.0),         # Brown
             'stealth': (0.4, 0.0, 0.6, 1.0),         # Purple
             'cruiser': (0.3, 0.3, 0.5, 1.0),         # Gray-Blue
-            'mothership': (0.5, 0.0, 0.5, 1.0)       # Purple
+            'mothership': (1.0, 1.0, 0.0, 1.0)       # Yellow (Mothership)
         }
         
     def create_test_entities(self):
@@ -108,6 +108,9 @@ class EntityVisualizer:
             elif building_type == 'solar':
                 # Black solar panel with white grid lines
                 node = self.create_3d_solar_panel(radius * 2, color)
+            elif building_type == 'nuclear':
+                # Large green nuclear reactor with glowing core
+                node = self.create_3d_nuclear_reactor(radius * 1.5, (0.0, 1.0, 0.4, 1.0))
             elif building_type == 'battery':
                 # Tall rectangular battery (fallback to 2D for now)
                 node = self.create_rectangle(radius, radius * 1.2, color)
@@ -128,6 +131,9 @@ class EntityVisualizer:
             elif building_type == 'superlaser':
                 # Larger white hexagon (taller for better 3D visibility)
                 node = self.create_3d_hexagon(radius * 1.3, 18, (1.0, 1.0, 1.0, 1.0))
+            elif building_type == 'missile_launcher':
+                # Orange octagon (missile launcher)
+                node = self.create_3d_octagon(radius * 1.2, 20, (0.8, 0.4, 0.0, 1.0))
             elif building_type == 'miner':
                 # Green diamond
                 node = self.create_3d_diamond(radius * 1.2, (0.2, 0.8, 0.2, 1.0))
@@ -165,23 +171,23 @@ class EntityVisualizer:
             
         return None
         
-    def create_enemy_visual(self, enemy_type, x, y, radius):
+    def create_enemy_visual(self, enemy_type, x, y, radius, velocity_x=0, velocity_y=0):
         """Create a 3D visual representation of an enemy"""
         try:
             color = self.enemy_colors.get(enemy_type, (0.8, 0.8, 0.8, 1.0))
             
             if enemy_type in ['basic', 'kamikaze', 'stealth']:
-                # Small triangular ships
-                node = self.create_triangle(radius, color)
-            elif enemy_type in ['large', 'cruiser']:
-                # Larger diamond shapes
-                node = self.create_diamond(radius, color)
+                # Fighter ships - narrow directional triangles
+                node = self.create_directional_triangle(radius, color, velocity_x, velocity_y)
             elif enemy_type == 'mothership':
-                # Large hexagon
-                node = self.create_hexagon(radius, color)
+                # Mothership - yellow oval
+                node = self.create_oval(radius, color)
+            elif enemy_type in ['large', 'cruiser']:
+                # Larger diamond shapes  
+                node = self.create_diamond(radius, color)
             else:
-                # Default triangle
-                node = self.create_triangle(radius, color)
+                # Default directional triangle for fighters
+                node = self.create_directional_triangle(radius, color, velocity_x, velocity_y)
             
             if node:
                 node.setPos(x, y, 5)  # Slightly elevated
@@ -192,6 +198,371 @@ class EntityVisualizer:
             print(f"Error creating enemy visual for {enemy_type}: {e}")
             
         return None
+    
+    def update_enemy_visual_direction(self, enemy_visual_node, enemy_type, radius, velocity_x, velocity_y):
+        """Update enemy visual to face movement direction"""
+        try:
+            if not enemy_visual_node or enemy_type not in ['basic', 'kamikaze', 'stealth']:
+                return  # Only update directional triangles
+            
+            # Get position and parent
+            pos = enemy_visual_node.getPos()
+            parent = enemy_visual_node.getParent()
+            
+            # Remove old visual
+            enemy_visual_node.removeNode()
+            
+            # Create new directional triangle
+            color = self.enemy_colors.get(enemy_type, (0.8, 0.8, 0.8, 1.0))
+            new_node = self.create_directional_triangle(radius, color, velocity_x, velocity_y)
+            
+            if new_node:
+                new_node.setPos(pos)
+                new_node.reparentTo(parent)
+                return new_node
+                
+        except Exception as e:
+            print(f"Error updating enemy visual direction: {e}")
+            
+        return enemy_visual_node  # Return original if update failed
+    
+    def create_projectile_visual(self, projectile_type, x, y):
+        """Create a visual representation of a projectile"""
+        try:
+            if projectile_type == "bullet":
+                # Enhanced bullet with glow effect
+                node = self.create_enhanced_bullet_visual(x, y)
+            elif projectile_type == "laser":
+                # Enhanced laser projectile (though lasers are usually beams)
+                node = self.create_enhanced_laser_projectile_visual(x, y)
+            else:
+                # Default projectile
+                node = self.create_circle(1, (1.0, 1.0, 1.0, 1.0))  # White
+                if node:
+                    node.setPos(x, y, 4)
+                    node.reparentTo(self.base.render)
+            
+            return node
+                
+        except Exception as e:
+            print(f"Error creating projectile visual: {e}")
+        
+        return None
+    
+    def create_enhanced_bullet_visual(self, x, y):
+        """Create bullet with glow effect"""
+        try:
+            # Main bullet core - bright yellow
+            main_bullet = self.create_circle(2, (1.0, 1.0, 0.2, 1.0))
+            if not main_bullet:
+                return None
+                
+            main_bullet.setPos(x, y, 4)
+            main_bullet.reparentTo(self.base.render)
+            
+            # Outer glow
+            glow = self.create_circle(4, (1.0, 0.8, 0.0, 0.4))
+            if glow:
+                glow.reparentTo(main_bullet)
+                
+            # Inner bright core
+            core = self.create_circle(1, (1.0, 1.0, 1.0, 1.0))
+            if core:
+                core.reparentTo(main_bullet)
+            
+            return main_bullet
+            
+        except Exception as e:
+            print(f"Error creating enhanced bullet visual: {e}")
+            return None
+    
+    def create_enhanced_laser_projectile_visual(self, x, y):
+        """Create glowing laser projectile"""
+        try:
+            # Main laser core - bright blue/white
+            main_laser = self.create_circle(1.5, (0.8, 0.9, 1.0, 1.0))
+            if not main_laser:
+                return None
+                
+            main_laser.setPos(x, y, 4)
+            main_laser.reparentTo(self.base.render)
+            
+            # Outer glow - blue tint
+            glow = self.create_circle(3.5, (0.3, 0.6, 1.0, 0.3))
+            if glow:
+                glow.reparentTo(main_laser)
+                
+            # Inner bright core - pure white
+            core = self.create_circle(0.5, (1.0, 1.0, 1.0, 1.0))
+            if core:
+                core.reparentTo(main_laser)
+            
+            return main_laser
+            
+        except Exception as e:
+            print(f"Error creating enhanced laser projectile visual: {e}")
+            return None
+    
+    def create_laser_beam_visual(self, start_x, start_y, end_x, end_y):
+        """Create an enhanced glowing laser beam from start to end"""
+        try:
+            # Create enhanced laser beam with multiple layers for glow effect
+            laser_effect = self.create_enhanced_laser_beam(start_x, start_y, end_x, end_y)
+            if laser_effect:
+                laser_effect.reparentTo(self.base.render)
+                return laser_effect
+            
+            # Fallback to simple line if enhanced version fails
+            line_segs = LineSegs()
+            line_segs.setThickness(2.0)
+            line_segs.setColor(1.0, 0.0, 0.0, 1.0)  # Red laser
+            line_segs.moveTo(start_x, start_y, 4)
+            line_segs.drawTo(end_x, end_y, 4)
+            
+            line_node = line_segs.create()
+            node_path = self.base.render.attachNewNode(line_node)
+            return node_path
+            
+        except Exception as e:
+            print(f"Error creating laser beam visual: {e}")
+        
+        return None
+    
+    def create_enhanced_laser_beam(self, start_x, start_y, end_x, end_y):
+        """Create a multi-layered glowing laser beam"""
+        try:
+            from panda3d.core import NodePath
+            
+            # Create main container node
+            laser_container = NodePath("laser_beam")
+            
+            # Outer glow layer (thick, transparent)
+            outer_glow = LineSegs()
+            outer_glow.setThickness(8.0)
+            outer_glow.setColor(1.0, 0.3, 0.3, 0.3)  # Thick red glow
+            outer_glow.moveTo(start_x, start_y, 4)
+            outer_glow.drawTo(end_x, end_y, 4)
+            outer_node = laser_container.attachNewNode(outer_glow.create())
+            
+            # Middle layer (medium thickness)
+            middle_layer = LineSegs()
+            middle_layer.setThickness(4.0)
+            middle_layer.setColor(1.0, 0.6, 0.6, 0.7)  # Medium red
+            middle_layer.moveTo(start_x, start_y, 4.1)
+            middle_layer.drawTo(end_x, end_y, 4.1)
+            middle_node = laser_container.attachNewNode(middle_layer.create())
+            
+            # Inner core (bright, thin)
+            inner_core = LineSegs()
+            inner_core.setThickness(1.5)
+            inner_core.setColor(1.0, 1.0, 1.0, 1.0)  # Bright white core
+            inner_core.moveTo(start_x, start_y, 4.2)
+            inner_core.drawTo(end_x, end_y, 4.2)
+            inner_node = laser_container.attachNewNode(inner_core.create())
+            
+            return laser_container
+            
+        except Exception as e:
+            print(f"Error creating enhanced laser beam: {e}")
+            return None
+    
+    def create_turret_attack_effect(self, start_x, start_y, target_x, target_y, turret_type):
+        """Create visual attack effect for player turrets"""
+        try:
+            # Different effects for different turret types
+            if turret_type == "laser":
+                # Bright blue laser beam with glow effect
+                effect = self.create_turret_laser_effect(start_x, start_y, target_x, target_y, 
+                                                       color=(0.2, 0.8, 1.0, 0.9), thickness=4.0)
+            elif turret_type == "superlaser":
+                # Thicker, brighter laser with different color
+                effect = self.create_turret_laser_effect(start_x, start_y, target_x, target_y,
+                                                       color=(1.0, 0.9, 0.2, 1.0), thickness=6.0)
+            else:
+                # Default laser effect
+                effect = self.create_turret_laser_effect(start_x, start_y, target_x, target_y,
+                                                       color=(0.8, 0.8, 1.0, 0.8), thickness=3.0)
+            
+            if effect:
+                # Schedule removal after short duration
+                def remove_effect():
+                    try:
+                        effect.removeNode()
+                    except:
+                        pass
+                
+                # Remove after 0.2 seconds
+                from direct.task import Task
+                self.base.taskMgr.doMethodLater(0.2, lambda task: remove_effect(), 'remove_attack_effect')
+                
+            return effect
+            
+        except Exception as e:
+            print(f"Error creating turret attack effect: {e}")
+            return None
+    
+    def create_turret_laser_effect(self, start_x, start_y, end_x, end_y, color=(0.2, 0.8, 1.0, 0.9), thickness=4.0):
+        """Create a turret laser beam with glow effect"""
+        try:
+            # Create main laser beam using thin rectangle
+            laser_path = self.create_thin_rectangle_line(
+                start_x, start_y, end_x, end_y, 
+                thickness=thickness, color=color, name="turret_laser_main"
+            )
+            
+            if not laser_path:
+                return None
+                
+            laser_path.reparentTo(self.base.render)
+            
+            # Create outer glow layer
+            glow_color = (color[0] * 0.5, color[1] * 0.5, color[2] * 0.5, color[3] * 0.4)
+            outer_path = self.create_thin_rectangle_line(
+                start_x, start_y, end_x, end_y,
+                thickness=thickness * 2.0, color=glow_color, name="turret_laser_glow"
+            )
+            if outer_path:
+                outer_path.reparentTo(laser_path)
+            
+            # Create inner bright core
+            core_color = (min(1.0, color[0] * 1.5), min(1.0, color[1] * 1.5), min(1.0, color[2] * 1.5), 1.0)
+            inner_path = self.create_thin_rectangle_line(
+                start_x, start_y, end_x, end_y,
+                thickness=thickness * 0.3, color=core_color, name="turret_laser_core"
+            )
+            if inner_path:
+                inner_path.reparentTo(laser_path)
+            
+            return laser_path
+            
+        except Exception as e:
+            print(f"Error creating turret laser effect: {e}")
+            return None
+    
+    def create_missile_visual(self, x, y):
+        """Create visual representation of a missile"""
+        try:
+            # Create small orange diamond for missile
+            node = self.create_diamond(3, (1.0, 0.5, 0.0, 1.0))  # Orange
+            if node:
+                node.setPos(x, y, 3)  # Elevated
+                node.reparentTo(self.base.render)
+                return node
+                
+        except Exception as e:
+            print(f"Error creating missile visual: {e}")
+            
+        return None
+    
+    def create_explosion_effect(self, x, y):
+        """Create visual explosion effect"""
+        try:
+            # Create expanding orange circle for explosion
+            explosion_node = self.create_circle(15, (1.0, 0.3, 0.0, 0.8))  # Orange explosion
+            if explosion_node:
+                explosion_node.setPos(x, y, 4)  # Elevated
+                explosion_node.reparentTo(self.base.render)
+                
+                # Scale up the explosion over time
+                from direct.interval.IntervalGlobal import LerpScaleInterval, Sequence, Func
+                
+                # Scale from small to large, then remove
+                scale_up = LerpScaleInterval(explosion_node, 0.3, (3, 3, 1), (0.5, 0.5, 1))
+                remove_func = Func(explosion_node.removeNode)
+                explosion_sequence = Sequence(scale_up, remove_func)
+                explosion_sequence.start()
+                
+                return explosion_node
+                
+        except Exception as e:
+            print(f"Error creating explosion effect: {e}")
+            
+        return None
+    
+    def create_bullet_impact_effect(self, x, y):
+        """Create particle effect when bullet hits enemy"""
+        try:
+            # Create multiple small particles that spread out
+            impact_container = NodePath("bullet_impact")
+            impact_container.setPos(x, y, 4)
+            impact_container.reparentTo(self.base.render)
+            
+            # Create several small sparks
+            spark_colors = [
+                (1.0, 1.0, 0.0, 1.0),  # Yellow
+                (1.0, 0.5, 0.0, 1.0),  # Orange
+                (1.0, 0.8, 0.2, 1.0),  # Yellow-orange
+            ]
+            
+            import random
+            for i in range(6):  # 6 sparks
+                spark = self.create_circle(1, random.choice(spark_colors))
+                if spark:
+                    # Random offset for each spark
+                    offset_x = random.uniform(-8, 8)
+                    offset_y = random.uniform(-8, 8)
+                    spark.setPos(offset_x, offset_y, 0)
+                    spark.reparentTo(impact_container)
+                    
+                    # Animate sparks flying outward and fading
+                    try:
+                        from direct.interval.IntervalGlobal import LerpPosInterval, LerpColorScaleInterval, Parallel, Sequence, Func
+                        
+                        # Move outward
+                        move_out = LerpPosInterval(spark, 0.3, 
+                                                 (offset_x * 2, offset_y * 2, 0), 
+                                                 (offset_x, offset_y, 0))
+                        
+                        # Fade out
+                        fade_out = LerpColorScaleInterval(spark, 0.3, 
+                                                        (1, 1, 1, 0), 
+                                                        (1, 1, 1, 1))
+                        
+                        # Run both animations in parallel
+                        spark_anim = Parallel(move_out, fade_out)
+                        spark_anim.start()
+                        
+                    except Exception as anim_error:
+                        print(f"Error animating spark: {anim_error}")
+            
+            # Remove the entire impact effect after animation
+            def cleanup_impact():
+                try:
+                    impact_container.removeNode()
+                except:
+                    pass
+            
+            self.base.taskMgr.doMethodLater(0.5, lambda task: cleanup_impact(), 'cleanup_bullet_impact')
+            
+            return impact_container
+            
+        except Exception as e:
+            print(f"Error creating bullet impact effect: {e}")
+            return None
+    
+    def create_3d_nuclear_reactor(self, radius, color):
+        """Create a nuclear reactor with glowing core"""
+        try:
+            # Main reactor container
+            reactor = self.create_3d_hexagon(radius, 20, color)
+            
+            # Inner glowing core
+            core = self.create_3d_circle(radius * 0.6, (0.0, 1.0, 0.8, 0.8))
+            if core:
+                core.reparentTo(reactor)
+                core.setPos(0, 0, 2)
+                
+            # Outer glow ring
+            glow = self.create_3d_circle(radius * 0.8, (0.0, 0.8, 0.4, 0.4))
+            if glow:
+                glow.reparentTo(reactor)
+                glow.setPos(0, 0, 1)
+            
+            return reactor
+            
+        except Exception as e:
+            print(f"Error creating nuclear reactor visual: {e}")
+            return self.create_3d_hexagon(radius, 20, color)
         
     def create_asteroid_visual(self, x, y, radius):
         """Create a 3D visual representation of an asteroid"""
@@ -248,14 +619,79 @@ class EntityVisualizer:
         return node_path
         
     def create_triangle(self, size, color):
-        """Create a triangle approximation using a card"""
+        """Create a triangle approximation using a card for orthographic 2D view"""
         card = CardMaker("triangle")
         card.setFrame(-size, size, -size, size)
-        node = self.base.render.attachNewNode(card.generate())
-        node.setColor(*color)
-        node.setBillboardAxis()  # Face camera
-        # TODO: In Phase 4, replace with actual triangular geometry
-        return node
+        node_path = NodePath(card.generate())
+        node_path.setColor(*color)
+        
+        # Orient for orthographic 2D view
+        node_path.setP(-90)  # Rotate to lay flat in XY plane
+        
+        return node_path
+    
+    def create_directional_triangle(self, size, color, velocity_x, velocity_y):
+        """Create a narrow triangle that points in the direction of movement"""
+        try:
+            from panda3d.core import GeomNode, Geom, GeomVertexFormat, GeomVertexData, GeomVertexWriter
+            from panda3d.core import GeomTriangles, GeomPoints, GeomLines, RenderState
+            import math
+            
+            # Calculate direction angle from velocity
+            if velocity_x == 0 and velocity_y == 0:
+                angle = 0  # Default facing right
+            else:
+                angle = math.atan2(velocity_y, velocity_x)
+            
+            # Create narrow triangle vertices (pointing right initially)
+            # Make it narrow and pointed for a fighter ship look
+            width = size * 0.4  # Narrow width
+            length = size * 1.2  # Longer length for pointy look
+            
+            # Triangle vertices (pointing right)
+            vertices = [
+                (length, 0),      # Tip (front)
+                (-length*0.5, width),   # Back left
+                (-length*0.5, -width)   # Back right
+            ]
+            
+            # Rotate vertices by the direction angle
+            cos_a = math.cos(angle)
+            sin_a = math.sin(angle)
+            rotated_vertices = []
+            for x, y in vertices:
+                new_x = x * cos_a - y * sin_a
+                new_y = x * sin_a + y * cos_a
+                rotated_vertices.append((new_x, new_y))
+            
+            # Create geometry
+            format = GeomVertexFormat.getV3()
+            vdata = GeomVertexData('triangle', format, Geom.UHStatic)
+            vdata.setNumRows(3)
+            vertex = GeomVertexWriter(vdata, 'vertex')
+            
+            # Add vertices
+            for x, y in rotated_vertices:
+                vertex.addData3(x, y, 0)
+            
+            # Create triangle primitive
+            geom = Geom(vdata)
+            tris = GeomTriangles(Geom.UHStatic)
+            tris.addVertices(0, 1, 2)
+            geom.addPrimitive(tris)
+            
+            # Create node
+            geom_node = GeomNode('directional_triangle')
+            geom_node.addGeom(geom)
+            node_path = NodePath(geom_node)
+            node_path.setColor(*color)
+            
+            return node_path
+            
+        except Exception as e:
+            print(f"Error creating directional triangle: {e}")
+            # Fallback to regular triangle
+            return self.create_triangle(size, color)
         
     def create_diamond(self, size, color):
         """Create a diamond approximation using a card for orthographic 2D view"""
@@ -281,15 +717,42 @@ class EntityVisualizer:
         
         return node_path
         
+    def create_oval(self, radius, color):
+        """Create an oval/ellipse approximation using a card for orthographic 2D view"""
+        card = CardMaker("oval")
+        # Make oval slightly wider than tall
+        card.setFrame(-radius * 1.2, radius * 1.2, -radius * 0.8, radius * 0.8)
+        node_path = NodePath(card.generate())
+        node_path.setColor(*color)
+        
+        # Orient for orthographic 2D view
+        node_path.setP(-90)  # Rotate to lay flat in XY plane
+        
+        return node_path
+        
+    def create_circle(self, radius, color):
+        """Create a circle approximation using a card for orthographic 2D view"""
+        card = CardMaker("circle")
+        card.setFrame(-radius, radius, -radius, radius)
+        node_path = NodePath(card.generate())
+        node_path.setColor(*color)
+        
+        # Orient for orthographic 2D view
+        node_path.setP(-90)  # Rotate to lay flat in XY plane
+        
+        return node_path
+        
     def create_octagon(self, radius, color):
-        """Create an octagon approximation using a card"""
+        """Create an octagon approximation using a card for orthographic 2D view"""
         card = CardMaker("octagon")
         card.setFrame(-radius, radius, -radius, radius)
-        node = self.base.render.attachNewNode(card.generate())
-        node.setColor(*color)
-        node.setBillboardAxis()  # Face camera
-        # TODO: In Phase 4, replace with actual octagonal geometry
-        return node
+        node_path = NodePath(card.generate())
+        node_path.setColor(*color)
+        
+        # Orient for orthographic 2D view
+        node_path.setP(-90)  # Rotate to lay flat in XY plane
+        
+        return node_path
         
     def create_turret(self, radius, color):
         """Create a turret approximation with base and barrel for orthographic 2D view"""

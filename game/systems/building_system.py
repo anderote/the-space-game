@@ -591,7 +591,7 @@ class BuildingSystem:
         print("✓ Building system cleanup complete") 
 
     def recycle_building(self, building) -> bool:
-        """Recycle a building for 50% resource refund"""
+        """Recycle a building for 75% resource refund"""
         if not building or not building.can_be_recycled():
             print("Cannot recycle: Building is destroyed")
             return False
@@ -604,7 +604,7 @@ class BuildingSystem:
         if building.state == BuildingState.UNDER_CONSTRUCTION:
             # Refund unconsumed energy for construction/upgrade
             energy_remaining = building.total_construction_energy - building.construction_energy_consumed
-            energy_refund = energy_remaining * 0.5  # 50% of remaining energy
+            energy_refund = energy_remaining * 0.75  # 75% of remaining energy
             
             if building.is_upgrading:
                 print(f"♻️ Cancelled upgrade and recycled {building.building_type} (Level {building.level})")
@@ -630,9 +630,14 @@ class BuildingSystem:
             if building in self.buildings_by_type[building.building_type]:
                 self.buildings_by_type[building.building_type].remove(building)
         
-        # Remove visual representation
+        # Remove visual representation including health bar
         if hasattr(building, 'visual_node') and building.visual_node:
             building.visual_node.removeNode()
+        if hasattr(building, 'health_bar') and building.health_bar:
+            building.health_bar.removeNode()
+        
+        # Use the game engine's remove_building method for proper cleanup
+        self.game_engine.remove_building(building)
         
         # Update power network visualization
         self.scene_manager.update_power_network(list(self.buildings.values()))

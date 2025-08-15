@@ -38,6 +38,7 @@ class Panda3DInputSystem(DirectObject):
         
         # Building interaction shortcuts (when building is selected)
         self.accept("delete", self.recycle_selected_building)  # DELETE key for recycle
+        self.accept("backspace", self.recycle_selected_building)  # BACKSPACE as alternative
         self.accept("g", self.toggle_disable_selected_building)  # G key for disable
         self.accept("u", self.upgrade_selected_building)        # U key for upgrade
         
@@ -200,13 +201,30 @@ class Panda3DInputSystem(DirectObject):
             success = self.game_engine.place_building_at_cursor(world_x, world_y)
             return
         
-        # Handle building selection
+        # Handle building selection first
         building = self.game_engine.get_building_at_position(world_x, world_y)
         if building:
             self.game_engine.select_building_at(world_x, world_y)
+            # Clear enemy selection when selecting building
+            if hasattr(self.game_engine, 'selected_enemy'):
+                self.game_engine.selected_enemy = None
+                self.game_engine.hud_system.hide_enemy_info()
         else:
-            # Clear building selection if clicking empty space
-            self.game_engine.clear_building_selection()
+            # Check for enemy selection
+            enemy = self.get_enemy_at_position(world_x, world_y)
+            if enemy:
+                # Clear building selection when selecting enemy
+                self.game_engine.clear_building_selection()
+                # Select enemy
+                self.game_engine.selected_enemy = enemy
+                self.game_engine.hud_system.show_enemy_info(enemy)
+                print(f"✓ Selected {enemy.enemy_type} enemy")
+            else:
+                # Clear all selections if clicking empty space
+                self.game_engine.clear_building_selection()
+                if hasattr(self.game_engine, 'selected_enemy'):
+                    self.game_engine.selected_enemy = None
+                    self.game_engine.hud_system.hide_enemy_info()
             
     def check_asteroid_click(self, world_x, world_y, tolerance=50.0):
         """Check if click is on an asteroid and show mineral info"""
@@ -233,6 +251,17 @@ class Panda3DInputSystem(DirectObject):
                             print(f"🪨 Asteroid: {current_minerals}/{max_minerals} minerals")
                             return True
         return False
+    
+    def get_enemy_at_position(self, world_x, world_y, tolerance=15.0):
+        """Find enemy at the given world position"""
+        if not hasattr(self.game_engine, 'enemies') or not self.game_engine.enemies:
+            return None
+            
+        for enemy in self.game_engine.enemies:
+            distance = ((world_x - enemy.x) ** 2 + (world_y - enemy.y) ** 2) ** 0.5
+            if distance <= enemy.radius + tolerance:
+                return enemy
+        return None
         
     def handle_right_click(self, world_x, world_y):
         """Handle right mouse click for canceling actions"""
@@ -384,12 +413,15 @@ class Panda3DInputSystem(DirectObject):
             
     def recycle_selected_building(self):
         """Recycle the currently selected building"""
+        print("🗑️ Recycle key pressed!")
         if hasattr(self.game_engine, 'building_system') and self.game_engine.building_system.selected_building:
             building = self.game_engine.building_system.selected_building
+            print(f"🗑️ Attempting to recycle {building.building_type} at ({building.x}, {building.y})")
             success = self.game_engine.building_system.recycle_building(building)
             if success:
                 # Clear selection since building was removed
                 self.game_engine.building_system.clear_building_selection()
+                print("✓ Building recycled successfully")
             else:
                 print("✗ Failed to recycle building")
         else:

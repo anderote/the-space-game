@@ -8,6 +8,9 @@ from ..panda3d.camera_controller import Panda3DCamera
 from ..panda3d.input_system import Panda3DInputSystem
 from ..panda3d.hud_system import HUDSystem
 from ..systems.building_system import BuildingSystem
+from ..systems.wave_system import WaveSystem
+from ..systems.research_system import ResearchSystem
+from ..entities.building import BuildingState
 
 class Panda3DGameEngine:
     """Game engine that integrates building system with Panda3D visualization"""
@@ -62,6 +65,12 @@ class Panda3DGameEngine:
         
         # Initialize building system (Phase 3)
         self.building_system = BuildingSystem(self.base, self.config, self.scene_manager, self)
+        
+        # Initialize research system
+        self.research_system = ResearchSystem(self.config)
+        
+        # Initialize wave system
+        self.wave_system = WaveSystem(self.config, self, self.scene_manager)
         
         # Connect HUD system to building system for UI updates
         self.building_system.hud_system = self.hud_system
@@ -127,7 +136,7 @@ class Panda3DGameEngine:
             
             # Override properties for asteroid
             asteroid.radius = data['radius']
-            asteroid.current_health = data['health']
+            asteroid._operational_health = data['health']
             asteroid.base_max_health = data['health']  # Store original health
             asteroid.mineral_value = data['minerals']
             asteroid.state = BuildingState.OPERATIONAL  # Asteroids are always "operational"
@@ -190,7 +199,15 @@ class Panda3DGameEngine:
         # Update building system
         self.building_system.update(dt)
         
-        # TODO: Update other systems (enemies, combat, etc.) in later parts of Phase 3
+        # Update research system
+        self.research_system.update(dt)
+        
+        # Update wave system and enemies
+        self.wave_system.update(dt)
+        self.update_enemies(dt)
+        
+        # Update projectiles
+        self.update_projectiles(dt)
         
     def start_game(self):
         """Start a new game"""
@@ -306,7 +323,7 @@ class Panda3DGameEngine:
         """Calculate total power generation from all buildings"""
         total_generation = 0.0
         for building in self.building_system.buildings.values():
-            if building.state.name == "OPERATIONAL" and not building.disabled:  # Only operational and enabled buildings generate power
+            if building.state == BuildingState.OPERATIONAL and not building.disabled:  # Only operational and enabled buildings generate power
                 # Use the building's effective energy generation (which includes level bonuses)
                 if building.building_type == "solar":
                     power_gen = building.get_effective_energy_generation()
@@ -324,7 +341,7 @@ class Panda3DGameEngine:
         """Calculate total energy storage capacity from all buildings"""
         total_capacity = 100  # Starting base provides 100 base capacity
         for building in self.building_system.buildings.values():
-            if building.state.name == "OPERATIONAL" and not building.disabled:  # Only operational and enabled buildings provide capacity
+            if building.state == BuildingState.OPERATIONAL and not building.disabled:  # Only operational and enabled buildings provide capacity
                 # Use the building's effective energy capacity (which includes level bonuses)
                 if building.building_type in ["solar", "battery"]:
                     capacity = building.get_effective_energy_capacity()
@@ -349,6 +366,28 @@ class Panda3DGameEngine:
         if generation_rate > 0:
             energy_generated = generation_rate * dt
             self.generate_energy(energy_generated)
+    
+    def update_enemies(self, dt: float):
+        """Update all enemies"""
+        # Update each enemy
+        for enemy in self.enemies[:]:  # Use slice to avoid modification during iteration
+            enemy.update(dt)
+            
+            # Remove destroyed enemies
+            if not enemy.is_alive():
+                if enemy in self.enemies:
+                    self.enemies.remove(enemy)
+    
+    def update_projectiles(self, dt: float):
+        """Update all projectiles"""
+        # Update each projectile
+        for projectile in self.projectiles[:]:  # Use slice to avoid modification during iteration
+            projectile.update(dt)
+            
+            # Remove inactive projectiles
+            if not projectile.is_active():
+                if projectile in self.projectiles:
+                    self.projectiles.remove(projectile)
         
     def get_camera_position(self):
         """Get current camera position"""
@@ -415,6 +454,10 @@ class Panda3DGameEngine:
         if hasattr(self, 'scene_manager'):
             self.scene_manager.cleanup()
             
+        # Clean up wave system
+        if hasattr(self, 'wave_system'):
+            self.wave_system.cleanup()
+        
         # Clear game state
         self.enemies.clear()
         self.projectiles.clear()
