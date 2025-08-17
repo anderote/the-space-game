@@ -9,7 +9,7 @@
     "spawn_base": 15,
     "speed_multiplier": 0.7,
     "health_base": 48,
-    "laser_range": 120,
+    "laser_range": 144,
     "laser_damage": 0.025,
     "laser_width": 1.5,
     "contact_damage": 0.167,

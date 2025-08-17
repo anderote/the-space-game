@@ -967,9 +967,14 @@ class HUDSystem:
                 parent=self.building_scroll_frame.getCanvas()
             )
             
-            # Building name
+            # Building name with hotkey
+            hotkey = config.get("hotkey", "").upper()
+            name_with_hotkey = config.get("name", building_type.title())
+            if hotkey:
+                name_with_hotkey += f" [{hotkey}]"
+                
             name_text = OnscreenText(
-                text=config.get("name", building_type.title()),
+                text=name_with_hotkey,
                 pos=(button_x_start + 0.02, y_pos + 0.02),
                 scale=0.035,
                 fg=(1, 1, 1, 1),
