@@ -30,10 +30,11 @@ class WaveSystem:
         # Timing configuration
         wave_timing = config.waves.get("wave_timing", {})
         self.initial_wait = 45.0  # Start first wave at 45 seconds
-        self.spawn_interval = 0.5  # Time between individual enemy spawns in a cluster
+        self.spawn_interval = 0.1  # Time between individual enemy spawns in a cluster (2x faster spawning)
         self.cluster_interval = 2.0  # Time between clusters within a wave
         self.wave_interval = 30.0  # Time between waves (gets shorter over time)
-        self.growth_factor = 1.6  # Geometric growth factor for difficulty
+        self.max_wave_duration = 240.0  # Maximum wave duration (4 minutes)a
+        self.growth_factor = 3.8  # Geometric growth factor for difficulty (2x faster ramp)
         
         # Game start time
         self.game_start_time = time.time()
@@ -42,12 +43,49 @@ class WaveSystem:
         # Spawn points (around the edges of the map)
         world_width = config.game.get("display", {}).get("world_width", 4800)
         world_height = config.game.get("display", {}).get("world_height", 2700)
-        self.spawn_points = [
-            (0, world_height // 2),              # Left edge
-            (world_width, world_height // 2),    # Right edge
-            (world_width // 2, 0),               # Top edge
-            (world_width // 2, world_height),    # Bottom edge
+        
+        # Extended spawn points for multi-directional waves
+        self.all_spawn_points = [
+            # Left edge spawn points
+            (0, world_height // 4),              # Left-top
+            (0, world_height // 2),              # Left-center
+            (0, 3 * world_height // 4),          # Left-bottom
+            
+            # Right edge spawn points
+            (world_width, world_height // 4),    # Right-top
+            (world_width, world_height // 2),    # Right-center
+            (world_width, 3 * world_height // 4), # Right-bottom
+            
+            # Top edge spawn points
+            (world_width // 4, 0),               # Top-left
+            (world_width // 2, 0),               # Top-center
+            (3 * world_width // 4, 0),           # Top-right
+            
+            # Bottom edge spawn points
+            (world_width // 4, world_height),    # Bottom-left
+            (world_width // 2, world_height),    # Bottom-center
+            (3 * world_width // 4, world_height) # Bottom-right
         ]
+    
+    def get_spawn_points_for_wave(self, wave_number: int) -> List[tuple]:
+        """Get spawn points based on wave number - more points for harder waves"""
+        if wave_number <= 3:
+            # Early waves: single spawn point (center left)
+            return [self.all_spawn_points[1]]  # Left-center
+        elif wave_number <= 6:
+            # Medium waves: two opposite spawn points
+            return [self.all_spawn_points[1], self.all_spawn_points[4]]  # Left-center, Right-center
+        elif wave_number <= 10:
+            # Harder waves: four spawn points (cardinal directions)
+            return [self.all_spawn_points[1], self.all_spawn_points[4], 
+                   self.all_spawn_points[7], self.all_spawn_points[10]]  # Left, Right, Top, Bottom centers
+        elif wave_number <= 15:
+            # Very hard waves: six spawn points
+            return [self.all_spawn_points[0], self.all_spawn_points[1], self.all_spawn_points[2],  # Left edge
+                   self.all_spawn_points[3], self.all_spawn_points[4], self.all_spawn_points[5]]   # Right edge
+        else:
+            # Extreme waves: all spawn points
+            return self.all_spawn_points
         
     def update(self, dt: float):
         """Update wave system"""
@@ -70,10 +108,16 @@ class WaveSystem:
                 self.spawn_next_enemy()
         
         # Check if wave is complete
-        if self.wave_active and not self.enemies_to_spawn:
-            # Check if all enemies are defeated
-            if len(self.game_engine.enemies) == 0:
+        if self.wave_active:
+            wave_duration = current_time - self.wave_start_time
+            
+            # Complete wave if all enemies spawned and defeated
+            if not self.enemies_to_spawn and len(self.game_engine.enemies) == 0:
                 self.complete_wave()
+            # Force complete wave after maximum duration (4 minutes)
+            elif wave_duration >= self.max_wave_duration:
+                print(f"⏰ Wave {self.current_wave} auto-completed after {self.max_wave_duration/60:.1f} minutes")
+                self.force_complete_wave()
         
         # Check if it's time for next wave (after wave complete + interval)
         elif (not self.wave_active and self.last_wave_complete_time > 0 and 
@@ -110,8 +154,8 @@ class WaveSystem:
         
         cluster_delay = 0.0
         for cluster in range(num_clusters):
-            # Each cluster spawns from a different edge
-            spawn_point = self.spawn_points[cluster % len(self.spawn_points)]
+            # Each cluster spawns from a different edge  
+            spawn_point = self.all_spawn_points[cluster % len(self.all_spawn_points)]
             
             # Cluster size varies (±25% of base)
             cluster_size = max(1, base_enemies_per_cluster + random.randint(-1, 2))
@@ -202,6 +246,20 @@ class WaveSystem:
             enemy.velocity_x, enemy.velocity_y
         )
         
+        # Add dynamic lighting for enemy (TEMPORARILY DISABLED)
+        # Dynamic lighting has API compatibility issues with current Panda3D version
+        print(f"✓ Skipping dynamic lighting for {enemy_data['type']} enemy (temporarily disabled)")
+        
+        # if (hasattr(self.scene_manager, 'dynamic_lighting') and 
+        #     self.scene_manager.dynamic_lighting):
+        #     
+        #     light_id = self.scene_manager.dynamic_lighting.create_enemy_light(
+        #         enemy_data["x"], enemy_data["y"], 5, enemy_data["type"]
+        #     )
+        #     
+        #     if light_id is not None:
+        #         enemy.dynamic_light_id = light_id
+        
         # Add to game engine
         self.game_engine.enemies.append(enemy)
         
@@ -220,6 +278,17 @@ class WaveSystem:
         
         print(f"✓ Wave {self.current_wave} complete!")
         print(f"  Next wave in {next_wave_delay:.0f} seconds...")
+    
+    def force_complete_wave(self):
+        """Force complete the current wave due to timeout"""
+        # Clear any remaining enemies to spawn
+        self.enemies_to_spawn.clear()
+        
+        # NOTE: Do NOT clear existing enemies - they should continue attacking
+        # Enemies are independent once spawned and will be removed when destroyed
+        
+        # Complete the wave normally
+        self.complete_wave()
         
         # Award bonus points  
         self.game_engine.score += self.current_wave * 10

@@ -195,6 +195,12 @@ class Laser:
                 distance = math.sqrt((self.target_x - enemy.x)**2 + (self.target_y - enemy.y)**2)
                 if distance < enemy.radius:
                     enemy.take_damage(self.damage)
+                    # Add laser impact particle effect
+                    if hasattr(self.game_engine, 'scene_manager') and self.game_engine.scene_manager:
+                        if hasattr(self.game_engine.scene_manager, 'entity_visualizer'):
+                            self.game_engine.scene_manager.entity_visualizer.create_laser_impact_effect(
+                                enemy.x, enemy.y
+                            )
                     break
     
     def update(self, dt: float):

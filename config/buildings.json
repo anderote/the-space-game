@@ -5,18 +5,18 @@
     "last_updated": "2025-01-25"
   },
   "building_costs": {
-    "solar": 50,
+    "solar": 35,
     "nuclear": 500,
     "connector": 30,
     "battery": 80,
-    "miner": 100,
-    "turret": 150,
-    "laser": 125,
-    "superlaser": 500,
-    "repair": 120,
-    "converter": 90,
+    "miner": 65,
+    "turret": 220,
+    "laser": 325,
+    "superlaser": 600,
+    "repair": 225,
+    "converter": 300,
     "hangar": 250,
-    "missile_launcher": 300,
+    "missile_launcher": 350,
     "force_field": 400,
     "asteroid": 0
   },
@@ -24,7 +24,7 @@
     "solar": {
       "name": "Solar Panel",
       "description": "Generates energy from starlight",
-      "cost": 50,
+      "cost": 35,
       "base_health": 100,
       "radius": 15,
       "color": [
@@ -33,8 +33,8 @@
         0
       ],
       "power_generation": true,
-      "energy_capacity": 50,
-      "energy_rate": 1.25,
+      "energy_capacity": 100,
+      "energy_rate": 2.25,
       "energy_cost": 0,
       "max_connections": 4,
       "connection_range": 60,
@@ -43,8 +43,8 @@
     "nuclear": {
       "name": "Nuclear Power Plant",
       "description": "High-output energy generation facility",
-      "cost": 500,
-      "base_health": 400,
+      "cost": 1200,
+      "base_health": 700,
       "radius": 25,
       "color": [
         0,
@@ -53,7 +53,7 @@
       ],
       "power_generation": true,
       "energy_capacity": 1000,
-      "energy_rate": 25.0,
+      "energy_rate": 100.0,
       "energy_cost": 0,
       "max_connections": 8,
       "connection_range": 80,
@@ -62,7 +62,7 @@
     "connector": {
       "name": "Power Connector",
       "description": "Hub for power distribution",
-      "cost": 30,
+      "cost": 20,
       "base_health": 80,
       "radius": 5,
       "color": [
@@ -74,7 +74,7 @@
       "energy_rate": 0,
       "energy_cost": 0,
       "max_connections": 6,
-      "connection_range": 120,
+      "connection_range": 160,
       "hotkey": "E"
     },
     "battery": {
@@ -100,7 +100,7 @@
     "miner": {
       "name": "Asteroid Miner",
       "description": "Extracts minerals from nearby asteroids",
-      "cost": 100,
+      "cost": 65,
       "base_health": 100,
       "radius": 10,
       "color": [
@@ -110,12 +110,12 @@
       ],
       "power_generation": false,
       "energy_rate": 0,
-      "energy_cost": 6,
-      "mining_rate": 2.3,
-      "mining_interval": 240,
+      "energy_cost": 3,
+      "mining_rate": 2.8,
+      "mining_interval": 180,
       "mining_range": 80,
       "max_targets": 6,
-      "max_connections": 1,
+      "max_connections": 7,
       "connection_range": 120,
       "hotkey": "M"
     },
@@ -295,15 +295,15 @@
         "minerals": 0,
         "energy": 0
       },
-      "base_health": 1000,
+      "base_health": 3500,
       "radius": 40,
       "color": [0.5, 0.5, 1.0, 1.0],
       "power_generation": 2.5,
-      "energy_capacity": 600,
-      "energy_rate": 2.5,
+      "energy_capacity": 1200,
+      "energy_rate": 10.0,
       "energy_cost": 0.0,
       "max_connections": 6,
-      "connection_range": 120,
+      "connection_range": 160,
       "hotkey": "B"
     },
     "asteroid": {

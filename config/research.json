@@ -3,9 +3,9 @@
     "mining_efficiency_1": {
       "name": "Mining Efficiency I",
       "description": "Increase mining rate by 25%",
-      "cost": 100,
+      "cost": 150,
       "energy_cost": 50,
-      "research_time": 30,
+      "research_time": 45,
       "prerequisites": [],
       "effects": {
         "mining_rate_multiplier": 1.25
@@ -15,9 +15,9 @@
     "mining_efficiency_2": {
       "name": "Mining Efficiency II", 
       "description": "Increase mining rate by 50%",
-      "cost": 200,
-      "energy_cost": 100,
-      "research_time": 45,
+      "cost": 300,
+      "energy_cost": 150,
+      "research_time": 68,
       "prerequisites": ["mining_efficiency_1"],
       "effects": {
         "mining_rate_multiplier": 1.5
@@ -27,21 +27,105 @@
     "mining_efficiency_3": {
       "name": "Mining Efficiency III",
       "description": "Increase mining rate by 75%", 
-      "cost": 400,
-      "energy_cost": 200,
-      "research_time": 60,
+      "cost": 600,
+      "energy_cost": 300,
+      "research_time": 90,
       "prerequisites": ["mining_efficiency_2"],
       "effects": {
         "mining_rate_multiplier": 1.75
       },
       "category": "mining"
     },
+    "mining_efficiency_4": {
+      "name": "Mining Efficiency IV",
+      "description": "Increase mining rate by 100%", 
+      "cost": 900,
+      "energy_cost": 450,
+      "research_time": 113,
+      "prerequisites": ["mining_efficiency_3"],
+      "effects": {
+        "mining_rate_multiplier": 2.0
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_5": {
+      "name": "Mining Efficiency V",
+      "description": "Increase mining rate by 125%", 
+      "cost": 1350,
+      "energy_cost": 675,
+      "research_time": 135,
+      "prerequisites": ["mining_efficiency_4"],
+      "effects": {
+        "mining_rate_multiplier": 2.25
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_6": {
+      "name": "Mining Efficiency VI",
+      "description": "Increase mining rate by 150%", 
+      "cost": 2025,
+      "energy_cost": 1012,
+      "research_time": 158,
+      "prerequisites": ["mining_efficiency_5"],
+      "effects": {
+        "mining_rate_multiplier": 2.5
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_7": {
+      "name": "Mining Efficiency VII",
+      "description": "Increase mining rate by 175%", 
+      "cost": 3037,
+      "energy_cost": 1518,
+      "research_time": 180,
+      "prerequisites": ["mining_efficiency_6"],
+      "effects": {
+        "mining_rate_multiplier": 2.75
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_8": {
+      "name": "Mining Efficiency VIII",
+      "description": "Increase mining rate by 200%", 
+      "cost": 4555,
+      "energy_cost": 2277,
+      "research_time": 203,
+      "prerequisites": ["mining_efficiency_7"],
+      "effects": {
+        "mining_rate_multiplier": 3.0
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_9": {
+      "name": "Mining Efficiency IX",
+      "description": "Increase mining rate by 225%", 
+      "cost": 6832,
+      "energy_cost": 3416,
+      "research_time": 225,
+      "prerequisites": ["mining_efficiency_8"],
+      "effects": {
+        "mining_rate_multiplier": 3.25
+      },
+      "category": "mining"
+    },
+    "mining_efficiency_10": {
+      "name": "Mining Efficiency X",
+      "description": "Increase mining rate by 250%", 
+      "cost": 10248,
+      "energy_cost": 5124,
+      "research_time": 248,
+      "prerequisites": ["mining_efficiency_9"],
+      "effects": {
+        "mining_rate_multiplier": 3.5
+      },
+      "category": "mining"
+    },
     "solar_efficiency_1": {
       "name": "Solar Efficiency I",
       "description": "Increase solar power by 25%",
-      "cost": 150,
-      "energy_cost": 75,
-      "research_time": 35,
+      "cost": 225,
+      "energy_cost": 50,
+      "research_time": 53,
       "prerequisites": [],
       "effects": {
         "solar_power_multiplier": 1.25
@@ -51,33 +135,117 @@
     "solar_efficiency_2": {
       "name": "Solar Efficiency II",
       "description": "Increase solar power by 50%",
-      "cost": 300,
-      "energy_cost": 150,
-      "research_time": 50,
+      "cost": 337,
+      "energy_cost": 168,
+      "research_time": 79,
       "prerequisites": ["solar_efficiency_1"],
       "effects": {
         "solar_power_multiplier": 1.5
       },
       "category": "energy"
     },
-    "nuclear_efficiency": {
-      "name": "Nuclear Efficiency",
-      "description": "Increase nuclear power by 25%",
-      "cost": 500,
-      "energy_cost": 300,
-      "research_time": 75,
-      "prerequisites": ["solar_efficiency_1"],
+    "solar_efficiency_3": {
+      "name": "Solar Efficiency III",
+      "description": "Increase solar power by 75%",
+      "cost": 505,
+      "energy_cost": 252,
+      "research_time": 118,
+      "prerequisites": ["solar_efficiency_2"],
       "effects": {
-        "nuclear_power_multiplier": 1.25
+        "solar_power_multiplier": 1.75
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_4": {
+      "name": "Solar Efficiency IV",
+      "description": "Increase solar power by 100%",
+      "cost": 757,
+      "energy_cost": 378,
+      "research_time": 177,
+      "prerequisites": ["solar_efficiency_3"],
+      "effects": {
+        "solar_power_multiplier": 2.0
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_5": {
+      "name": "Solar Efficiency V",
+      "description": "Increase solar power by 125%",
+      "cost": 1135,
+      "energy_cost": 567,
+      "research_time": 265,
+      "prerequisites": ["solar_efficiency_4"],
+      "effects": {
+        "solar_power_multiplier": 2.25
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_6": {
+      "name": "Solar Efficiency VI",
+      "description": "Increase solar power by 150%",
+      "cost": 1702,
+      "energy_cost": 851,
+      "research_time": 398,
+      "prerequisites": ["solar_efficiency_5"],
+      "effects": {
+        "solar_power_multiplier": 2.5
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_7": {
+      "name": "Solar Efficiency VII",
+      "description": "Increase solar power by 175%",
+      "cost": 2553,
+      "energy_cost": 1276,
+      "research_time": 596,
+      "prerequisites": ["solar_efficiency_6"],
+      "effects": {
+        "solar_power_multiplier": 2.75
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_8": {
+      "name": "Solar Efficiency VIII",
+      "description": "Increase solar power by 200%",
+      "cost": 3829,
+      "energy_cost": 1914,
+      "research_time": 894,
+      "prerequisites": ["solar_efficiency_7"],
+      "effects": {
+        "solar_power_multiplier": 3.0
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_9": {
+      "name": "Solar Efficiency IX",
+      "description": "Increase solar power by 225%",
+      "cost": 5743,
+      "energy_cost": 2871,
+      "research_time": 1341,
+      "prerequisites": ["solar_efficiency_8"],
+      "effects": {
+        "solar_power_multiplier": 3.25
+      },
+      "category": "energy"
+    },
+    "solar_efficiency_10": {
+      "name": "Solar Efficiency X",
+      "description": "Increase solar power by 250%",
+      "cost": 8614,
+      "energy_cost": 4307,
+      "research_time": 2012,
+      "prerequisites": ["solar_efficiency_9"],
+      "effects": {
+        "solar_power_multiplier": 3.5
       },
       "category": "energy"
     },
     "turret_damage_1": {
       "name": "Weapon Systems I",
       "description": "Increase turret damage by 25%",
-      "cost": 200,
-      "energy_cost": 100,
-      "research_time": 40,
+      "cost": 300,
+      "energy_cost": 75,
+      "research_time": 68,
       "prerequisites": [],
       "effects": {
         "turret_damage_multiplier": 1.25
@@ -87,57 +255,237 @@
     "turret_damage_2": {
       "name": "Weapon Systems II",
       "description": "Increase turret damage by 50%",
-      "cost": 400,
-      "energy_cost": 200,
-      "research_time": 60,
+      "cost": 450,
+      "energy_cost": 225,
+      "research_time": 101,
       "prerequisites": ["turret_damage_1"],
       "effects": {
         "turret_damage_multiplier": 1.5
       },
       "category": "combat"
     },
+    "turret_damage_3": {
+      "name": "Weapon Systems III",
+      "description": "Increase turret damage by 75%",
+      "cost": 675,
+      "energy_cost": 337,
+      "research_time": 152,
+      "prerequisites": ["turret_damage_2"],
+      "effects": {
+        "turret_damage_multiplier": 1.75
+      },
+      "category": "combat"
+    },
+    "turret_damage_4": {
+      "name": "Weapon Systems IV",
+      "description": "Increase turret damage by 100%",
+      "cost": 1012,
+      "energy_cost": 506,
+      "research_time": 228,
+      "prerequisites": ["turret_damage_3"],
+      "effects": {
+        "turret_damage_multiplier": 2.0
+      },
+      "category": "combat"
+    },
+    "turret_damage_5": {
+      "name": "Weapon Systems V",
+      "description": "Increase turret damage by 125%",
+      "cost": 1518,
+      "energy_cost": 759,
+      "research_time": 342,
+      "prerequisites": ["turret_damage_4"],
+      "effects": {
+        "turret_damage_multiplier": 2.25
+      },
+      "category": "combat"
+    },
+    "turret_damage_6": {
+      "name": "Weapon Systems VI",
+      "description": "Increase turret damage by 150%",
+      "cost": 2277,
+      "energy_cost": 1138,
+      "research_time": 513,
+      "prerequisites": ["turret_damage_5"],
+      "effects": {
+        "turret_damage_multiplier": 2.5
+      },
+      "category": "combat"
+    },
+    "turret_damage_7": {
+      "name": "Weapon Systems VII",
+      "description": "Increase turret damage by 175%",
+      "cost": 3415,
+      "energy_cost": 1707,
+      "research_time": 770,
+      "prerequisites": ["turret_damage_6"],
+      "effects": {
+        "turret_damage_multiplier": 2.75
+      },
+      "category": "combat"
+    },
+    "turret_damage_8": {
+      "name": "Weapon Systems VIII",
+      "description": "Increase turret damage by 200%",
+      "cost": 5122,
+      "energy_cost": 2561,
+      "research_time": 1154,
+      "prerequisites": ["turret_damage_7"],
+      "effects": {
+        "turret_damage_multiplier": 3.0
+      },
+      "category": "combat"
+    },
+    "turret_damage_9": {
+      "name": "Weapon Systems IX",
+      "description": "Increase turret damage by 225%",
+      "cost": 7683,
+      "energy_cost": 3841,
+      "research_time": 1731,
+      "prerequisites": ["turret_damage_8"],
+      "effects": {
+        "turret_damage_multiplier": 3.25
+      },
+      "category": "combat"
+    },
+    "turret_damage_10": {
+      "name": "Weapon Systems X",
+      "description": "Increase turret damage by 250%",
+      "cost": 11524,
+      "energy_cost": 5762,
+      "research_time": 2597,
+      "prerequisites": ["turret_damage_9"],
+      "effects": {
+        "turret_damage_multiplier": 3.5
+      },
+      "category": "combat"
+    },
     "turret_range_1": {
       "name": "Targeting Systems I",
-      "description": "Increase turret range by 20%",
-      "cost": 180,
+      "description": "Increase turret range by 15%",
+      "cost": 375,
       "energy_cost": 90,
-      "research_time": 35,
+      "research_time": 84,
       "prerequisites": [],
       "effects": {
-        "turret_range_multiplier": 1.2
+        "turret_range_multiplier": 1.15
       },
       "category": "combat"
     },
     "turret_range_2": {
       "name": "Targeting Systems II",
-      "description": "Increase turret range by 40%",
-      "cost": 360,
-      "energy_cost": 180,
-      "research_time": 55,
+      "description": "Increase turret range by 30%",
+      "cost": 562,
+      "energy_cost": 281,
+      "research_time": 127,
       "prerequisites": ["turret_range_1"],
       "effects": {
-        "turret_range_multiplier": 1.4
+        "turret_range_multiplier": 1.3
       },
       "category": "combat"
     },
-    "turret_speed": {
-      "name": "Fire Control Systems",
-      "description": "Decrease turret cooldown by 25%",
-      "cost": 250,
-      "energy_cost": 125,
-      "research_time": 45,
-      "prerequisites": [],
+    "turret_range_3": {
+      "name": "Targeting Systems III",
+      "description": "Increase turret range by 45%",
+      "cost": 843,
+      "energy_cost": 421,
+      "research_time": 190,
+      "prerequisites": ["turret_range_2"],
       "effects": {
-        "turret_cooldown_multiplier": 0.75
+        "turret_range_multiplier": 1.45
+      },
+      "category": "combat"
+    },
+    "turret_range_4": {
+      "name": "Targeting Systems IV",
+      "description": "Increase turret range by 60%",
+      "cost": 1264,
+      "energy_cost": 632,
+      "research_time": 285,
+      "prerequisites": ["turret_range_3"],
+      "effects": {
+        "turret_range_multiplier": 1.6
+      },
+      "category": "combat"
+    },
+    "turret_range_5": {
+      "name": "Targeting Systems V",
+      "description": "Increase turret range by 75%",
+      "cost": 1896,
+      "energy_cost": 948,
+      "research_time": 427,
+      "prerequisites": ["turret_range_4"],
+      "effects": {
+        "turret_range_multiplier": 1.75
+      },
+      "category": "combat"
+    },
+    "turret_range_6": {
+      "name": "Targeting Systems VI",
+      "description": "Increase turret range by 90%",
+      "cost": 2844,
+      "energy_cost": 1422,
+      "research_time": 641,
+      "prerequisites": ["turret_range_5"],
+      "effects": {
+        "turret_range_multiplier": 1.9
+      },
+      "category": "combat"
+    },
+    "turret_range_7": {
+      "name": "Targeting Systems VII",
+      "description": "Increase turret range by 105%",
+      "cost": 4266,
+      "energy_cost": 2133,
+      "research_time": 962,
+      "prerequisites": ["turret_range_6"],
+      "effects": {
+        "turret_range_multiplier": 2.05
+      },
+      "category": "combat"
+    },
+    "turret_range_8": {
+      "name": "Targeting Systems VIII",
+      "description": "Increase turret range by 120%",
+      "cost": 6399,
+      "energy_cost": 3199,
+      "research_time": 1442,
+      "prerequisites": ["turret_range_7"],
+      "effects": {
+        "turret_range_multiplier": 2.2
+      },
+      "category": "combat"
+    },
+    "turret_range_9": {
+      "name": "Targeting Systems IX",
+      "description": "Increase turret range by 135%",
+      "cost": 9598,
+      "energy_cost": 4799,
+      "research_time": 2163,
+      "prerequisites": ["turret_range_8"],
+      "effects": {
+        "turret_range_multiplier": 2.35
+      },
+      "category": "combat"
+    },
+    "turret_range_10": {
+      "name": "Targeting Systems X",
+      "description": "Increase turret range by 150%",
+      "cost": 14397,
+      "energy_cost": 7198,
+      "research_time": 3245,
+      "prerequisites": ["turret_range_9"],
+      "effects": {
+        "turret_range_multiplier": 2.5
       },
       "category": "combat"
     },
     "building_health_1": {
       "name": "Structural Integrity I",
       "description": "Increase building health by 25%",
-      "cost": 120,
-      "energy_cost": 60,
-      "research_time": 30,
+      "cost": 450,
+      "energy_cost": 100,
+      "research_time": 101,
       "prerequisites": [],
       "effects": {
         "building_health_multiplier": 1.25
@@ -147,72 +495,110 @@
     "building_health_2": {
       "name": "Structural Integrity II",
       "description": "Increase building health by 50%",
-      "cost": 240,
-      "energy_cost": 120,
-      "research_time": 50,
+      "cost": 675,
+      "energy_cost": 337,
+      "research_time": 152,
       "prerequisites": ["building_health_1"],
       "effects": {
         "building_health_multiplier": 1.5
       },
       "category": "defense"
     },
-    "connection_range": {
-      "name": "Power Grid Optimization",
-      "description": "Increase connection range by 30%",
-      "cost": 160,
-      "energy_cost": 80,
-      "research_time": 40,
-      "prerequisites": [],
+    "building_health_3": {
+      "name": "Structural Integrity III",
+      "description": "Increase building health by 75%",
+      "cost": 1012,
+      "energy_cost": 506,
+      "research_time": 228,
+      "prerequisites": ["building_health_2"],
       "effects": {
-        "connection_range_multiplier": 1.3
+        "building_health_multiplier": 1.75
       },
-      "category": "infrastructure"
+      "category": "defense"
     },
-    "construction_speed": {
-      "name": "Automated Construction",
-      "description": "Increase construction speed by 50%",
-      "cost": 300,
-      "energy_cost": 150,
-      "research_time": 55,
-      "prerequisites": [],
+    "building_health_4": {
+      "name": "Structural Integrity IV",
+      "description": "Increase building health by 100%",
+      "cost": 1518,
+      "energy_cost": 759,
+      "research_time": 342,
+      "prerequisites": ["building_health_3"],
       "effects": {
-        "construction_speed_multiplier": 1.5
+        "building_health_multiplier": 2.0
       },
-      "category": "infrastructure"
+      "category": "defense"
     },
-    "energy_efficiency": {
-      "name": "Energy Efficiency",
-      "description": "Reduce energy costs by 20%",
-      "cost": 200,
-      "energy_cost": 100,
-      "research_time": 45,
-      "prerequisites": [],
+    "building_health_5": {
+      "name": "Structural Integrity V",
+      "description": "Increase building health by 125%",
+      "cost": 2277,
+      "energy_cost": 1138,
+      "research_time": 513,
+      "prerequisites": ["building_health_4"],
       "effects": {
-        "energy_cost_multiplier": 0.8
+        "building_health_multiplier": 2.25
       },
-      "category": "infrastructure"
-    }
-  },
-  "research_categories": {
-    "mining": {
-      "name": "Mining Technology",
-      "color": [0.8, 0.6, 0.2, 1.0]
+      "category": "defense"
     },
-    "energy": {
-      "name": "Energy Systems", 
-      "color": [1.0, 1.0, 0.3, 1.0]
+    "building_health_6": {
+      "name": "Structural Integrity VI",
+      "description": "Increase building health by 150%",
+      "cost": 3415,
+      "energy_cost": 1707,
+      "research_time": 770,
+      "prerequisites": ["building_health_5"],
+      "effects": {
+        "building_health_multiplier": 2.5
+      },
+      "category": "defense"
     },
-    "combat": {
-      "name": "Combat Systems",
-      "color": [1.0, 0.3, 0.3, 1.0]
+    "building_health_7": {
+      "name": "Structural Integrity VII",
+      "description": "Increase building health by 175%",
+      "cost": 5122,
+      "energy_cost": 2561,
+      "research_time": 1154,
+      "prerequisites": ["building_health_6"],
+      "effects": {
+        "building_health_multiplier": 2.75
+      },
+      "category": "defense"
     },
-    "defense": {
-      "name": "Defensive Systems",
-      "color": [0.3, 0.7, 1.0, 1.0]
+    "building_health_8": {
+      "name": "Structural Integrity VIII",
+      "description": "Increase building health by 200%",
+      "cost": 7683,
+      "energy_cost": 3841,
+      "research_time": 1731,
+      "prerequisites": ["building_health_7"],
+      "effects": {
+        "building_health_multiplier": 3.0
+      },
+      "category": "defense"
     },
-    "infrastructure": {
-      "name": "Infrastructure",
-      "color": [0.7, 0.7, 0.7, 1.0]
+    "building_health_9": {
+      "name": "Structural Integrity IX",
+      "description": "Increase building health by 225%",
+      "cost": 11524,
+      "energy_cost": 5762,
+      "research_time": 2597,
+      "prerequisites": ["building_health_8"],
+      "effects": {
+        "building_health_multiplier": 3.25
+      },
+      "category": "defense"
+    },
+    "building_health_10": {
+      "name": "Structural Integrity X",
+      "description": "Increase building health by 250%",
+      "cost": 17286,
+      "energy_cost": 8643,
+      "research_time": 3896,
+      "prerequisites": ["building_health_9"],
+      "effects": {
+        "building_health_multiplier": 3.5
+      },
+      "category": "defense"
     }
   }
 }

@@ -4,6 +4,7 @@ Manages the 3D scene, lighting, starfield background, and entity visualization
 """
 
 from panda3d.core import AmbientLight, DirectionalLight, Vec3
+from .dynamic_lighting import DynamicLightingManager
 from .entity_visualizer import EntityVisualizer
 from .starfield import StarfieldSystem
 from .power_network_renderer import PowerNetworkRenderer
@@ -24,6 +25,9 @@ class SceneManager:
         
         # Initialize power network renderer
         self.power_network_renderer = PowerNetworkRenderer(base)
+        
+        # Initialize dynamic lighting system
+        self.dynamic_lighting = DynamicLightingManager(base, base.render)
         
         self.setup_scene()
         
@@ -98,7 +102,7 @@ class SceneManager:
     def add_entity_visual(self, entity_type, entity_id, x, y, radius=20):
         """Add a visual representation of a game entity"""
         if entity_type == 'building':
-            return self.entity_visualizer.create_building_visual(entity_id, x, y, radius)
+            return self.entity_visualizer.create_building_visual(entity_id, x, y, radius, building_id=entity_id)
         elif entity_type == 'enemy':
             return self.entity_visualizer.create_enemy_visual(entity_id, x, y, radius)
         elif entity_type == 'asteroid':
@@ -116,8 +120,10 @@ class SceneManager:
         
     def update(self, dt):
         """Update scene elements"""
+        # Update dynamic lighting effects
+        if hasattr(self, 'dynamic_lighting'):
+            self.dynamic_lighting.update(dt)
         # Starfield parallax is updated by camera system
-        pass
         
     def update_starfield_parallax(self, camera_x, camera_y):
         """Update starfield parallax based on camera position"""
@@ -154,6 +160,10 @@ class SceneManager:
         
         # Clean up entity visualizer
         self.entity_visualizer.cleanup()
+        
+        # Clean up dynamic lighting
+        if hasattr(self, 'dynamic_lighting'):
+            self.dynamic_lighting.cleanup()
         
         # Clean up lights
         for light_name, light_np in self.lights.items():

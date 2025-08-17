@@ -50,7 +50,7 @@
   
   "resources": {
     "starting_minerals": 600,
-    "starting_energy": 50,
+    "starting_energy": 100,
     "starting_max_energy": 200,
     "minerals_per_kill": 10,
     "score_per_kill": 10,

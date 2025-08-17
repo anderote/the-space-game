@@ -105,9 +105,38 @@ class BuildingSystem:
         # Update power network visualization when buildings become operational
         self._update_power_network_visualization()
         
+        # Add dynamic lighting for completed buildings
+        self._add_building_lighting(building_type)
+        
         # Force health bar update for all buildings to clean up construction progress bars
         for building in self.buildings.values():
             self._update_building_health_bar(building)
+    
+    def _add_building_lighting(self, building_type: str):
+        """Add dynamic lighting for a specific building type that just completed"""
+        # TEMPORARILY DISABLED - dynamic lighting has API compatibility issues
+        print(f"✓ Skipping dynamic lighting for {building_type} (temporarily disabled)")
+        return
+        
+        # Find the most recently completed building of this type
+        for building in self.buildings.values():
+            if (building.building_type == building_type and 
+                building.state == BuildingState.OPERATIONAL and 
+                not hasattr(building, 'dynamic_light_id')):
+                
+                # Add dynamic lighting if scene manager supports it
+                if (hasattr(self.scene_manager, 'dynamic_lighting') and 
+                    self.scene_manager.dynamic_lighting):
+                    
+                    light_id = self.scene_manager.dynamic_lighting.create_building_light(
+                        building.x, building.y, 10, building.building_type, building.state.name
+                    )
+                    
+                    if light_id is not None:
+                        building.dynamic_light_id = light_id
+                        print(f"✓ Added dynamic lighting to {building.building_type} at ({building.x:.0f}, {building.y:.0f})")
+                
+                break  # Only light the first matching building
         
     def can_afford_building(self, building_type: str, minerals: int, energy: int) -> bool:
         """Check if player can afford to build"""
@@ -445,10 +474,10 @@ class BuildingSystem:
         if hasattr(self, 'hud_system') and self.hud_system:
             self.hud_system.show_building_info(building)
         
-        # Create radius indicators
+        # Create radius indicators using effective ranges
         building_config = self.config.buildings.get("building_types", {}).get(building.building_type, {})
         self.selected_building_indicators = self.scene_manager.entity_visualizer.create_building_radius_indicators(
-            building.building_type, building_config, building.x, building.y
+            building.building_type, building_config, building.x, building.y, building
         )
         
         # Attach indicators to render

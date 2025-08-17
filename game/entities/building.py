@@ -171,6 +171,9 @@ class Building:
             # Update combat for turret buildings
             elif self.building_type in ["turret", "laser", "superlaser", "missile_launcher"] and self.powered:
                 self._update_turret_combat(dt)
+            # Update repair for repair buildings
+            elif self.building_type == "repair" and self.powered:
+                self._update_repair_logic(dt)
             
     def _update_construction(self, dt: float):
         """Handle energy-based construction progress"""
@@ -369,15 +372,66 @@ class Building:
         distance = ((self.x - other_building.x) ** 2 + (self.y - other_building.y) ** 2) ** 0.5
         
         # Check if within connection range for both buildings
-        if distance > self.connection_range or distance > other_building.connection_range:
+        if distance > self.get_effective_connection_range() or distance > other_building.get_effective_connection_range():
             return False  # Too far apart
         
-        # Check connection limits for both buildings
-        if len(self.connections) >= self.max_connections:
-            return False  # This building is at max connections
+        # Special connection limit logic for connectors
+        if self.building_type == "connector":
+            # Count connector-to-connector connections
+            connector_connections = sum(1 for conn_id in self.connections 
+                                      if self.game_engine and conn_id in self.game_engine.building_system.buildings 
+                                      and self.game_engine.building_system.buildings[conn_id].building_type == "connector")
             
-        if len(other_building.connections) >= other_building.max_connections:
-            return False  # Other building is at max connections
+            # Count non-connector connections
+            non_connector_connections = sum(1 for conn_id in self.connections 
+                                          if self.game_engine and conn_id in self.game_engine.building_system.buildings 
+                                          and self.game_engine.building_system.buildings[conn_id].building_type != "connector")
+            
+            # If connecting to another connector, check connector limit (max 3)
+            if other_building.building_type == "connector":
+                if connector_connections >= 3:
+                    return False  # Already at max connector connections
+            else:
+                # If connecting to a non-connector, check non-connector limit (max 6)
+                if non_connector_connections >= 6:
+                    return False  # Already at max non-connector connections
+            
+            # Check total connection limit (max 9)
+            if len(self.connections) >= 9:
+                return False  # This building is at max total connections
+        else:
+            # Non-connector buildings use normal connection limits
+            if len(self.connections) >= self.get_effective_max_connections():
+                return False  # This building is at max connections
+        
+        # Check connection limits for the other building (same logic)
+        if other_building.building_type == "connector":
+            # Count connector-to-connector connections for other building
+            other_connector_connections = sum(1 for conn_id in other_building.connections 
+                                            if self.game_engine and conn_id in self.game_engine.building_system.buildings 
+                                            and self.game_engine.building_system.buildings[conn_id].building_type == "connector")
+            
+            # Count non-connector connections for other building
+            other_non_connector_connections = sum(1 for conn_id in other_building.connections 
+                                                if self.game_engine and conn_id in self.game_engine.building_system.buildings 
+                                                and self.game_engine.building_system.buildings[conn_id].building_type != "connector")
+            
+            # If this is a connector connecting to another connector, check connector limit
+            if self.building_type == "connector":
+                if other_connector_connections >= 3:
+                    return False  # Other building already at max connector connections
+            else:
+                # If this is a non-connector connecting to a connector, check non-connector limit
+                if other_non_connector_connections >= 6:
+                    return False  # Other building already at max non-connector connections
+            
+            # Check total connection limit for other building (max 9)
+            if len(other_building.connections) >= 9:
+                return False  # Other building is at max total connections
+        else:
+            # Non-connector buildings use normal connection limits
+            if len(other_building.connections) >= other_building.get_effective_max_connections():
+                return False  # Other building is at max connections
             
         # Special connection rules for certain building types
         # Mining and defense buildings can only connect to one building
@@ -730,7 +784,11 @@ class Building:
     def get_effective_range(self):
         """Get range with level and research bonuses applied"""
         if self.building_type in ["miner", "turret", "laser", "superlaser", "repair", "missile_launcher"]:
-            level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
+            # Turrets get 30% range bonus per level, others get 20%
+            if self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
+                level_bonus = (self.level - 1) * 0.3  # 30% per level above 1 for turrets
+            else:
+                level_bonus = (self.level - 1) * 0.2  # 20% per level above 1 for others
             building_config = self.config.buildings.get("building_types", {}).get(self.building_type, {})
             
             # Get the appropriate range value for each building type
@@ -750,7 +808,7 @@ class Building:
                 if self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
                     research_bonus = self.game_engine.research_system.get_bonus("turret_range_multiplier")
                 elif self.building_type == "miner":
-                    research_bonus = self.game_engine.research_system.get_bonus("connection_range_multiplier")  # Could add mining_range_multiplier later
+                    research_bonus = self.game_engine.research_system.get_bonus("wconnection_range_multiplier")  # Could add mining_range_multiplier later
                 else:
                     research_bonus = self.game_engine.research_system.get_bonus("connection_range_multiplier")
                 
@@ -760,7 +818,7 @@ class Building:
     def get_effective_damage(self):
         """Get damage with level and research bonuses applied"""
         if self.building_type in ["turret", "laser", "superlaser", "missile_launcher"]:
-            level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
+            level_bonus = (self.level - 1) * 0.3  # 30% per level above 1
             base_damage = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("damage", 10)
             
             # Apply research bonus
@@ -826,8 +884,43 @@ class Building:
         if self.building_type == "miner":
             level_bonus = (self.level - 1) * 0.2  # 20% per level above 1
             base_cost = 1.0  # Base energy cost per zap
-            return base_cost * (1.0 + level_bonus)
-        return 1.0 
+            
+            # Apply research bonuses
+            research_multiplier = 1.0
+            if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                research_multiplier = self.game_engine.research_system.get_bonus("mining_energy_multiplier")
+            
+            return base_cost * (1.0 + level_bonus) * research_multiplier
+        return 1.0
+        
+    def get_effective_max_connections(self):
+        """Get max connections with research bonuses applied"""
+        base_connections = self.max_connections
+        
+        # Apply research bonuses
+        general_bonus = 0
+        building_specific_bonus = 0
+        
+        if self.game_engine and hasattr(self.game_engine, 'research_system'):
+            # General max connections bonus (affects all buildings)
+            general_bonus = self.game_engine.research_system.get_bonus("max_connections_bonus")
+            
+            # Special bonus for miners
+            if self.building_type == "miner":
+                building_specific_bonus = self.game_engine.research_system.get_bonus("miner_max_connections_bonus")
+        
+        return int(base_connections + general_bonus + building_specific_bonus)
+        
+    def get_effective_connection_range(self):
+        """Get connection range with research bonuses applied"""
+        base_range = self.connection_range
+        
+        # Apply research bonuses
+        research_multiplier = 1.0
+        if self.game_engine and hasattr(self.game_engine, 'research_system'):
+            research_multiplier = self.game_engine.research_system.get_bonus("connection_range_multiplier")
+        
+        return base_range * research_multiplier 
     
     def _update_turret_combat(self, dt: float):
         """Update turret combat - search for enemies and fire"""
@@ -872,21 +965,77 @@ class Building:
     def _fire_at_enemy(self, enemy):
         """Fire weapon at target enemy"""
         try:
+            # Check resource requirements before firing
+            if not self._can_afford_to_fire():
+                return
+            
             # Get turret stats
             damage = self.get_effective_damage()
             
             if self.building_type == "missile_launcher":
-                # Fire homing missile
-                self._fire_missile(enemy, damage)
+                # Fire homing missile (consumes minerals)
+                if self._consume_firing_resources():
+                    self._fire_missile(enemy, damage)
             elif self.building_type == "turret":
-                # Fire bullet projectile
+                # Fire bullet projectile (no additional cost beyond energy)
                 self._fire_bullet(enemy, damage)
             else:
-                # Fire laser (instant hit) for laser and superlaser
-                self._fire_laser(enemy, damage)
+                # Fire laser (instant hit) for laser and superlaser (consumes energy)
+                if self._consume_firing_resources():
+                    self._fire_laser(enemy, damage)
             
         except Exception as e:
             print(f"Error in turret fire: {e}")
+            
+    def _can_afford_to_fire(self):
+        """Check if building can afford to fire its weapon"""
+        try:
+            if not self.game_engine or not hasattr(self.game_engine, 'building_system'):
+                return True
+                
+            if self.building_type == "missile_launcher":
+                # Missiles cost minerals per shot
+                mineral_cost = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("mineral_cost", 0)
+                return self.game_engine.building_system.minerals >= mineral_cost
+            elif self.building_type in ["laser", "superlaser"]:
+                # Lasers cost energy per shot  
+                energy_cost = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_cost", 0)
+                return self.game_engine.energy >= energy_cost
+            else:
+                # Regular turrets have no firing cost
+                return True
+                
+        except Exception as e:
+            print(f"Error checking firing affordability: {e}")
+            return True
+    
+    def _consume_firing_resources(self):
+        """Consume resources for firing and return success"""
+        try:
+            if not self.game_engine or not hasattr(self.game_engine, 'building_system'):
+                return True
+                
+            if self.building_type == "missile_launcher":
+                # Consume minerals for missile
+                mineral_cost = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("mineral_cost", 0)
+                if self.game_engine.building_system.minerals >= mineral_cost:
+                    self.game_engine.building_system.minerals -= mineral_cost
+                    return True
+                return False
+            elif self.building_type in ["laser", "superlaser"]:
+                # Consume energy for laser
+                energy_cost = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_cost", 0)
+                if self.game_engine.energy >= energy_cost:
+                    self.game_engine.energy -= energy_cost
+                    return True
+                return False
+            else:
+                # Regular turrets have no firing cost
+                return True
+                
+        except Exception as e:
+            print(f"Error consuming firing resources: {e}")
+            return True
     
     def _fire_missile(self, target_enemy, damage):
         """Fire a homing missile at target"""
@@ -954,9 +1103,97 @@ class Building:
                     scene_manager.entity_visualizer.create_turret_attack_effect(
                         self.x, self.y, target_enemy.x, target_enemy.y, self.building_type
                     )
+                    # Add laser impact particle effect at target location
+                    scene_manager.entity_visualizer.create_laser_impact_effect(
+                        target_enemy.x, target_enemy.y
+                    )
             
             print(f"⚡ {self.building_type.title()} hit {target_enemy.enemy_type} for {damage:.1f} damage")
             
         except Exception as e:
             print(f"Error firing laser: {e}")
+            
+    def _update_repair_logic(self, dt: float):
+        """Update repair building - heal nearby damaged buildings"""
+        import time
+        
+        if not hasattr(self, 'game_engine') or not self.game_engine:
+            return
+            
+        current_time = time.time()
+        
+        # Check repair cooldown (heal every 2 seconds)
+        if not hasattr(self, 'last_repair_time'):
+            self.last_repair_time = 0
+        
+        repair_cooldown = 2.0  # 2 seconds between repair cycles
+        if current_time - self.last_repair_time < repair_cooldown:
+            return
+            
+        # Check if we have energy to repair (with research bonuses)
+        base_energy_cost = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("energy_cost", 0.15)
+        
+        # Apply research cost reduction
+        cost_multiplier = 1.0
+        if self.game_engine and hasattr(self.game_engine, 'research_system'):
+            cost_multiplier = self.game_engine.research_system.get_bonus("repair_cost_multiplier")
+        
+        energy_cost = base_energy_cost * cost_multiplier
+        if self.game_engine.energy < energy_cost:
+            return
+            
+        # Find nearby damaged buildings
+        repair_range = self.get_effective_range()
+        damaged_buildings = []
+        
+        for building in self.game_engine.building_system.buildings.values():
+            if building.building_id == self.building_id:
+                continue  # Don't heal self
+                
+            # Only heal buildings that are damaged
+            if building.current_health >= building.max_health:
+                continue
+                
+            # Calculate distance
+            distance = math.sqrt((building.x - self.x)**2 + (building.y - self.y)**2)
+            if distance <= repair_range:
+                damaged_buildings.append((distance, building))
+        
+        # Sort by distance and heal up to 3 closest buildings
+        damaged_buildings.sort(key=lambda x: x[0])
+        max_heal_targets = 3
+        healed_count = 0
+        
+        for distance, building in damaged_buildings[:max_heal_targets]:
+            # Consume energy per heal
+            if self.game_engine.energy >= energy_cost:
+                self.game_engine.energy -= energy_cost
+                
+                # Apply healing with research bonuses
+                base_repair_rate = self.config.buildings.get("building_types", {}).get(self.building_type, {}).get("repair_rate", 0.15)
+                
+                # Apply research bonuses
+                repair_multiplier = 1.0
+                if self.game_engine and hasattr(self.game_engine, 'research_system'):
+                    repair_multiplier = self.game_engine.research_system.get_bonus("repair_rate_multiplier")
+                
+                effective_repair_rate = base_repair_rate * repair_multiplier
+                heal_amount = effective_repair_rate * building.max_health  # Heal as percentage of max health
+                
+                old_health = building.current_health
+                building.repair(int(heal_amount))
+                healed_amount = building.current_health - old_health
+                
+                if healed_amount > 0:
+                    print(f"🩹 Repair Node healed {building.building_type} for {healed_amount:.1f} HP ({building.current_health:.1f}/{building.max_health})")
+                    healed_count += 1
+                    
+                    # Create visual healing effect
+                    if hasattr(self.game_engine, 'scene_manager'):
+                        self.game_engine.scene_manager.entity_visualizer.create_healing_effect(building.x, building.y)
+            else:
+                break  # Not enough energy for more healing
+        
+        if healed_count > 0:
+            self.last_repair_time = current_time
 

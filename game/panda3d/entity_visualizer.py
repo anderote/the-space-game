@@ -3,13 +3,13 @@ Panda3D Entity Visualizer - Phase 2 Implementation
 Creates simple 3D representations of game entities
 """
 
+import math
 from panda3d.core import (
     GeomNode, Geom, GeomVertexFormat, GeomVertexData, GeomVertexWriter,
     GeomTriangles, GeomPoints, GeomLines, NodePath, TransparencyAttrib, 
     LineSegs, Vec3, CardMaker, VBase4
 )
 from direct.actor.Actor import Actor
-import math
 from panda3d.core import LineSegs
 
 class EntityVisualizer:
@@ -18,6 +18,7 @@ class EntityVisualizer:
     def __init__(self, base):
         self.base = base
         self.entity_nodes = {}
+        self.building_visuals = {}  # Track building visuals by building_id
         self.test_entities = []
         
         # Colors for different entity types
@@ -44,7 +45,13 @@ class EntityVisualizer:
             'assault': (0.6, 0.3, 0.0, 1.0),         # Brown
             'stealth': (0.4, 0.0, 0.6, 1.0),         # Purple
             'cruiser': (0.3, 0.3, 0.5, 1.0),         # Gray-Blue
-            'mothership': (1.0, 1.0, 0.0, 1.0)       # Yellow (Mothership)
+            'mothership': (1.0, 1.0, 0.0, 1.0),      # Yellow (Mothership)
+            'laser_mothership': (1.0, 0.4, 0.4, 1.0), # Bright Red (Laser Mothership)
+            'carrier': (0.4, 0.4, 0.8, 1.0),         # Blue (Carrier)
+            'missile_cruiser': (0.6, 0.6, 0.2, 1.0), # Yellow-Green (Missile Cruiser)
+            'dreadnought': (0.3, 0.15, 0.15, 1.0),   # Dark Red (Dreadnought)
+            'interceptor': (1.0, 1.0, 0.4, 1.0),     # Bright Yellow (Interceptor)
+            'support_ship': (0.4, 1.0, 0.4, 1.0)     # Green (Support)
         }
         
     def create_test_entities(self):
@@ -95,7 +102,7 @@ class EntityVisualizer:
                 
         print(f"✓ Created {len(self.test_entities)} test entities")
         
-    def create_building_visual(self, building_type, x, y, radius):
+    def create_building_visual(self, building_type, x, y, radius, building_id=None):
         """Create a 3D visual representation of a building"""
         try:
             # Get color for building type
@@ -132,22 +139,29 @@ class EntityVisualizer:
                 # Larger white hexagon (taller for better 3D visibility)
                 node = self.create_3d_hexagon(radius * 1.3, 18, (1.0, 1.0, 1.0, 1.0))
             elif building_type == 'missile_launcher':
-                # Orange octagon (missile launcher)
-                node = self.create_3d_octagon(radius * 1.2, 20, (0.8, 0.4, 0.0, 1.0))
+                # Pink outline pentagon inside white circle
+                node = self.create_missile_launcher_visual(radius * 1.2)
             elif building_type == 'miner':
                 # Green diamond
                 node = self.create_3d_diamond(radius * 1.2, (0.2, 0.8, 0.2, 1.0))
+            elif building_type == 'asteroid':
+                # Create 3D asteroid visual
+                node = self.create_3d_asteroid(x, y, radius)
             else:
                 # Default square for other types
                 node = self.create_square(radius * 2, color)
             
             if node:
-                # Position the building in the XY plane (Z=0 for 2D game)
-                node.setPos(x, y, 0)
-                node.reparentTo(self.base.render)
+                # Position the building - asteroids on lowest layer, others on main layer
+                if building_type == 'asteroid':
+                    node.setPos(x, y, -2)  # Lowest layer behind all other elements
+                    node.setBin("background", 0)  # Background rendering bin
+                    node.setDepthOffset(1)  # Render further back
+                else:
+                    node.setPos(x, y, 0)  # Main layer for other buildings
+                    node.setBin("opaque", 50)  # Main game objects layer
                 
-                # Set building to render in main layer above background (power connections and asteroids)
-                node.setBin("opaque", 50)  # Main game objects layer
+                node.reparentTo(self.base.render)
                 
                 # Make sure it's visible and properly scaled
                 node.setScale(1.0)
@@ -158,6 +172,10 @@ class EntityVisualizer:
                 
                 # Ensure proper rendering state for 2D visibility
                 node.setTwoSided(True)  # Make cards visible from both sides
+                
+                # Store the building visual if building_id is provided
+                if building_id is not None:
+                    self.building_visuals[building_id] = node
                 
                 return node
             else:
@@ -170,20 +188,42 @@ class EntityVisualizer:
             traceback.print_exc()
             
         return None
+    
+    def remove_building_visual(self, building_id):
+        """Remove a building visual from the scene"""
+        if building_id in self.building_visuals:
+            visual_node = self.building_visuals[building_id]
+            if visual_node:
+                visual_node.removeNode()
+            del self.building_visuals[building_id]
+        else:
+            print(f"Warning: Building visual {building_id} not found for removal")
         
     def create_enemy_visual(self, enemy_type, x, y, radius, velocity_x=0, velocity_y=0):
         """Create a 3D visual representation of an enemy"""
         try:
             color = self.enemy_colors.get(enemy_type, (0.8, 0.8, 0.8, 1.0))
             
-            if enemy_type in ['basic', 'kamikaze', 'stealth']:
+            if enemy_type in ['basic', 'kamikaze', 'stealth', 'interceptor']:
                 # Fighter ships - narrow directional triangles
                 node = self.create_directional_triangle(radius, color, velocity_x, velocity_y)
-            elif enemy_type == 'mothership':
-                # Mothership - yellow oval
+            elif enemy_type in ['mothership', 'laser_mothership']:
+                # Motherships - large ovals
                 node = self.create_oval(radius, color)
-            elif enemy_type in ['large', 'cruiser']:
-                # Larger diamond shapes  
+            elif enemy_type == 'carrier':
+                # Carrier - large rectangular ship
+                node = self.create_3d_rectangle(radius * 1.5, radius * 2, color)
+            elif enemy_type == 'missile_cruiser':
+                # Missile Cruiser - hexagonal shape
+                node = self.create_3d_hexagon(radius, 6, color)
+            elif enemy_type == 'dreadnought':
+                # Dreadnought - massive octagonal shape
+                node = self.create_3d_octagon(radius, 8, color)
+            elif enemy_type == 'support_ship':
+                # Support ship - circular with cross pattern
+                node = self.create_support_ship_visual(radius, color)
+            elif enemy_type in ['large', 'cruiser', 'assault']:
+                # Medium ships - diamond shapes  
                 node = self.create_diamond(radius, color)
             else:
                 # Default directional triangle for fighters
@@ -225,6 +265,158 @@ class EntityVisualizer:
             print(f"Error updating enemy visual direction: {e}")
             
         return enemy_visual_node  # Return original if update failed
+    
+    def create_support_ship_visual(self, radius, color):
+        """Create a support ship visual - circle with cross pattern"""
+        try:
+            # Create main circular base
+            main_node = NodePath('support_ship')
+            circle = self.create_3d_circle(radius, color)
+            if circle:
+                circle.reparentTo(main_node)
+            
+            # Add cross pattern
+            cross_color = (color[0] * 0.7, color[1] * 0.7, color[2] * 0.7, color[3])
+            
+            # Horizontal bar of cross
+            h_bar = self.create_3d_rectangle(radius * 1.5, radius * 0.3, cross_color)
+            if h_bar:
+                h_bar.reparentTo(main_node)
+                h_bar.setZ(2)
+            
+            # Vertical bar of cross
+            v_bar = self.create_3d_rectangle(radius * 0.3, radius * 1.5, cross_color)
+            if v_bar:
+                v_bar.reparentTo(main_node)
+                v_bar.setZ(2)
+            
+            return main_node
+            
+        except Exception as e:
+            print(f"Error creating support ship visual: {e}")
+            return None
+    
+    def create_3d_hexagon(self, radius, height, color):
+        """Create a 3D hexagon for missile cruisers"""
+        try:
+            from panda3d.core import GeomNode, Geom, GeomVertexFormat, GeomVertexData, GeomVertexWriter
+            from panda3d.core import GeomTriangles, GeomLines, RenderState, ColorAttrib
+            import math
+            
+            # Create geometry
+            format = GeomVertexFormat.getV3()
+            vdata = GeomVertexData('hexagon', format, Geom.UHStatic)
+            vertex = GeomVertexWriter(vdata, 'vertex')
+            
+            # Create hexagon vertices
+            sides = 6
+            for i in range(sides):
+                angle = (i * 2 * math.pi) / sides
+                x = radius * math.cos(angle)
+                y = radius * math.sin(angle)
+                vertex.addData3f(x, y, 0)
+                vertex.addData3f(x, y, height)
+            
+            # Center vertices
+            vertex.addData3f(0, 0, 0)      # Bottom center
+            vertex.addData3f(0, 0, height) # Top center
+            
+            # Create geometry
+            geom = Geom(vdata)
+            
+            # Create faces
+            tris = GeomTriangles(Geom.UHStatic)
+            
+            # Bottom face
+            for i in range(sides):
+                tris.addVertices(sides * 2, i * 2, ((i + 1) % sides) * 2)
+            
+            # Top face  
+            for i in range(sides):
+                tris.addVertices(sides * 2 + 1, ((i + 1) % sides) * 2 + 1, i * 2 + 1)
+            
+            # Side faces
+            for i in range(sides):
+                next_i = (i + 1) % sides
+                tris.addVertices(i * 2, next_i * 2, i * 2 + 1)
+                tris.addVertices(next_i * 2, next_i * 2 + 1, i * 2 + 1)
+            
+            geom.addPrimitive(tris)
+            
+            # Create node
+            gnode = GeomNode('hexagon')
+            gnode.addGeom(geom)
+            
+            node = NodePath(gnode)
+            node.setRenderModeWireframe()
+            node.setColor(color[0], color[1], color[2], color[3])
+            
+            return node
+            
+        except Exception as e:
+            print(f"Error creating hexagon: {e}")
+            return None
+    
+    def create_3d_octagon(self, radius, height, color):
+        """Create a 3D octagon for dreadnoughts"""
+        try:
+            from panda3d.core import GeomNode, Geom, GeomVertexFormat, GeomVertexData, GeomVertexWriter
+            from panda3d.core import GeomTriangles, GeomLines, RenderState, ColorAttrib
+            import math
+            
+            # Create geometry
+            format = GeomVertexFormat.getV3()
+            vdata = GeomVertexData('octagon', format, Geom.UHStatic)
+            vertex = GeomVertexWriter(vdata, 'vertex')
+            
+            # Create octagon vertices
+            sides = 8
+            for i in range(sides):
+                angle = (i * 2 * math.pi) / sides
+                x = radius * math.cos(angle)
+                y = radius * math.sin(angle)
+                vertex.addData3f(x, y, 0)
+                vertex.addData3f(x, y, height)
+            
+            # Center vertices
+            vertex.addData3f(0, 0, 0)      # Bottom center
+            vertex.addData3f(0, 0, height) # Top center
+            
+            # Create geometry
+            geom = Geom(vdata)
+            
+            # Create faces
+            tris = GeomTriangles(Geom.UHStatic)
+            
+            # Bottom face
+            for i in range(sides):
+                tris.addVertices(sides * 2, i * 2, ((i + 1) % sides) * 2)
+            
+            # Top face  
+            for i in range(sides):
+                tris.addVertices(sides * 2 + 1, ((i + 1) % sides) * 2 + 1, i * 2 + 1)
+            
+            # Side faces
+            for i in range(sides):
+                next_i = (i + 1) % sides
+                tris.addVertices(i * 2, next_i * 2, i * 2 + 1)
+                tris.addVertices(next_i * 2, next_i * 2 + 1, i * 2 + 1)
+            
+            geom.addPrimitive(tris)
+            
+            # Create node
+            gnode = GeomNode('octagon')
+            gnode.addGeom(geom)
+            
+            node = NodePath(gnode)
+            node.setRenderModeWireframe()
+            node.setColor(color[0], color[1], color[2], color[3])
+            
+            return node
+            
+        except Exception as e:
+            print(f"Error creating octagon: {e}")
+            return None
     
     def create_projectile_visual(self, projectile_type, x, y):
         """Create a visual representation of a projectile"""
@@ -402,7 +594,7 @@ class EntityVisualizer:
             return None
     
     def create_turret_laser_effect(self, start_x, start_y, end_x, end_y, color=(0.2, 0.8, 1.0, 0.9), thickness=4.0):
-        """Create a turret laser beam with glow effect"""
+        """Create a turret laser beam with enhanced glow and particle effects"""
         try:
             # Create main laser beam using thin rectangle
             laser_path = self.create_thin_rectangle_line(
@@ -415,8 +607,18 @@ class EntityVisualizer:
                 
             laser_path.reparentTo(self.base.render)
             
-            # Create outer glow layer
-            glow_color = (color[0] * 0.5, color[1] * 0.5, color[2] * 0.5, color[3] * 0.4)
+            # Create multiple glow layers for enhanced ambient effect
+            # Outer ambient glow (largest, most transparent)
+            ambient_color = (color[0] * 0.3, color[1] * 0.3, color[2] * 0.3, color[3] * 0.2)
+            ambient_path = self.create_thin_rectangle_line(
+                start_x, start_y, end_x, end_y,
+                thickness=thickness * 4.0, color=ambient_color, name="turret_laser_ambient"
+            )
+            if ambient_path:
+                ambient_path.reparentTo(laser_path)
+            
+            # Outer glow layer
+            glow_color = (color[0] * 0.6, color[1] * 0.6, color[2] * 0.6, color[3] * 0.5)
             outer_path = self.create_thin_rectangle_line(
                 start_x, start_y, end_x, end_y,
                 thickness=thickness * 2.0, color=glow_color, name="turret_laser_glow"
@@ -432,12 +634,55 @@ class EntityVisualizer:
             )
             if inner_path:
                 inner_path.reparentTo(laser_path)
+                
+            # Add particle effects along the laser beam
+            self.create_laser_particles(start_x, start_y, end_x, end_y, color, laser_path)
             
             return laser_path
             
         except Exception as e:
             print(f"Error creating turret laser effect: {e}")
             return None
+    
+    def create_laser_particles(self, start_x, start_y, end_x, end_y, color, parent_node):
+        """Create particle effects along the laser beam"""
+        try:
+            import math
+            import random
+            
+            # Calculate beam length and direction
+            beam_length = math.sqrt((end_x - start_x)**2 + (end_y - start_y)**2)
+            if beam_length == 0:
+                return
+                
+            # Create several particles along the beam
+            num_particles = max(3, int(beam_length / 50))  # More particles for longer beams
+            
+            for i in range(num_particles):
+                # Position along the beam
+                t = i / max(1, num_particles - 1)
+                x = start_x + t * (end_x - start_x)
+                y = start_y + t * (end_y - start_y)
+                
+                # Add slight random offset
+                x += random.uniform(-3, 3)
+                y += random.uniform(-3, 3)
+                
+                # Create small glowing particle
+                particle = self.create_circle(2, color)
+                if particle:
+                    particle.setPos(x, y, 3)
+                    particle.reparentTo(parent_node)
+                    
+                    # Add subtle scaling animation
+                    from direct.interval.IntervalGlobal import LerpScaleInterval, Sequence
+                    scale_up = LerpScaleInterval(particle, 0.1, (1.5, 1.5, 1), (0.5, 0.5, 1))
+                    scale_down = LerpScaleInterval(particle, 0.1, (0.5, 0.5, 1), (1.5, 1.5, 1))
+                    scale_sequence = Sequence(scale_up, scale_down)
+                    scale_sequence.start()
+                    
+        except Exception as e:
+            print(f"Error creating laser particles: {e}")
     
     def create_missile_visual(self, x, y):
         """Create visual representation of a missile"""
@@ -455,29 +700,230 @@ class EntityVisualizer:
         return None
     
     def create_explosion_effect(self, x, y):
-        """Create visual explosion effect"""
+        """Create visual explosion effect with red and orange particles"""
         try:
-            # Create expanding orange circle for explosion
-            explosion_node = self.create_circle(15, (1.0, 0.3, 0.0, 0.8))  # Orange explosion
-            if explosion_node:
-                explosion_node.setPos(x, y, 4)  # Elevated
-                explosion_node.reparentTo(self.base.render)
+            # Create explosion container
+            explosion_container = NodePath("missile_explosion")
+            explosion_container.setPos(x, y, 4)
+            explosion_container.reparentTo(self.base.render)
+            
+            # Explosion particle colors - reds and oranges
+            explosion_colors = [
+                (1.0, 0.0, 0.0, 1.0),  # Pure red
+                (1.0, 0.3, 0.0, 1.0),  # Red-orange
+                (1.0, 0.5, 0.0, 1.0),  # Orange
+                (1.0, 0.7, 0.0, 1.0),  # Yellow-orange
+                (0.8, 0.0, 0.0, 1.0),  # Dark red
+                (1.0, 0.2, 0.1, 1.0),  # Bright red-orange
+            ]
+            
+            import random
+            
+            # Create multiple explosion particles in waves
+            # First wave - large blast particles
+            for i in range(12):
+                particle = self.create_circle(random.uniform(3, 6), random.choice(explosion_colors))
+                if particle:
+                    # Random direction and distance
+                    angle = random.uniform(0, 2 * 3.14159)
+                    distance = random.uniform(15, 35)
+                    offset_x = distance * math.cos(angle)
+                    offset_y = distance * math.sin(angle)
+                    
+                    particle.setPos(0, 0, 0)  # Start at center
+                    particle.reparentTo(explosion_container)
+                    
+                    # Animate explosion outward
+                    try:
+                        from direct.interval.IntervalGlobal import LerpPosInterval, LerpColorScaleInterval, LerpScaleInterval, Parallel
+                        
+                        # Blast outward
+                        move_out = LerpPosInterval(particle, 0.4, 
+                                                 (offset_x, offset_y, random.uniform(-2, 2)), 
+                                                 (0, 0, 0))
+                        
+                        # Fade out
+                        fade_out = LerpColorScaleInterval(particle, 0.4, 
+                                                        (1, 1, 1, 0), 
+                                                        (1, 1, 1, 1))
+                        
+                        # Scale animation - expand then shrink
+                        scale_anim = LerpScaleInterval(particle, 0.4, 0.2, 1.0)
+                        
+                        # Run all animations in parallel
+                        particle_anim = Parallel(move_out, fade_out, scale_anim)
+                        particle_anim.start()
+                        
+                    except Exception as anim_error:
+                        print(f"Error animating explosion particle: {anim_error}")
+            
+            # Second wave - smaller debris particles
+            for i in range(16):
+                debris = self.create_circle(random.uniform(1, 2), random.choice(explosion_colors))
+                if debris:
+                    # Random direction and longer distance
+                    angle = random.uniform(0, 2 * 3.14159)
+                    distance = random.uniform(25, 50)
+                    offset_x = distance * math.cos(angle)
+                    offset_y = distance * math.sin(angle)
+                    
+                    debris.setPos(random.uniform(-5, 5), random.uniform(-5, 5), 0)  # Start slightly scattered
+                    debris.reparentTo(explosion_container)
+                    
+                    # Animate debris outward (longer duration)
+                    try:
+                        from direct.interval.IntervalGlobal import LerpPosInterval, LerpColorScaleInterval, Parallel
+                        
+                        # Fly outward
+                        move_out = LerpPosInterval(debris, 0.6, 
+                                                 (offset_x, offset_y, random.uniform(-3, 3)), 
+                                                 debris.getPos())
+                        
+                        # Fade out slower
+                        fade_out = LerpColorScaleInterval(debris, 0.6, 
+                                                        (1, 1, 1, 0), 
+                                                        (1, 1, 1, 1))
+                        
+                        # Run animations in parallel
+                        debris_anim = Parallel(move_out, fade_out)
+                        debris_anim.start()
+                        
+                    except Exception as anim_error:
+                        print(f"Error animating explosion debris: {anim_error}")
+            
+            # Central flash
+            try:
+                flash = self.create_circle(8, (1.0, 1.0, 0.8, 1.0))  # Bright yellow-white flash
+                if flash:
+                    flash.setPos(0, 0, 1)
+                    flash.reparentTo(explosion_container)
+                    
+                    # Quick bright flash
+                    from direct.interval.IntervalGlobal import LerpScaleInterval, LerpColorScaleInterval, Parallel
+                    
+                    expand = LerpScaleInterval(flash, 0.15, 4.0, 0.5)
+                    fade = LerpColorScaleInterval(flash, 0.15, (1, 1, 1, 0), (1, 1, 1, 1))
+                    
+                    flash_anim = Parallel(expand, fade)
+                    flash_anim.start()
+                    
+            except Exception as flash_error:
+                print(f"Error creating explosion flash: {flash_error}")
+            
+            # Remove the entire explosion effect after all animations
+            def cleanup_explosion():
+                try:
+                    explosion_container.removeNode()
+                except:
+                    pass
+            
+            # Schedule cleanup after longest animation duration
+            try:
+                from direct.task import Task
+                self.base.taskMgr.doMethodLater(0.8, lambda task: cleanup_explosion(), "cleanup_explosion")
+            except Exception as cleanup_error:
+                print(f"Error scheduling explosion cleanup: {cleanup_error}")
+                # Fallback cleanup
+                cleanup_explosion()
                 
-                # Scale up the explosion over time
-                from direct.interval.IntervalGlobal import LerpScaleInterval, Sequence, Func
-                
-                # Scale from small to large, then remove
-                scale_up = LerpScaleInterval(explosion_node, 0.3, (3, 3, 1), (0.5, 0.5, 1))
-                remove_func = Func(explosion_node.removeNode)
-                explosion_sequence = Sequence(scale_up, remove_func)
-                explosion_sequence.start()
-                
-                return explosion_node
+            return explosion_container
                 
         except Exception as e:
             print(f"Error creating explosion effect: {e}")
             
         return None
+    
+    def create_laser_impact_effect(self, x, y):
+        """Create particle effect when laser hits enemy"""
+        try:
+            # Create multiple small energy particles that spread out
+            impact_container = NodePath("laser_impact")
+            impact_container.setPos(x, y, 4)
+            impact_container.reparentTo(self.base.render)
+            
+            # Create energy discharge particles with electric blue/white colors
+            particle_colors = [
+                (0.2, 0.8, 1.0, 1.0),  # Electric blue
+                (0.8, 0.9, 1.0, 1.0),  # Light blue-white
+                (1.0, 1.0, 1.0, 1.0),  # Pure white
+                (0.6, 0.8, 1.0, 1.0),  # Cyan
+            ]
+            
+            import random
+            for i in range(8):  # 8 energy particles (more than bullets)
+                particle = self.create_circle(1.5, random.choice(particle_colors))
+                if particle:
+                    # Random offset for each particle
+                    offset_x = random.uniform(-12, 12)
+                    offset_y = random.uniform(-12, 12)
+                    particle.setPos(offset_x, offset_y, 0)
+                    particle.reparentTo(impact_container)
+                    
+                    # Add glow effect
+                    particle.setRenderModeWireframe()
+                    particle.setTwoSided(True)
+                    
+                    # Animate particles flying outward and fading
+                    try:
+                        from direct.interval.IntervalGlobal import LerpPosInterval, LerpColorScaleInterval, LerpScaleInterval, Parallel, Sequence, Func
+                        
+                        # Move outward faster than bullet sparks
+                        move_out = LerpPosInterval(particle, 0.2, 
+                                                 (offset_x * 3, offset_y * 3, 0), 
+                                                 (offset_x, offset_y, 0))
+                        
+                        # Fade out quickly
+                        fade_out = LerpColorScaleInterval(particle, 0.2, 
+                                                        (1, 1, 1, 0), 
+                                                        (1, 1, 1, 1))
+                        
+                        # Scale down as it fades
+                        scale_down = LerpScaleInterval(particle, 0.2, 0.1, 1.0)
+                        
+                        # Run all animations in parallel
+                        particle_anim = Parallel(move_out, fade_out, scale_down)
+                        particle_anim.start()
+                        
+                    except Exception as anim_error:
+                        print(f"Error animating laser particle: {anim_error}")
+            
+            # Add a central flash effect
+            try:
+                flash = self.create_circle(3, (1.0, 1.0, 1.0, 0.8))
+                if flash:
+                    flash.setPos(0, 0, 0)
+                    flash.reparentTo(impact_container)
+                    
+                    # Quick flash that expands and fades
+                    from direct.interval.IntervalGlobal import LerpScaleInterval, LerpColorScaleInterval, Parallel
+                    
+                    expand = LerpScaleInterval(flash, 0.1, 2.0, 1.0)
+                    fade = LerpColorScaleInterval(flash, 0.1, (1, 1, 1, 0), (1, 1, 1, 0.8))
+                    
+                    flash_anim = Parallel(expand, fade)
+                    flash_anim.start()
+                    
+            except Exception as flash_error:
+                print(f"Error creating laser flash: {flash_error}")
+            
+            # Remove the entire impact effect after animation
+            def cleanup_impact():
+                try:
+                    impact_container.removeNode()
+                except:
+                    pass
+            
+            # Schedule cleanup after effect duration
+            try:
+                from direct.task import Task
+                self.base.taskMgr.doMethodLater(0.3, lambda task: cleanup_impact(), "cleanup_laser_impact")
+            except Exception as cleanup_error:
+                print(f"Error scheduling laser impact cleanup: {cleanup_error}")
+                # Fallback cleanup
+                cleanup_impact()
+                
+        except Exception as e:
+            print(f"Error creating laser impact effect: {e}")
     
     def create_bullet_impact_effect(self, x, y):
         """Create particle effect when bullet hits enemy"""
@@ -571,7 +1017,7 @@ class EntityVisualizer:
             node = self.create_octagon(radius, (0.4, 0.3, 0.2, 1.0))  # Brown color
             
             if node:
-                node.setPos(x, y, 0)
+                node.setPos(x, y, -2)  # Lowest layer behind all other elements
                 node.reparentTo(self.base.render)
                 return node
                 
@@ -832,7 +1278,7 @@ class EntityVisualizer:
         """Create teal healing range indicator"""
         return self.create_range_indicator(radius, (0.0, 0.8, 0.8, 0.4))  # Teal
     
-    def create_building_radius_indicators(self, building_type, building_config, x, y):
+    def create_building_radius_indicators(self, building_type, building_config, x, y, building=None):
         """Create all appropriate radius indicators for a building"""
         indicators = {}
         
@@ -845,23 +1291,50 @@ class EntityVisualizer:
                     connection_indicator.setPos(x, y, 0.1)
                     indicators['connection'] = connection_indicator
             
-            # Attack radius (for defensive buildings)
-            attack_range = building_config.get("range", 0)  # Using 'range' for attack range
+            # Attack radius (for defensive buildings) - use effective range if building is provided
             is_defensive = building_type in ['turret', 'laser', 'superlaser', 'missile_launcher']
-            if attack_range > 0 and is_defensive:
-                attack_indicator = self.create_attack_radius_indicator(attack_range)
-                if attack_indicator:
-                    attack_indicator.setPos(x, y, 0.1)
-                    indicators['attack'] = attack_indicator
+            if is_defensive:
+                # Use effective range if building object is available, otherwise use config range
+                if building and hasattr(building, 'get_effective_range'):
+                    attack_range = building.get_effective_range()
+                else:
+                    attack_range = building_config.get("range", 0)
+                
+                if attack_range > 0:
+                    attack_indicator = self.create_attack_radius_indicator(attack_range)
+                    if attack_indicator:
+                        attack_indicator.setPos(x, y, 0.1)
+                        indicators['attack'] = attack_indicator
             
-            # Healing radius (for repair buildings)
-            heal_range = building_config.get("repair_range", 0)
+            # Mining radius (for miners) - use effective range if building is provided
+            is_miner = building_type in ['miner']
+            if is_miner:
+                # Use effective range if building object is available, otherwise use config range
+                if building and hasattr(building, 'get_effective_range'):
+                    mining_range = building.get_effective_range()
+                else:
+                    mining_range = building_config.get("range", 0)
+                
+                if mining_range > 0:
+                    mining_indicator = self.create_connection_radius_indicator(mining_range)  # Use connection color for mining
+                    if mining_indicator:
+                        mining_indicator.setPos(x, y, 0.1)
+                        indicators['mining'] = mining_indicator
+            
+            # Healing radius (for repair buildings) - use effective range if building is provided
             is_repair = building_type in ['repair']
-            if heal_range > 0 and is_repair:
-                heal_indicator = self.create_heal_radius_indicator(heal_range)
-                if heal_indicator:
-                    heal_indicator.setPos(x, y, 0.1)
-                    indicators['heal'] = heal_indicator
+            if is_repair:
+                # Use effective range if building object is available, otherwise use config range
+                if building and hasattr(building, 'get_effective_range'):
+                    heal_range = building.get_effective_range()
+                else:
+                    heal_range = building_config.get("repair_range", 0)
+                
+                if heal_range > 0:
+                    heal_indicator = self.create_heal_radius_indicator(heal_range)
+                    if heal_indicator:
+                        heal_indicator.setPos(x, y, 0.1)
+                        indicators['heal'] = heal_indicator
             
             return indicators
             
@@ -1333,6 +1806,75 @@ class EntityVisualizer:
         node_path.setColor(*color)
         
         return node_path
+    
+    def create_missile_launcher_visual(self, size):
+        """Create a pink outline pentagon inside a white circle for missile launcher"""
+        from panda3d.core import GeomNode, CardMaker
+        import math
+        
+        # Create the main node that will hold both shapes
+        main_node = NodePath('missile_launcher')
+        
+        # Create white circle background using 3D circle
+        circle = self.create_3d_circle(size, (1.0, 1.0, 1.0, 1.0))
+        if circle:
+            circle.reparentTo(main_node)
+        
+        # Create pink pentagon outline with solid fill for better visibility
+        pentagon = self.create_3d_pentagon(size * 0.8, 8, (1.0, 0.4, 0.8, 1.0))  # Pink filled pentagon
+        if pentagon:
+            pentagon.reparentTo(main_node)
+            pentagon.setZ(2)  # Above the circle
+        
+        return main_node
+    
+    def create_pentagon_outline(self, size, color, thickness=2.0):
+        """Create a pentagon outline"""
+        format = GeomVertexFormat.getV3()
+        vdata = GeomVertexData('pentagon_outline', format, Geom.UHStatic)
+        vdata.setNumRows(10)  # 5 vertices * 2 for thick outline
+        vertex = GeomVertexWriter(vdata, 'vertex')
+        
+        radius = size / 2
+        
+        # Pentagon vertices (5 points)
+        pentagon_points = []
+        for i in range(5):
+            angle = i * 2 * math.pi / 5 - math.pi / 2  # Start from top
+            x = radius * math.cos(angle)
+            y = radius * math.sin(angle)
+            pentagon_points.append((x, y))
+        
+        # Create thick outline by drawing lines between points
+        geom = Geom(Geom.UHStatic)
+        
+        # Create line segments for pentagon outline
+        lines = GeomLines(Geom.UHStatic)
+        
+        for i in range(5):
+            # Current point
+            curr = pentagon_points[i]
+            next_pt = pentagon_points[(i + 1) % 5]
+            
+            # Add vertices for line segment
+            vertex.addData3f(curr[0], curr[1], 0)
+            vertex.addData3f(next_pt[0], next_pt[1], 0)
+            
+            # Add line primitive
+            lines.addVertex(i * 2)
+            lines.addVertex(i * 2 + 1)
+            lines.closePrimitive()
+        
+        geom.addPrimitive(lines)
+        
+        # Create node
+        geom_node = GeomNode('pentagon_outline')
+        geom_node.addGeom(geom)
+        node_path = NodePath(geom_node)
+        node_path.setColor(*color)
+        node_path.setRenderModeThickness(thickness)
+        
+        return node_path
         
     def create_3d_asteroid(self, pos_x, pos_y, radius):
         """Create a 3D polyhedral asteroid"""
@@ -1459,7 +2001,7 @@ class EntityVisualizer:
                 # Create asteroid
                 asteroid = self.create_3d_asteroid(ast_x, ast_y, size)
                 if asteroid:
-                    asteroid.setPos(ast_x, ast_y, 0)
+                    asteroid.setPos(ast_x, ast_y, -2)  # Lowest layer behind all other elements
                     # Random rotation for variety, but keep it primarily in the H axis for top-down view
                     asteroid.setH(random.uniform(0, 360))
                     asteroid.setP(random.uniform(-10, 10))  # Reduced tilt for top-down view
@@ -1643,6 +2185,12 @@ class EntityVisualizer:
             if node:
                 node.removeNode()
         self.entity_nodes.clear()
+        
+        # Clean up building visuals
+        for building_id, node in self.building_visuals.items():
+            if node:
+                node.removeNode()
+        self.building_visuals.clear()
         
         print("✓ Entity visualizer cleanup complete") 
 

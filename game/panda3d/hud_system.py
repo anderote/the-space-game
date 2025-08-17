@@ -219,10 +219,16 @@ class HUDSystem:
         self.hud_elements['minerals']['text'] = f"Minerals: {game_data['minerals']:.1f}"
         
         # Update building menu affordability
-        self.update_building_menu()
+        # Update both building and research menus when resources change
+        if hasattr(self, 'building_scroll_frame'):
+            # Refresh both menus to update affordability colors
+            pass  # For now, we'll keep the static display
         
         # Update wave preview
         self.update_wave_preview()
+        
+        # Update research progress bar
+        self.update_research_progress()
         
         # Update minimap (less frequently to avoid performance issues)
         if hasattr(self, '_minimap_update_timer'):
@@ -362,15 +368,41 @@ class HUDSystem:
         # Update health bar
         self.update_health_bar(health_percent / 100.0)
         
-        # Building stats
+        # Building stats - use effective values that include level bonuses
         stats_text = ""
-        if building_config.get('power_generation', 0) > 0:
+        
+        # Energy generation (for power buildings)
+        if hasattr(building, 'get_effective_energy_generation'):
+            effective_energy = building.get_effective_energy_generation()
+            if effective_energy > 0:
+                stats_text += f"Energy: +{effective_energy:.1f}/s\n"
+        elif building_config.get('power_generation', 0) > 0:
             stats_text += f"Energy: +{building_config['power_generation']:.1f}/s\n"
-        if building_config.get('attack_damage', 0) > 0:
-            stats_text += f"Damage: {building_config['attack_damage']:.0f}\n"
-            stats_text += f"Range: {building_config.get('attack_range', 0):.0f}\n"
-        if building_config.get('energy_capacity', 0) > 0:
+        
+        # Combat stats (for turrets/weapons)
+        if hasattr(building, 'get_effective_damage'):
+            effective_damage = building.get_effective_damage()
+            if effective_damage > 0:
+                stats_text += f"Damage: {effective_damage:.1f}\n"
+        
+        if hasattr(building, 'get_effective_range'):
+            effective_range = building.get_effective_range()
+            if effective_range > 0 and building.building_type in ["turret", "laser", "superlaser", "missile_launcher", "miner", "repair"]:
+                stats_text += f"Range: {effective_range:.0f}\n"
+        
+        # Energy storage
+        if hasattr(building, 'get_effective_energy_capacity'):
+            effective_capacity = building.get_effective_energy_capacity()
+            if effective_capacity > 0:
+                stats_text += f"Storage: {effective_capacity:.0f}\n"
+        elif building_config.get('energy_capacity', 0) > 0:
             stats_text += f"Storage: {building_config['energy_capacity']:.0f}\n"
+        
+        # Mining rate (for miners)
+        if building.building_type == "miner" and hasattr(building, 'get_effective_mining_rate'):
+            effective_mining = building.get_effective_mining_rate()
+            if effective_mining > 0:
+                stats_text += f"Mining: {effective_mining:.1f}/zap\n"
         
         self.building_info['stats']['text'] = stats_text.rstrip()
         
@@ -470,37 +502,108 @@ class HUDSystem:
             print(f"Error setting up wave preview: {e}")
     
     def setup_minimap(self):
-        """Setup minimap in bottom left corner"""
+        """Setup enhanced minimap in bottom left corner"""
         try:
-            # Minimap panel (bottom left corner)
-            minimap_size = 0.3
+            # Enhanced minimap positioning - more tucked away
+            minimap_size = 0.25  # Slightly smaller for better tucking
+            margin = 0.02  # Margin from screen edge
+            
+            # Outer shadow/glow effect
+            self.minimap_shadow = DirectFrame(
+                frameSize=(-1.0 + margin - 0.008, -1.0 + margin + minimap_size + 0.008, 
+                          -1.0 + margin - 0.008, -1.0 + margin + minimap_size + 0.008),
+                frameColor=(0.0, 0.2, 0.4, 0.3),  # Blue glow
+                pos=(0, 0, 0),
+                parent=self.base.aspect2d
+            )
+            
+            # Main minimap panel with gradient-like appearance
             self.minimap_panel = DirectFrame(
-                frameSize=(-1.0, -1.0 + minimap_size, -1.0, -1.0 + minimap_size),
-                frameColor=(0.0, 0.0, 0.0, 0.9),
+                frameSize=(-1.0 + margin, -1.0 + margin + minimap_size, 
+                          -1.0 + margin, -1.0 + margin + minimap_size),
+                frameColor=(0.05, 0.1, 0.15, 0.95),  # Dark blue-gray with high transparency
                 pos=(0, 0, 0),
                 parent=self.base.aspect2d
             )
             
-            # Minimap border
+            # Inner highlight border
             self.minimap_border = DirectFrame(
-                frameSize=(-1.02, -1.0 + minimap_size + 0.02, -1.02, -1.0 + minimap_size + 0.02),
-                frameColor=(0.3, 0.3, 0.3, 1.0),
+                frameSize=(-1.0 + margin + 0.003, -1.0 + margin + minimap_size - 0.003, 
+                          -1.0 + margin + 0.003, -1.0 + margin + minimap_size - 0.003),
+                frameColor=(0.2, 0.4, 0.6, 0.8),  # Bright blue border
                 pos=(0, 0, 0),
                 parent=self.base.aspect2d
             )
             
-            # Minimap title
+            # Minimap background (space/void color)
+            self.minimap_background = DirectFrame(
+                frameSize=(-1.0 + margin + 0.006, -1.0 + margin + minimap_size - 0.006, 
+                          -1.0 + margin + 0.006, -1.0 + margin + minimap_size - 0.006),
+                frameColor=(0.02, 0.05, 0.1, 1.0),  # Very dark space color
+                pos=(0, 0, 0),
+                parent=self.base.aspect2d
+            )
+            
+            # Enhanced title with better positioning
             self.minimap_title = OnscreenText(
-                text="MINIMAP",
-                pos=(-0.85, -0.75),
-                scale=0.03,
-                fg=(1, 1, 1, 1),
+                text="SCANNER",
+                pos=(-1.0 + margin + minimap_size/2, -1.0 + margin + minimap_size + 0.015),
+                scale=0.025,
+                fg=(0.6, 0.8, 1.0, 0.9),  # Light blue
+                align=TextNode.ACenter,
+                parent=self.base.aspect2d,
+                font=self.base.loader.loadFont("cmr12")  # Try to load a better font
+            )
+            
+            # Grid overlay for better reference
+            self.setup_minimap_grid(margin, minimap_size)
+            
+            # Camera view indicator
+            self.camera_indicator = OnscreenText(
+                text="◊",  # Diamond shape for camera
+                pos=(-1.0 + margin + minimap_size/2, -1.0 + margin + minimap_size/2),
+                scale=0.02,
+                fg=(1.0, 1.0, 0.5, 0.8),  # Yellow
                 align=TextNode.ACenter,
                 parent=self.base.aspect2d
             )
             
         except Exception as e:
             print(f"Error setting up minimap: {e}")
+    
+    def setup_minimap_grid(self, margin, minimap_size):
+        """Setup subtle grid overlay for minimap"""
+        try:
+            # Create subtle grid lines
+            grid_lines = 4  # 4x4 grid
+            grid_color = (0.1, 0.2, 0.3, 0.3)
+            
+            # Vertical lines
+            for i in range(1, grid_lines):
+                x_pos = -1.0 + margin + (minimap_size * i / grid_lines)
+                line = DirectFrame(
+                    frameSize=(x_pos - 0.0005, x_pos + 0.0005, 
+                              -1.0 + margin + 0.006, -1.0 + margin + minimap_size - 0.006),
+                    frameColor=grid_color,
+                    pos=(0, 0, 0),
+                    parent=self.base.aspect2d
+                )
+                self.minimap_elements.append(line)
+            
+            # Horizontal lines  
+            for i in range(1, grid_lines):
+                y_pos = -1.0 + margin + (minimap_size * i / grid_lines)
+                line = DirectFrame(
+                    frameSize=(-1.0 + margin + 0.006, -1.0 + margin + minimap_size - 0.006,
+                              y_pos - 0.0005, y_pos + 0.0005),
+                    frameColor=grid_color,
+                    pos=(0, 0, 0),
+                    parent=self.base.aspect2d
+                )
+                self.minimap_elements.append(line)
+                
+        except Exception as e:
+            print(f"Error setting up minimap grid: {e}")
     
     def start_next_wave(self):
         """Start the next wave manually"""
@@ -552,76 +655,129 @@ class HUDSystem:
             print(f"Error updating wave preview: {e}")
     
     def update_minimap(self):
-        """Update minimap with current game state"""
+        """Update enhanced minimap with current game state"""
         try:
             if not self.minimap_panel:
                 return
                 
-            # Clear existing minimap elements
-            for element in self.minimap_elements:
+            # Clear existing dynamic minimap elements (keep grid)
+            dynamic_elements = [elem for elem in self.minimap_elements if hasattr(elem, 'getText')]
+            for element in dynamic_elements:
                 if element:
                     element.destroy()
-            self.minimap_elements.clear()
+                    if element in self.minimap_elements:
+                        self.minimap_elements.remove(element)
             
-            # Get world bounds for scaling
+            # Enhanced positioning parameters
             world_width = 4800
             world_height = 2700
-            minimap_size = 0.3
+            minimap_size = 0.25  # Match the new smaller size
+            margin = 0.02
             
             # Scale factors
             scale_x = minimap_size / world_width
             scale_y = minimap_size / world_height
             
-            # Minimap offset (lower left corner)
-            offset_x = -1.0
-            offset_y = -1.0
+            # Minimap area bounds (with padding)
+            area_padding = 0.006
+            offset_x = -1.0 + margin + area_padding
+            offset_y = -1.0 + margin + area_padding
             
-            # Draw buildings (green dots)
+            # Update camera position indicator
+            if hasattr(self.game_engine, 'scene_manager') and hasattr(self.game_engine.scene_manager, 'camera_controller'):
+                cam_x = self.game_engine.scene_manager.camera_controller.camera_x
+                cam_y = self.game_engine.scene_manager.camera_controller.camera_y
+                
+                # Map camera position to minimap coordinates
+                cam_minimap_x = offset_x + (cam_x * scale_x)
+                cam_minimap_y = offset_y + (cam_y * scale_y)
+                
+                if hasattr(self, 'camera_indicator'):
+                    self.camera_indicator.setPos(cam_minimap_x, cam_minimap_y)
+            
+            # Draw buildings with enhanced symbols and colors
             if hasattr(self.game_engine, 'building_system'):
+                building_symbols = {
+                    'starting_base': ('█', (0.2, 0.8, 1.0, 1.0), 0.025),  # Cyan block
+                    'solar': ('☀', (1.0, 1.0, 0.3, 0.9), 0.012),         # Sun symbol
+                    'nuclear': ('⚛', (0.3, 1.0, 0.3, 1.0), 0.015),       # Atom symbol
+                    'turret': ('▲', (1.0, 0.4, 0.4, 1.0), 0.013),        # Triangle
+                    'laser': ('◆', (1.0, 1.0, 1.0, 1.0), 0.012),         # Diamond
+                    'superlaser': ('◆', (1.0, 0.8, 1.0, 1.0), 0.016),    # Larger diamond
+                    'missile_launcher': ('⬟', (1.0, 0.4, 0.8, 1.0), 0.014), # Pentagon
+                    'miner': ('⛏', (0.4, 1.0, 0.4, 1.0), 0.013),         # Pickaxe
+                    'repair': ('✚', (0.6, 1.0, 1.0, 1.0), 0.013),        # Cross
+                    'connector': ('○', (1.0, 1.0, 0.6, 0.8), 0.010),     # Circle
+                }
+                
                 for building in self.game_engine.building_system.buildings.values():
                     if building.building_type != "asteroid":  # Skip asteroids for buildings
                         x = offset_x + (building.x * scale_x)
                         y = offset_y + (building.y * scale_y)
                         
+                        # Get symbol info, fallback to default
+                        symbol, color, size = building_symbols.get(building.building_type, ('●', (0.5, 0.5, 0.5, 1.0), 0.012))
+                        
                         dot = OnscreenText(
-                            text="o",
+                            text=symbol,
                             pos=(x, y),
-                            scale=0.015,
-                            fg=(0, 1, 0, 1),  # Green
+                            scale=size,
+                            fg=color,
                             align=TextNode.ACenter,
                             parent=self.base.aspect2d
                         )
                         self.minimap_elements.append(dot)
             
-            # Draw asteroids (brown dots)
+            # Draw asteroids with smaller, subtler appearance
             if hasattr(self.game_engine, 'building_system'):
                 for building in self.game_engine.building_system.buildings.values():
                     if building.building_type == "asteroid":
                         x = offset_x + (building.x * scale_x)
                         y = offset_y + (building.y * scale_y)
                         
+                        # Use smaller, more subtle asteroid markers
                         dot = OnscreenText(
-                            text=".",
+                            text="·",  # Middle dot
                             pos=(x, y),
-                            scale=0.020,
-                            fg=(0.6, 0.4, 0.2, 1),  # Brown
+                            scale=0.015,
+                            fg=(0.7, 0.5, 0.3, 0.6),  # Brownish with transparency
                             align=TextNode.ACenter,
                             parent=self.base.aspect2d
                         )
                         self.minimap_elements.append(dot)
             
-            # Draw enemies (red dots)
+            # Draw enemies with enhanced symbols
             if hasattr(self.game_engine, 'enemies'):
+                enemy_symbols = {
+                    'basic': ('▼', (1.0, 0.2, 0.2, 1.0), 0.014),         # Red triangle
+                    'kamikaze': ('◄', (1.0, 0.4, 0.0, 1.0), 0.013),      # Orange arrow
+                    'large': ('█', (0.8, 0.0, 0.0, 1.0), 0.016),         # Large red block
+                    'assault': ('◆', (1.0, 0.0, 0.4, 1.0), 0.015),       # Pink diamond
+                    'stealth': ('?', (0.6, 0.0, 0.6, 0.7), 0.012),       # Purple question mark
+                    'cruiser': ('▬', (0.9, 0.1, 0.1, 1.0), 0.018),       # Large red bar
+                    'mothership': ('⬟', (1.0, 1.0, 0.0, 1.0), 0.020),    # Yellow pentagon
+                    'laser_mothership': ('⬟', (1.0, 0.4, 0.4, 1.0), 0.022), # Large red pentagon
+                    'carrier': ('⬣', (0.4, 0.4, 0.8, 1.0), 0.019),       # Blue hexagon
+                    'missile_cruiser': ('⬢', (0.6, 0.6, 0.2, 1.0), 0.017), # Yellow hexagon
+                    'dreadnought': ('⬟', (0.3, 0.15, 0.15, 1.0), 0.024), # Huge dark red pentagon
+                    'interceptor': ('→', (1.0, 1.0, 0.4, 1.0), 0.012),    # Yellow arrow
+                    'support_ship': ('✚', (0.4, 1.0, 0.4, 1.0), 0.014),   # Green cross
+                }
+                
                 for enemy in self.game_engine.enemies:
                     if enemy.is_alive():
                         x = offset_x + (enemy.x * scale_x)
                         y = offset_y + (enemy.y * scale_y)
                         
+                        # Get enemy type symbol, fallback to default
+                        enemy_type = getattr(enemy, 'enemy_type', 'basic')
+                        symbol, color, size = enemy_symbols.get(enemy_type, ('▼', (1.0, 0.0, 0.0, 1.0), 0.014))
+                        
                         dot = OnscreenText(
-                            text="X",
+                            text=symbol,
                             pos=(x, y),
-                            scale=0.018,
-                            fg=(1, 0, 0, 1),  # Red
+                            scale=size,
+                            fg=color,
                             align=TextNode.ACenter,
                             parent=self.base.aspect2d
                         )
@@ -661,6 +817,25 @@ class HUDSystem:
             for item in self.building_menu_items:
                 if item:
                     item.removeNode()
+        
+        # Clean up enhanced minimap elements
+        if hasattr(self, 'minimap_panel'):
+            self.minimap_panel.removeNode()
+        if hasattr(self, 'minimap_shadow'):
+            self.minimap_shadow.removeNode()
+        if hasattr(self, 'minimap_border'):
+            self.minimap_border.removeNode()
+        if hasattr(self, 'minimap_background'):
+            self.minimap_background.removeNode()
+        if hasattr(self, 'minimap_title'):
+            self.minimap_title.removeNode()
+        if hasattr(self, 'camera_indicator'):
+            self.camera_indicator.removeNode()
+        if hasattr(self, 'minimap_elements'):
+            for element in self.minimap_elements:
+                if element:
+                    element.removeNode()
+            self.minimap_elements.clear()
         
         self.hud_elements.clear()
         print("✓ HUD cleanup complete")
@@ -783,7 +958,7 @@ class HUDSystem:
             print(f"Error hiding enemy info: {e}")
     
     def setup_building_menu(self):
-        """Create interactive building/research selection menu with tabs"""
+        """Create building and research menus as separate vertical sections"""
         try:
             # Shift menu 10% to the left to avoid edge clipping
             menu_x_offset = -0.1
@@ -796,38 +971,20 @@ class HUDSystem:
                 parent=self.base.aspect2d
             )
             
-            # Tab buttons at the top
-            tab_y = 0.85
-            tab_width = 0.35
-            buildings_tab_x = 1.25 + menu_x_offset
-            research_tab_x = 1.60 + menu_x_offset
-            
-            self.buildings_tab_button = DirectButton(
+            # Buildings section title
+            self.buildings_title = OnscreenText(
                 text="BUILDINGS",
-                scale=0.04,
-                pos=(buildings_tab_x, 0, tab_y),
-                frameSize=(-tab_width/2, tab_width/2, -0.05, 0.05),
-                frameColor=(0.3, 0.6, 0.3, 1.0),
-                text_fg=(1, 1, 1, 1),
-                command=self.switch_to_buildings_tab,
+                pos=(1.45 + menu_x_offset, 0.85),
+                scale=0.05,
+                fg=(0.3, 1.0, 0.3, 1),
+                align=TextNode.ACenter,
                 parent=self.base.aspect2d
             )
             
-            self.research_tab_button = DirectButton(
-                text="RESEARCH",
-                scale=0.04,
-                pos=(research_tab_x, 0, tab_y),
-                frameSize=(-tab_width/2, tab_width/2, -0.05, 0.05),
-                frameColor=(0.6, 0.3, 0.6, 1.0),
-                text_fg=(1, 1, 1, 1),
-                command=self.switch_to_research_tab,
-                parent=self.base.aspect2d
-            )
-            
-            # Create vertical scrollable frame
+            # Buildings scrollable frame (top half)
             self.building_scroll_frame = DirectScrolledFrame(
-                frameSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, -0.9, 0.75),
-                canvasSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, -3.0, 0.75),  # Vertical canvas
+                frameSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, 0.1, 0.8),
+                canvasSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, -2.0, 0.8),
                 frameColor=(0, 0, 0, 0),  # Transparent
                 scrollBarWidth=0.04,
                 verticalScroll_frameColor=(0.3, 0.3, 0.3, 0.8),
@@ -835,46 +992,183 @@ class HUDSystem:
                 parent=self.base.aspect2d
             )
             
-            # Initialize with buildings tab
-            self.switch_to_buildings_tab()
+            # Research section title
+            self.research_title = OnscreenText(
+                text="RESEARCH",
+                pos=(1.45 + menu_x_offset, 0.05),
+                scale=0.05,
+                fg=(0.6, 0.3, 1.0, 1),
+                align=TextNode.ACenter,
+                parent=self.base.aspect2d
+            )
+            
+            # Research progress bar
+            self.research_progress_frame = DirectFrame(
+                frameSize=(1.2 + menu_x_offset, 1.7 + menu_x_offset, 0.01, 0.03),
+                frameColor=(0.2, 0.2, 0.2, 0.8),  # Dark background
+                pos=(0, 0, 0),
+                parent=self.base.aspect2d
+            )
+            
+            self.research_progress_bar = DirectFrame(
+                frameSize=(1.2 + menu_x_offset, 1.2 + menu_x_offset, 0.01, 0.03),  # Start with 0 width
+                frameColor=(0.6, 0.3, 1.0, 0.8),  # Purple progress
+                pos=(0, 0, 0),
+                parent=self.base.aspect2d
+            )
+            
+            self.research_progress_text = OnscreenText(
+                text="No active research",
+                pos=(1.45 + menu_x_offset, 0.015),
+                scale=0.025,
+                fg=(0.8, 0.8, 0.8, 1),
+                align=TextNode.ACenter,
+                parent=self.base.aspect2d
+            )
+            
+            # Research scrollable frame (bottom half)
+            self.research_scroll_frame = DirectScrolledFrame(
+                frameSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, -0.9, -0.05),
+                canvasSize=(1.07 + menu_x_offset, 1.83 + menu_x_offset, -2.0, -0.05),
+                frameColor=(0, 0, 0, 0),  # Transparent
+                scrollBarWidth=0.04,
+                verticalScroll_frameColor=(0.3, 0.3, 0.3, 0.8),
+                verticalScroll_thumb_frameColor=(0.6, 0.6, 0.6, 1.0),
+                parent=self.base.aspect2d
+            )
+            
+            # Populate both menus
+            self.populate_buildings_menu()
+            # Note: Research menu will be populated when research system is ready
                 
         except Exception as e:
             print(f"Error setting up building menu: {e}")
     
-    def switch_to_buildings_tab(self):
-        """Switch to buildings tab"""
-        self.current_tab = "buildings"
-        self.update_tab_appearance()
-        self.populate_current_tab()
-    
-    def switch_to_research_tab(self):
-        """Switch to research tab"""
-        self.current_tab = "research"
-        self.update_tab_appearance()
-        self.populate_current_tab()
-    
-    def update_tab_appearance(self):
-        """Update tab button appearance based on current tab"""
-        if self.current_tab == "buildings":
-            self.buildings_tab_button['frameColor'] = (0.3, 0.8, 0.3, 1.0)  # Bright green
-            self.research_tab_button['frameColor'] = (0.4, 0.2, 0.4, 1.0)   # Dark purple
-        else:
-            self.buildings_tab_button['frameColor'] = (0.2, 0.4, 0.2, 1.0)  # Dark green
-            self.research_tab_button['frameColor'] = (0.6, 0.3, 0.8, 1.0)   # Bright purple
-    
-    def populate_current_tab(self):
-        """Populate the current tab with appropriate content"""
-        # Clear existing buttons
-        for button in self.building_buttons + self.research_buttons:
-            if button:
-                button.destroy()
+    def populate_buildings_menu(self):
+        """Populate buildings menu with building buttons"""
+        # Clear existing building buttons
+        for button_data in self.building_buttons:
+            if isinstance(button_data, dict):
+                for key, element in button_data.items():
+                    if hasattr(element, 'destroy'):
+                        element.destroy()
+            elif hasattr(button_data, 'destroy'):
+                button_data.destroy()
         self.building_buttons.clear()
+        
+        building_configs = self.get_building_configurations()
+        if building_configs:
+            menu_x_offset = -0.1
+            button_width = 0.7
+            button_height = 0.08
+            y_start = 0.75
+            
+            for i, (building_type, config) in enumerate(building_configs):
+                y_pos = y_start - (i * (button_height + 0.02))
+                self.create_building_button(building_type, config, y_pos, menu_x_offset, button_width, button_height, self.building_scroll_frame)
+    
+    def populate_research_menu(self):
+        """Populate research menu with research buttons"""
+        print("🔬 Populating research menu...")
+        # Clear existing research buttons
+        for button_data in self.research_buttons:
+            if isinstance(button_data, dict):
+                for key, element in button_data.items():
+                    if hasattr(element, 'destroy'):
+                        element.destroy()
+            elif hasattr(button_data, 'destroy'):
+                button_data.destroy()
         self.research_buttons.clear()
         
-        if self.current_tab == "buildings":
-            self.populate_buildings_tab()
+        if not hasattr(self.game_engine, 'research_system'):
+            print("🔬 No research system found!")
+            return
+            
+        research_system = self.game_engine.research_system
+        available_research = research_system.get_available_research()
+        print(f"🔬 Found {len(available_research)} available research options")
+        
+        if available_research:
+            menu_x_offset = -0.1
+            button_width = 0.7
+            button_height = 0.08
+            y_start = -0.1
+            
+            for i, tech in enumerate(available_research):
+                print(f"🔬 Creating button for research: {tech.name}")
+                y_pos = y_start - (i * (button_height + 0.02))
+                self.create_research_button(tech, y_pos, menu_x_offset, button_width, button_height, self.research_scroll_frame)
         else:
-            self.populate_research_tab()
+            print("🔬 No available research, showing fallback text")
+            fallback_text = OnscreenText(
+                text="No research available\n(Prerequisites not met)",
+                pos=(1.45, -0.2),
+                scale=0.04,
+                fg=(0.7, 0.7, 0.7, 1),
+                align=TextNode.ACenter,
+                parent=self.research_scroll_frame.getCanvas()
+            )
+            self.research_buttons.append(fallback_text)
+    
+    def refresh_research_menu(self):
+        """Refresh the research menu after research system is available"""
+        print("🔬 Refreshing research menu...")
+        if hasattr(self, 'research_scroll_frame') and self.research_scroll_frame:
+            self.populate_research_menu()
+        else:
+            print("🔬 Research scroll frame not ready yet")
+    
+    def update_research_progress(self):
+        """Update research progress bar and text"""
+        try:
+            if not hasattr(self.game_engine, 'research_system'):
+                return
+                
+            research_system = self.game_engine.research_system
+            current_tech = research_system.get_researching_technology()
+            
+            menu_x_offset = -0.1
+            
+            if current_tech:
+                # Calculate progress
+                import time
+                elapsed = time.time() - current_tech.research_start_time
+                progress = min(1.0, elapsed / current_tech.research_time)
+                remaining_time = max(0, current_tech.research_time - elapsed)
+                
+                # Update progress bar width
+                bar_width = 0.5  # Total width of progress bar
+                progress_width = progress * bar_width
+                
+                # Update the progress bar frame size
+                if hasattr(self, 'research_progress_bar'):
+                    self.research_progress_bar['frameSize'] = (
+                        1.2 + menu_x_offset, 
+                        1.2 + menu_x_offset + progress_width, 
+                        0.01, 
+                        0.03
+                    )
+                
+                # Update progress text
+                if hasattr(self, 'research_progress_text'):
+                    self.research_progress_text.setText(
+                        f"{current_tech.name} - {remaining_time:.0f}s remaining ({progress*100:.0f}%)"
+                    )
+            else:
+                # No active research
+                if hasattr(self, 'research_progress_bar'):
+                    self.research_progress_bar['frameSize'] = (
+                        1.2 + menu_x_offset, 
+                        1.2 + menu_x_offset, 
+                        0.01, 
+                        0.03
+                    )
+                
+                if hasattr(self, 'research_progress_text'):
+                    self.research_progress_text.setText("No active research")
+                    
+        except Exception as e:
+            print(f"Error updating research progress: {e}")
     
     def populate_buildings_tab(self):
         """Populate buildings tab with building buttons"""
@@ -892,11 +1186,14 @@ class HUDSystem:
     
     def populate_research_tab(self):
         """Populate research tab with research buttons"""
+        print("🔬 Populating research tab...")
         if not hasattr(self.game_engine, 'research_system'):
+            print("🔬 No research system found!")
             return
             
         research_system = self.game_engine.research_system
         available_research = research_system.get_available_research()
+        print(f"🔬 Found {len(available_research)} available research options")
         
         if available_research:
             menu_x_offset = -0.1
@@ -905,9 +1202,11 @@ class HUDSystem:
             y_start = 0.65
             
             for i, tech in enumerate(available_research):
+                print(f"🔬 Creating button for research: {tech.name}")
                 y_pos = y_start - (i * (button_height + 0.02))
                 self.create_research_button(tech, y_pos, menu_x_offset, button_width, button_height)
         else:
+            print("🔬 No available research, showing fallback text")
             # Add fallback text if no research available
             fallback_text = OnscreenText(
                 text="No research available\n(Prerequisites not met)",
@@ -946,7 +1245,7 @@ class HUDSystem:
             print(f"Error getting building configurations: {e}")
             return []
     
-    def create_building_button(self, building_type, config, y_pos, menu_x_offset=-0.1, button_width=0.7, button_height=0.08):
+    def create_building_button(self, building_type, config, y_pos, menu_x_offset=-0.1, button_width=0.7, button_height=0.08, parent_frame=None):
         """Create a clickable button for a building type"""
         try:
             # Get building costs
@@ -958,13 +1257,14 @@ class HUDSystem:
             button_x_end = button_x_start + button_width
             
             # Building button
+            parent_canvas = (parent_frame or self.building_scroll_frame).getCanvas()
             button = DirectButton(
                 frameSize=(button_x_start, button_x_end, y_pos - button_height/2, y_pos + button_height/2),
                 frameColor=(0.2, 0.2, 0.3, 0.8),
                 text="",
                 command=self.on_building_button_click,
                 extraArgs=[building_type],
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Building name with hotkey
@@ -979,7 +1279,7 @@ class HUDSystem:
                 scale=0.035,
                 fg=(1, 1, 1, 1),
                 align=TextNode.ALeft,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Building cost
@@ -993,7 +1293,7 @@ class HUDSystem:
                 scale=0.035,
                 fg=(0.5, 1, 1, 1),
                 align=TextNode.ARight,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Building description
@@ -1003,7 +1303,7 @@ class HUDSystem:
                 scale=0.025,
                 fg=(0.8, 0.8, 0.8, 1),
                 align=TextNode.ALeft,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Store button references
@@ -1018,7 +1318,7 @@ class HUDSystem:
         except Exception as e:
             print(f"Error creating building button for {building_type}: {e}")
     
-    def create_research_button(self, tech, y_pos, menu_x_offset=-0.1, button_width=0.7, button_height=0.08):
+    def create_research_button(self, tech, y_pos, menu_x_offset=-0.1, button_width=0.7, button_height=0.08, parent_frame=None):
         """Create a clickable button for a research technology"""
         try:
             # Calculate button position
@@ -1026,13 +1326,14 @@ class HUDSystem:
             button_x_end = button_x_start + button_width
             
             # Research button
+            parent_canvas = (parent_frame or self.building_scroll_frame).getCanvas()
             button = DirectButton(
                 frameSize=(button_x_start, button_x_end, y_pos - button_height/2, y_pos + button_height/2),
                 frameColor=(0.3, 0.2, 0.4, 0.8),
                 text="",
                 command=self.on_research_button_click,
                 extraArgs=[tech.tech_id],
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Research name
@@ -1042,7 +1343,7 @@ class HUDSystem:
                 scale=0.035,
                 fg=(1, 1, 1, 1),
                 align=TextNode.ALeft,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Research cost
@@ -1054,7 +1355,7 @@ class HUDSystem:
                 scale=0.035,
                 fg=(0.8, 0.5, 1, 1),
                 align=TextNode.ARight,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Research description
@@ -1064,7 +1365,7 @@ class HUDSystem:
                 scale=0.025,
                 fg=(0.8, 0.8, 0.8, 1),
                 align=TextNode.ALeft,
-                parent=self.building_scroll_frame.getCanvas()
+                parent=parent_canvas
             )
             
             # Store button references

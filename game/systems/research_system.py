@@ -56,7 +56,12 @@ class ResearchSystem:
             "building_health_multiplier": 1.0,
             "connection_range_multiplier": 1.0,
             "construction_speed_multiplier": 1.0,
-            "energy_cost_multiplier": 1.0
+            "energy_cost_multiplier": 1.0,
+            "repair_rate_multiplier": 1.0,
+            "repair_cost_multiplier": 1.0,
+            "mining_energy_multiplier": 1.0,
+            "miner_max_connections_bonus": 0,
+            "max_connections_bonus": 0
         }
         
         self._load_research_config()
@@ -75,6 +80,8 @@ class ResearchSystem:
             
         except Exception as e:
             print(f"Error loading research config: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _update_research_availability(self):
         """Update which technologies are available for research"""
@@ -105,7 +112,10 @@ class ResearchSystem:
     def start_research(self, tech_id: str, minerals: float, energy: float) -> bool:
         """Start researching a technology"""
         if not self.can_afford_research(tech_id, minerals, energy):
+            tech = self.technologies[tech_id]
             print(f"Cannot afford research: {tech_id}")
+            print(f"  Required: {tech.cost} minerals, {tech.energy_cost} energy")
+            print(f"  Available: {minerals} minerals, {energy} energy")
             return False
             
         if self.current_research is not None:
@@ -163,6 +173,9 @@ class ResearchSystem:
                 # For multipliers, we multiply the current bonus
                 if "multiplier" in effect_name:
                     self.bonuses[effect_name] *= effect_value
+                # For bonus values (like connection bonuses), we add them
+                elif "bonus" in effect_name:
+                    self.bonuses[effect_name] += effect_value
                 else:
                     self.bonuses[effect_name] += effect_value
                     

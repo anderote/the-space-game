@@ -69,6 +69,10 @@ class Panda3DGameEngine:
         # Initialize research system
         self.research_system = ResearchSystem(self.config)
         
+        # Refresh research menu now that research system is available
+        if hasattr(self, 'hud_system') and self.hud_system:
+            self.hud_system.refresh_research_menu()
+        
         # Initialize wave system
         self.wave_system = WaveSystem(self.config, self, self.scene_manager)
         
@@ -209,6 +213,9 @@ class Panda3DGameEngine:
         # Update projectiles
         self.update_projectiles(dt)
         
+        # Periodically cleanup destroyed buildings
+        self.cleanup_destroyed_buildings()
+        
     def start_game(self):
         """Start a new game"""
         print("=== STARTING GAME ===")
@@ -325,7 +332,7 @@ class Panda3DGameEngine:
         for building in self.building_system.buildings.values():
             if building.state == BuildingState.OPERATIONAL and not building.disabled:  # Only operational and enabled buildings generate power
                 # Use the building's effective energy generation (which includes level bonuses)
-                if building.building_type == "solar":
+                if building.building_type in ["solar", "nuclear"]:
                     power_gen = building.get_effective_energy_generation()
                 elif building.building_type == "starting_base":
                     power_gen = 0.2  # Base power rate from starting base
@@ -371,10 +378,30 @@ class Panda3DGameEngine:
         """Update all enemies"""
         # Update each enemy
         for enemy in self.enemies[:]:  # Use slice to avoid modification during iteration
+            old_x, old_y = enemy.x, enemy.y
             enemy.update(dt)
+            
+            # Update dynamic lighting position if enemy moved (TEMPORARILY DISABLED)
+            # Dynamic lighting has API compatibility issues with current Panda3D version
+            # if (hasattr(enemy, 'dynamic_light_id') and 
+            #     hasattr(self.scene_manager, 'dynamic_lighting') and
+            #     self.scene_manager.dynamic_lighting and
+            #     (enemy.x != old_x or enemy.y != old_y)):
+            #     
+            #     self.scene_manager.dynamic_lighting.update_light_position(
+            #         enemy.dynamic_light_id, enemy.x, enemy.y, 5
+            #     )
             
             # Remove destroyed enemies
             if not enemy.is_alive():
+                # Clean up dynamic lighting (TEMPORARILY DISABLED)
+                # Dynamic lighting has API compatibility issues with current Panda3D version
+                # if (hasattr(enemy, 'dynamic_light_id') and 
+                #     hasattr(self.scene_manager, 'dynamic_lighting') and
+                #     self.scene_manager.dynamic_lighting):
+                #     
+                #     self.scene_manager.dynamic_lighting.remove_light(enemy.dynamic_light_id)
+                
                 if enemy in self.enemies:
                     self.enemies.remove(enemy)
     
@@ -437,6 +464,44 @@ class Panda3DGameEngine:
             'power_generation': self.building_system.get_total_power_generation(),
             'power_consumption': self.building_system.get_total_power_consumption()
         }
+    
+    def cleanup_destroyed_buildings(self):
+        """Remove buildings that have zero health and are not under construction"""
+        import time
+        
+        # Only run cleanup every 5 seconds to avoid performance issues
+        if not hasattr(self, '_last_building_cleanup'):
+            self._last_building_cleanup = 0
+            
+        current_time = time.time()
+        if current_time - self._last_building_cleanup < 5.0:
+            return
+            
+        self._last_building_cleanup = current_time
+        
+        # Get buildings that need to be removed
+        buildings_to_remove = []
+        for building_id, building in self.building_system.buildings.items():
+            # Remove buildings with zero health that are not under construction
+            if (building.current_health <= 0 and 
+                building.state != BuildingState.UNDER_CONSTRUCTION and
+                building.state != BuildingState.DESTROYED):
+                buildings_to_remove.append(building_id)
+        
+        # Remove the buildings
+        for building_id in buildings_to_remove:
+            building = self.building_system.buildings[building_id]
+            print(f"🗑️ Removing destroyed {building.building_type} at ({building.x:.0f}, {building.y:.0f})")
+            
+            # Mark as destroyed first
+            building.state = BuildingState.DESTROYED
+            
+            # Remove from building system
+            self.building_system.remove_building(building_id)
+            
+            # Remove visual representation
+            if hasattr(self, 'scene_manager') and self.scene_manager.entity_visualizer:
+                self.scene_manager.entity_visualizer.remove_building_visual(building_id)
         
     def cleanup(self):
         """Clean up all game systems"""

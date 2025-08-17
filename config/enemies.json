@@ -8,7 +8,7 @@
   "enemy_base_stats": {
     "spawn_base": 15,
     "speed_multiplier": 0.7,
-    "health_base": 48,
+    "health_base": 58,
     "laser_range": 144,
     "laser_damage": 0.025,
     "laser_width": 1.5,
@@ -35,7 +35,7 @@
     "kamikaze": {
       "name": "Kamikaze Ship",
       "description": "Fast suicide attacker",
-      "base_health": 60,
+      "base_health": 72,
       "speed": 1.25,
       "radius": 6,
       "size": 10,
@@ -50,7 +50,7 @@
     "large": {
       "name": "Large Ship",
       "description": "Heavy ship with powerful weapons",
-      "base_health": 400,
+      "base_health": 480,
       "speed": 0.25,
       "radius": 15,
       "size": 25,
@@ -66,7 +66,7 @@
     "assault": {
       "name": "Assault Ship",
       "description": "Rapid-fire machine gun attacker",
-      "base_health": 240,
+      "base_health": 288,
       "speed": 0.75,
       "radius": 12,
       "size": 18,
@@ -84,7 +84,7 @@
     "stealth": {
       "name": "Stealth Ship",
       "description": "Cloaking ship with EMP weapons",
-      "base_health": 160,
+      "base_health": 192,
       "speed": 1.0,
       "radius": 8,
       "size": 12,
@@ -102,7 +102,7 @@
     "cruiser": {
       "name": "Heavy Cruiser",
       "description": "Massive ship with charging plasma cannon",
-      "base_health": 600,
+      "base_health": 720,
       "speed": 0.4,
       "radius": 18,
       "size": 30,
@@ -131,6 +131,114 @@
       "missile_cooldown": 120,
       "spawn_chance": 0.15,
       "spawn_weight": 3
+    },
+    
+    "laser_mothership": {
+      "name": "Laser Mothership",
+      "description": "Massive ship with devastating long-range laser weaponry",
+      "base_health": 1200,
+      "speed": 0.3,
+      "radius": 25,
+      "size": 40,
+      "color": [255, 100, 100],
+      "points": 15,
+      "abilities": ["heavy_laser", "shield_regeneration"],
+      "laser_range": 500,
+      "laser_damage": 25,
+      "laser_width": 3.0,
+      "shot_cooldown": 180,
+      "shield_regen_rate": 2.0,
+      "spawn_weight": 2
+    },
+    
+    "carrier": {
+      "name": "Fighter Carrier",
+      "description": "Deployment ship that launches fighter escorts",
+      "base_health": 800,
+      "speed": 0.4,
+      "radius": 22,
+      "size": 35,
+      "color": [100, 100, 200],
+      "points": 12,
+      "abilities": ["deploy_fighters", "escort_command"],
+      "fighter_spawn_count": 3,
+      "fighter_spawn_interval": 300,
+      "max_active_fighters": 6,
+      "escort_range": 150,
+      "spawn_weight": 3
+    },
+    
+    "missile_cruiser": {
+      "name": "Missile Cruiser",
+      "description": "Heavy warship armed with guided missile systems",
+      "base_health": 1500,
+      "speed": 0.35,
+      "radius": 20,
+      "size": 32,
+      "color": [150, 150, 50],
+      "points": 13,
+      "abilities": ["missile_barrage", "point_defense"],
+      "missile_range": 450,
+      "missile_damage": 20,
+      "missile_count": 4,
+      "missile_cooldown": 240,
+      "salvo_delay": 60,
+      "spawn_weight": 2
+    },
+    
+    "dreadnought": {
+      "name": "Dreadnought",
+      "description": "Colossal battleship with multiple weapon systems",
+      "base_health": 3600,
+      "speed": 0.2,
+      "radius": 30,
+      "size": 50,
+      "color": [80, 40, 40],
+      "points": 25,
+      "abilities": ["multi_weapon", "armor_plating", "repair_systems"],
+      "primary_laser_range": 400,
+      "primary_laser_damage": 30,
+      "secondary_missile_range": 350,
+      "secondary_missile_damage": 18,
+      "armor_reduction": 0.3,
+      "repair_rate": 1.5,
+      "weapon_cooldown": 150,
+      "spawn_weight": 1
+    },
+    
+    "interceptor": {
+      "name": "Fast Interceptor",
+      "description": "Ultra-fast ship designed to hunt player projectiles",
+      "base_health": 120,
+      "speed": 2.0,
+      "radius": 6,
+      "size": 12,
+      "color": [255, 255, 100],
+      "points": 4,
+      "abilities": ["projectile_intercept", "evasive_maneuvers"],
+      "intercept_range": 80,
+      "evasion_chance": 0.3,
+      "burst_speed": 3.5,
+      "burst_duration": 120,
+      "spawn_weight": 8
+    },
+    
+    "support_ship": {
+      "name": "Support Vessel",
+      "description": "Non-combat ship that buffs nearby enemies",
+      "base_health": 300,
+      "speed": 0.8,
+      "radius": 12,
+      "size": 20,
+      "color": [100, 255, 100],
+      "points": 8,
+      "abilities": ["buff_allies", "healing_beam"],
+      "buff_range": 200,
+      "buff_damage_multiplier": 1.5,
+      "buff_speed_multiplier": 1.3,
+      "heal_range": 150,
+      "heal_rate": 3.0,
+      "spawn_weight": 4
     }
   },
   
