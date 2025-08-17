@@ -44,47 +44,69 @@ class WaveSystem:
         world_width = config.game.get("display", {}).get("world_width", 4800)
         world_height = config.game.get("display", {}).get("world_height", 2700)
         
-        # Extended spawn points for multi-directional waves
+        # Extended spawn points for multi-directional waves (24 points for better coverage)
         self.all_spawn_points = [
-            # Left edge spawn points
-            (0, world_height // 4),              # Left-top
+            # Left edge spawn points (6 points)
+            (0, world_height // 6),              # Left-top
+            (0, world_height // 3),              # Left-upper  
             (0, world_height // 2),              # Left-center
-            (0, 3 * world_height // 4),          # Left-bottom
+            (0, 2 * world_height // 3),          # Left-lower
+            (0, 5 * world_height // 6),          # Left-bottom
+            (0, world_height // 8),              # Left-extreme-top
             
-            # Right edge spawn points
-            (world_width, world_height // 4),    # Right-top
+            # Right edge spawn points (6 points)
+            (world_width, world_height // 6),    # Right-top
+            (world_width, world_height // 3),    # Right-upper
             (world_width, world_height // 2),    # Right-center
-            (world_width, 3 * world_height // 4), # Right-bottom
+            (world_width, 2 * world_height // 3), # Right-lower
+            (world_width, 5 * world_height // 6), # Right-bottom
+            (world_width, world_height // 8),     # Right-extreme-top
             
-            # Top edge spawn points
-            (world_width // 4, 0),               # Top-left
+            # Top edge spawn points (6 points)
+            (world_width // 6, 0),               # Top-left
+            (world_width // 3, 0),               # Top-left-center
             (world_width // 2, 0),               # Top-center
-            (3 * world_width // 4, 0),           # Top-right
+            (2 * world_width // 3, 0),           # Top-right-center
+            (5 * world_width // 6, 0),           # Top-right
+            (world_width // 8, 0),               # Top-extreme-left
             
-            # Bottom edge spawn points
-            (world_width // 4, world_height),    # Bottom-left
+            # Bottom edge spawn points (6 points)
+            (world_width // 6, world_height),    # Bottom-left
+            (world_width // 3, world_height),    # Bottom-left-center
             (world_width // 2, world_height),    # Bottom-center
-            (3 * world_width // 4, world_height) # Bottom-right
+            (2 * world_width // 3, world_height), # Bottom-right-center
+            (5 * world_width // 6, world_height), # Bottom-right
+            (world_width // 8, world_height)     # Bottom-extreme-left
         ]
     
     def get_spawn_points_for_wave(self, wave_number: int) -> List[tuple]:
-        """Get spawn points based on wave number - more points for harder waves"""
-        if wave_number <= 3:
-            # Early waves: single spawn point (center left)
-            return [self.all_spawn_points[1]]  # Left-center
+        """Get spawn points based on wave number - progressively more points for harder waves"""
+        if wave_number <= 2:
+            # Very early waves: single spawn point (center left)
+            return [self.all_spawn_points[2]]  # Left-center
+        elif wave_number <= 4:
+            # Early waves: two spawn points (opposite sides)
+            return [self.all_spawn_points[2], self.all_spawn_points[8]]  # Left-center, Right-center
         elif wave_number <= 6:
-            # Medium waves: two opposite spawn points
-            return [self.all_spawn_points[1], self.all_spawn_points[4]]  # Left-center, Right-center
-        elif wave_number <= 10:
-            # Harder waves: four spawn points (cardinal directions)
-            return [self.all_spawn_points[1], self.all_spawn_points[4], 
-                   self.all_spawn_points[7], self.all_spawn_points[10]]  # Left, Right, Top, Bottom centers
-        elif wave_number <= 15:
-            # Very hard waves: six spawn points
+            # Medium waves: four spawn points (all cardinal directions)
+            return [self.all_spawn_points[2], self.all_spawn_points[8],   # Left/Right center
+                   self.all_spawn_points[16], self.all_spawn_points[22]]  # Top/Bottom center
+        elif wave_number <= 8:
+            # Medium-hard waves: eight spawn points (expanded coverage)
+            return [self.all_spawn_points[1], self.all_spawn_points[2], self.all_spawn_points[3],  # Left edge
+                   self.all_spawn_points[7], self.all_spawn_points[8], self.all_spawn_points[9],   # Right edge
+                   self.all_spawn_points[16], self.all_spawn_points[22]]  # Top/Bottom centers
+        elif wave_number <= 12:
+            # Hard waves: twelve spawn points (half perimeter)
             return [self.all_spawn_points[0], self.all_spawn_points[1], self.all_spawn_points[2],  # Left edge
-                   self.all_spawn_points[3], self.all_spawn_points[4], self.all_spawn_points[5]]   # Right edge
+                   self.all_spawn_points[6], self.all_spawn_points[7], self.all_spawn_points[8],   # Right edge  
+                   self.all_spawn_points[14], self.all_spawn_points[15], self.all_spawn_points[16], # Top edge
+                   self.all_spawn_points[20], self.all_spawn_points[21], self.all_spawn_points[22]] # Bottom edge
+        elif wave_number <= 18:
+            # Very hard waves: eighteen spawn points (3/4 perimeter)
+            return self.all_spawn_points[0:18]  # First 18 spawn points
         else:
-            # Extreme waves: all spawn points
+            # Extreme waves: all spawn points (full perimeter assault)
             return self.all_spawn_points
         
     def update(self, dt: float):
@@ -143,9 +165,9 @@ class WaveSystem:
         """Generate enemy list for a wave with clusters"""
         enemies = []
         
-        # Geometric scaling of difficulty
+        # Geometric scaling of difficulty with more aggressive cluster growth
         base_enemies_per_cluster = max(2, int(2 * (self.growth_factor ** (wave_number - 1))))
-        num_clusters = max(1, wave_number + 1)  # More clusters as waves progress (faster scaling)
+        num_clusters = max(1, min(12, wave_number + 2))  # More clusters as waves progress, cap at 12 for performance
         
         print(f"🌊 Wave {wave_number}: {num_clusters} clusters, ~{base_enemies_per_cluster} enemies per cluster")
         
@@ -170,15 +192,17 @@ class WaveSystem:
                 offset_x = random.uniform(-cluster_spread, cluster_spread)
                 offset_y = random.uniform(-cluster_spread, cluster_spread)
                 
+                # Reduced spawn delays for more concurrent spawning
+                individual_delay = i * (self.spawn_interval * 0.3)  # 70% faster individual spawning
                 enemies.append({
                     "type": enemy_type,
                     "x": spawn_point[0] + offset_x,
                     "y": spawn_point[1] + offset_y,
-                    "spawn_delay": cluster_delay + (i * self.spawn_interval)  # Stagger spawning within cluster
+                    "spawn_delay": cluster_delay + individual_delay
                 })
             
-            # Next cluster spawns after current cluster + interval
-            cluster_delay += (cluster_size * self.spawn_interval) + self.cluster_interval
+            # Reduced cluster delays for more overlapping waves
+            cluster_delay += (cluster_size * self.spawn_interval * 0.4) + (self.cluster_interval * 0.5)  # 50% faster cluster spawning
         
         # Sort by spawn delay so they spawn in order
         enemies.sort(key=lambda x: x.get("spawn_delay", 0))
@@ -186,39 +210,40 @@ class WaveSystem:
         return enemies
     
     def get_available_enemy_types(self, wave_number: int) -> List[str]:
-        """Get available enemy types for a wave"""
+        """Get available enemy types for a wave - introducing larger units earlier"""
         types = ["basic"]
-        if wave_number >= 3:
+        if wave_number >= 2:
             types.append("kamikaze")
-        if wave_number >= 5:
+        if wave_number >= 4:
             types.append("stealth") 
-        if wave_number >= 8:
-            types.append("large")
-        if wave_number >= 12:
-            types.append("assault")
+        if wave_number >= 5:
+            types.append("large")  # Large units start at wave 5 (was wave 8)
+        if wave_number >= 7:
+            types.append("assault")  # Assault units start at wave 7 (was wave 12)
+        if wave_number >= 10:
+            types.append("cruiser")  # Cruisers start at wave 10 (was wave 15)
         if wave_number >= 15:
-            types.append("cruiser")
-        if wave_number >= 20:
-            types.append("mothership")
+            types.append("mothership")  # Motherships start at wave 15 (was wave 20)
         return types
     
     def choose_enemy_type(self, available_types: List[str], wave_number: int) -> str:
-        """Choose an enemy type with weighted probability"""
-        # Basic enemies are common early, rarer later
+        """Choose an enemy type with weighted probability - emphasizing larger units in later waves"""
         weights = []
         for enemy_type in available_types:
             if enemy_type == "basic":
-                weights.append(max(1, 10 - wave_number))  # Gets rarer
+                weights.append(max(1, 8 - wave_number))  # Gets rarer faster
             elif enemy_type == "kamikaze":
                 weights.append(3)
             elif enemy_type == "stealth":
                 weights.append(2)
-            elif enemy_type in ["large", "assault"]:
-                weights.append(2)
+            elif enemy_type == "large":
+                weights.append(max(1, wave_number - 3))  # Gets more common after wave 5
+            elif enemy_type == "assault":
+                weights.append(max(1, wave_number - 5))  # Gets more common after wave 7
             elif enemy_type == "cruiser":
-                weights.append(1)
+                weights.append(max(1, wave_number - 8))  # Gets more common after wave 10
             elif enemy_type == "mothership":
-                weights.append(1 if wave_number >= 25 else 0)
+                weights.append(max(1, wave_number - 12) if wave_number >= 15 else 0)  # More common after wave 15
             else:
                 weights.append(1)
         
