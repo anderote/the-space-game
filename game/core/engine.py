@@ -482,10 +482,8 @@ class Panda3DGameEngine:
         # Get buildings that need to be removed
         buildings_to_remove = []
         for building_id, building in self.building_system.buildings.items():
-            # Remove buildings with zero health that are not under construction
-            if (building.current_health <= 0 and 
-                building.state != BuildingState.UNDER_CONSTRUCTION and
-                building.state != BuildingState.DESTROYED):
+            # Remove buildings that are in destroyed state (including depleted asteroids)
+            if building.state == BuildingState.DESTROYED:
                 buildings_to_remove.append(building_id)
         
         # Remove the buildings

@@ -278,21 +278,42 @@ class BuildingSystem:
             
         connected_count = 0
         
-        # Find nearby buildings within connection range
+        # Collect all potential connections and prioritize unconnected buildings
+        potential_connections = []
         for building in self.buildings.values():
             if building == new_building:
                 continue
                 
             if new_building.can_connect_to(building) and building.can_connect_to(new_building):
-                if new_building.connect_to(building):
-                    connected_count += 1
-                    
-                    # Stop if we've reached max connections
-                    if connected_count >= new_building.max_connections:
-                        break
+                # Calculate distance for sorting
+                distance = ((new_building.x - building.x)**2 + (new_building.y - building.y)**2)**0.5
+                
+                # Determine if building is effectively unconnected
+                # For connectors, consider buildings with < 3 connections as "needing connections"
+                # For other buildings, consider 0 connections as unconnected
+                if building.building_type == "connector":
+                    is_unconnected = len(building.connections) < 3
+                else:
+                    is_unconnected = len(building.connections) == 0
+                
+                potential_connections.append((building, distance, is_unconnected))
+        
+        # Sort by priority: unconnected first, then by distance
+        potential_connections.sort(key=lambda x: (not x[2], x[1]))  # Unconnected first, then closest
+        
+        # Make connections in priority order
+        for building, distance, is_unconnected in potential_connections:
+            if new_building.connect_to(building):
+                connected_count += 1
+                connection_type = "unconnected" if is_unconnected else "connected"
+                print(f"    ✓ Connected to {connection_type} {building.building_type} at distance {distance:.0f}")
+                
+                # Stop if we've reached max connections
+                if connected_count >= new_building.max_connections:
+                    break
                         
         if connected_count > 0:
-            print(f"  ✓ Auto-connected to {connected_count} nearby buildings")
+            print(f"  ✓ Auto-connected to {connected_count} nearby buildings (prioritized unconnected)")
             
     def update_construction_preview(self, mouse_world_x: float, mouse_world_y: float, 
                                    minerals: int = 600, energy: int = 50):

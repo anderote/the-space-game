@@ -748,20 +748,25 @@ class Building:
         # Get conversion configuration
         building_config = self.config.buildings.get("building_types", {}).get(self.building_type, {})
         conversion_interval = building_config.get("conversion_interval", 100) / 100.0  # Convert to seconds
-        energy_cost = building_config.get("energy_rate", -2.0)  # Energy consumed per conversion
-        mineral_gain = building_config.get("mineral_generation", 1.0)  # Minerals generated per conversion
+        base_energy_cost = building_config.get("energy_rate", -2.0)  # Base energy consumed per conversion
+        base_mineral_gain = building_config.get("mineral_generation", 1.0)  # Base minerals generated per conversion
+        
+        # Scale efficiency with building level (20% improvement per level)
+        level_multiplier = 1.0 + (self.level - 1) * 0.2
+        energy_cost = abs(base_energy_cost)  # Keep energy cost the same
+        mineral_gain = base_mineral_gain * level_multiplier  # Increase mineral output per level
         
         # Check if it's time to convert
         if current_time - self.last_conversion_time >= conversion_interval:
             # Check if we have enough energy
-            if self.game_engine and self.game_engine.energy >= abs(energy_cost):
+            if self.game_engine and self.game_engine.energy >= energy_cost:
                 # Consume energy and generate minerals
-                self.game_engine.energy -= abs(energy_cost)
+                self.game_engine.energy -= energy_cost
                 self.game_engine.minerals += mineral_gain
                 
                 self.last_conversion_time = current_time
                 
-                print(f"🔄 Converter consumed {abs(energy_cost)} energy → generated {mineral_gain} minerals")
+                print(f"🔄 Converter (Level {self.level}) consumed {energy_cost} energy → generated {mineral_gain:.1f} minerals")
                 
                 # Create visual effect
                 if hasattr(self.game_engine, 'scene_manager'):

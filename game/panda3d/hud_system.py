@@ -865,8 +865,12 @@ class HUDSystem:
                 # Conversion rate from converters
                 elif building.building_type == "converter":
                     building_config = self.game_engine.config.buildings.get("building_types", {}).get("converter", {})
-                    mineral_generation = building_config.get("mineral_generation", 1.0)
+                    base_mineral_generation = building_config.get("mineral_generation", 1.0)
                     conversion_interval = building_config.get("conversion_interval", 100) / 100.0
+                    
+                    # Scale efficiency with building level (20% improvement per level)
+                    level_multiplier = 1.0 + (building.level - 1) * 0.2
+                    mineral_generation = base_mineral_generation * level_multiplier
                     
                     if conversion_interval > 0:
                         minerals_per_second = mineral_generation / conversion_interval

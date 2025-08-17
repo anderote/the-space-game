@@ -833,6 +833,103 @@ class EntityVisualizer:
             
         return None
     
+    def create_healing_effect(self, x, y):
+        """Create visual healing effect with green particles"""
+        try:
+            # Create healing container
+            healing_container = NodePath("healing_effect")
+            healing_container.setPos(x, y, 4)
+            healing_container.reparentTo(self.base.render)
+            
+            # Healing particle colors - greens and blues
+            healing_colors = [
+                (0.0, 1.0, 0.2, 1.0),  # Bright green
+                (0.2, 1.0, 0.4, 1.0),  # Light green
+                (0.0, 0.8, 0.8, 1.0),  # Cyan
+                (0.3, 1.0, 0.3, 1.0),  # Pure green
+                (0.0, 1.0, 0.6, 1.0),  # Mint green
+                (0.1, 0.9, 1.0, 1.0),  # Light blue
+            ]
+            
+            import random
+            
+            # Create healing particles floating upward
+            for i in range(8):
+                particle = self.create_circle(random.uniform(2, 4), random.choice(healing_colors))
+                if particle:
+                    # Start from slightly below and move upward
+                    start_x = random.uniform(-8, 8)
+                    start_y = random.uniform(-8, 8)
+                    particle.setPos(start_x, start_y, -2)
+                    particle.reparentTo(healing_container)
+                    
+                    # Animate healing particles floating upward
+                    try:
+                        from direct.interval.IntervalGlobal import LerpPosInterval, LerpColorScaleInterval, LerpScaleInterval, Parallel
+                        
+                        # Float upward gently
+                        float_up = LerpPosInterval(particle, 1.2, 
+                                                 (start_x + random.uniform(-3, 3), 
+                                                  start_y + random.uniform(-3, 3), 
+                                                  random.uniform(15, 25)))
+                        
+                        # Fade out
+                        fade_out = LerpColorScaleInterval(particle, 1.2, 
+                                                        (1, 1, 1, 0), 
+                                                        (1, 1, 1, 1))
+                        
+                        # Gentle pulsing scale
+                        pulse = LerpScaleInterval(particle, 0.6, 1.3, 1.0)
+                        
+                        # Run animations in parallel
+                        particle_anim = Parallel(float_up, fade_out, pulse)
+                        particle_anim.start()
+                        
+                    except Exception as anim_error:
+                        print(f"Error animating healing particle: {anim_error}")
+            
+            # Central healing glow
+            try:
+                glow = self.create_circle(12, (0.2, 1.0, 0.4, 0.6))  # Soft green glow
+                if glow:
+                    glow.setPos(0, 0, 1)
+                    glow.reparentTo(healing_container)
+                    
+                    # Gentle pulsing glow
+                    from direct.interval.IntervalGlobal import LerpScaleInterval, LerpColorScaleInterval, Sequence
+                    
+                    pulse_out = LerpScaleInterval(glow, 0.3, 1.5, 1.0)
+                    pulse_in = LerpScaleInterval(glow, 0.3, 1.0, 1.5)
+                    fade_out = LerpColorScaleInterval(glow, 0.4, (1, 1, 1, 0), (1, 1, 1, 0.6))
+                    
+                    glow_anim = Sequence(pulse_out, pulse_in, fade_out)
+                    glow_anim.start()
+                    
+            except Exception as glow_error:
+                print(f"Error creating healing glow: {glow_error}")
+            
+            # Clean up healing effect
+            def cleanup_healing():
+                try:
+                    healing_container.removeNode()
+                except:
+                    pass
+            
+            # Schedule cleanup
+            try:
+                from direct.task import Task
+                self.base.taskMgr.doMethodLater(1.3, lambda task: cleanup_healing(), "cleanup_healing")
+            except Exception as cleanup_error:
+                print(f"Error scheduling healing cleanup: {cleanup_error}")
+                cleanup_healing()
+                
+            return healing_container
+                
+        except Exception as e:
+            print(f"Error creating healing effect: {e}")
+            
+        return None
+    
     def create_laser_impact_effect(self, x, y):
         """Create particle effect when laser hits enemy"""
         try:
