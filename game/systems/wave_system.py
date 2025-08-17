@@ -34,7 +34,7 @@ class WaveSystem:
         self.cluster_interval = 2.0  # Time between clusters within a wave
         self.wave_interval = 30.0  # Time between waves (gets shorter over time)
         self.max_wave_duration = 240.0  # Maximum wave duration (4 minutes)a
-        self.growth_factor = 3.8  # Geometric growth factor for difficulty (2x faster ramp)
+        self.growth_factor = 1.3  # Geometric growth factor for difficulty (reduced by half)
         
         # Game start time
         self.game_start_time = time.time()
@@ -231,13 +231,14 @@ class WaveSystem:
         
         enemy_data = self.enemies_to_spawn.pop(0)
         
-        # Create enemy
+        # Create enemy with wave scaling
         enemy = Enemy(
             enemy_data["type"],
             enemy_data["x"],
             enemy_data["y"],
             self.config,
-            self.game_engine
+            self.game_engine,
+            self.current_wave
         )
         
         # Create visual representation with velocity information

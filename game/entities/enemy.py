@@ -19,25 +19,31 @@ class EnemyState(Enum):
 class Enemy:
     """Basic enemy entity"""
     
-    def __init__(self, enemy_type: str, x: float, y: float, config, game_engine=None):
+    def __init__(self, enemy_type: str, x: float, y: float, config, game_engine=None, wave_number=1):
         # Core identity
         self.enemy_type = enemy_type
         self.x = x
         self.y = y
         self.config = config
         self.game_engine = game_engine
+        self.wave_number = wave_number
         
         # Get enemy configuration
         enemy_config = config.enemies.get("enemy_types", {}).get(enemy_type, {})
         
-        # Basic properties
+        # Basic properties with wave scaling (10% increase per wave)
+        wave_multiplier = 1.0 + (wave_number - 1) * 0.1  # 10% increase per wave level
+        
         base_health = enemy_config.get("base_health", 24)
         # Handle "calculated" or string values
         if isinstance(base_health, str) or base_health == "calculated":
-            self.max_health = 24.0  # Default health
+            self.max_health = 24.0 * wave_multiplier  # Default health with wave scaling
         else:
-            self.max_health = float(base_health)
+            self.max_health = float(base_health) * wave_multiplier
         self.current_health = self.max_health
+        
+        # Store wave multiplier for damage calculations
+        self.wave_damage_multiplier = wave_multiplier
         self.speed = enemy_config.get("speed", 0.5) * 60  # Convert to pixels per second
         self.radius = enemy_config.get("radius", 8)
         self.points = enemy_config.get("points", 1)
@@ -224,21 +230,23 @@ class Enemy:
             return
             
         if self.enemy_type == "basic":
-            # Fighter fires short-range laser
+            # Fighter fires short-range laser (damage scales with wave)
+            base_damage = 5.0 * self.wave_damage_multiplier
             laser = Laser(
                 self.x, self.y, target_x, target_y,
-                damage=5.0, max_range=self.weapon_range,
+                damage=base_damage, max_range=self.weapon_range,
                 owner=self, game_engine=self.game_engine
             )
             if self.game_engine:
                 self.game_engine.projectiles.append(laser)
                 
         elif self.enemy_type == "mothership":
-            # Mothership fires bullets
+            # Mothership fires bullets (damage scales with wave)
+            base_damage = 10.0 * self.wave_damage_multiplier
             bullet = Projectile(
                 ProjectileType.BULLET,
                 self.x, self.y, target_x, target_y,
-                speed=300.0, damage=10.0, max_range=self.weapon_range,
+                speed=300.0, damage=base_damage, max_range=self.weapon_range,
                 owner=self, game_engine=self.game_engine
             )
             if self.game_engine:

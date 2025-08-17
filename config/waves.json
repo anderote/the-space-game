@@ -9,7 +9,7 @@
     "wait_time": 120,
     "spawn_interval": 30,
     "initial_wait": 9600,
-    "growth_factor": 1.6,
+    "growth_factor": 0.8,
     "formation_size_threshold": 20,
     "max_formations": 8
   },
@@ -146,7 +146,7 @@
     
     "point_scaling": {
       "base_points": 10,
-      "growth_factor": 1.6,
+      "growth_factor": 0.8,
       "formula": "base_points * (growth_factor ^ wave)"
     },
     
