@@ -34,7 +34,12 @@ import {
   researchLoadout,
   normalizeResearch,
 } from "./research.js";
-import { experienceBudget, buyBaseStat, buyTowerSkill } from "./experience.js";
+import {
+  experienceBudget,
+  masteryBudget,
+  buyBaseStat,
+  buyTowerSkill,
+} from "./experience.js";
 import { researchView } from "./research-view.js";
 const app = document.querySelector("#app");
 const esc = (s) =>
@@ -391,15 +396,16 @@ function updateHud() {
   );
   const intelButton = document.querySelector('[data-action="run-research"]');
   const command = experienceBudget(progress);
+  const mastery = masteryBudget(progress);
   set(
     "xp-hud",
     sim.mission.classic
       ? "CLASSIC · I"
-      : `LV ${command.level} · ${command.available} SP · I`,
+      : `LV ${command.level} · ${command.available} SP · ${mastery.available} MP · I`,
   );
   intelButton.title = sim.mission.classic
     ? "Classic · original rules"
-    : `Progression · I | Intel from rare ships | Level ${command.level}: ${Math.floor(command.into)}/${command.needed} XP | ${command.available} stat points`;
+    : `Progression · I | Intel from rare ships | Level ${command.level}: ${Math.floor(command.into)}/${command.needed} XP | ${command.available} stat points | Mastery level ${mastery.level}: ${Math.floor(mastery.into)}/${mastery.needed} XP | ${mastery.available} mastery points`;
   set("minerals", fmt(sim.minerals));
   set("income", `+${fmt(sim.income * 60)} / MIN`);
   set("energy", fmt(sim.energy));
@@ -1198,6 +1204,12 @@ function frame(now) {
       saveActive();
       toast(
         `Command level ${experienceBudget(progress).level} · +${experience.levels} stat point${experience.levels > 1 ? "s" : ""} · Press I`,
+      );
+    }
+    if (experience.masteryLevels > 0) {
+      saveActive();
+      toast(
+        `Mastery level ${masteryBudget(progress).level} · +${experience.masteryLevels} tower points · Press I`,
       );
     }
     if (earned > 0) {

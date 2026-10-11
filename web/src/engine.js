@@ -1,7 +1,7 @@
 import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
 import { ASTEROID_ORE_MULTIPLIER } from "./structure-upgrades.js";
-import { XP_RATES, normalizeRanks } from "./experience.js";
+import { XP_RATES, MASTERY_RATES, normalizeRanks } from "./experience.js";
 import { normalizeTowerRanks } from "./tower-skills.js";
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export function rng(seed) {
@@ -127,6 +127,8 @@ export class Simulation {
     this.intelCredit = { rare: 0, earned: 0 };
     this.xpEarned = 0;
     this.xpCredit = 0;
+    this.masteryEarned = 0;
+    this.masteryCredit = 0;
     this.bossKills = 0;
     this.lost = 0;
     this.spent = 0;
@@ -320,6 +322,7 @@ export class Simulation {
     const configured = stats(b);
     b.hp = b.maxHp = configured.hp;
     b.baseCost = b.investment = configured.cost;
+    b.masteryConstructionCost = free ? 0 : configured.cost;
     b.energy = free ? (configured.capacity || 0) * 0.7 : 0;
     this.buildings.push(b);
     this.networkDirty = true;
@@ -545,6 +548,7 @@ export class Simulation {
       return { ok: false, reason: `Need ${cost} minerals` };
     this.minerals -= cost;
     this.spent += cost;
+    b.masteryConstructionCost = cost;
     b.investment += cost;
     b.upgradeSpent = (b.upgradeSpent || 0) + cost;
     const oldMax = b.maxHp;
@@ -953,6 +957,9 @@ export class Simulation {
               b.constructionUnits / (b.constructionTarget || 10),
             );
             if (b.construction >= 1) {
+              this.masteryEarned +=
+                (b.masteryConstructionCost || 0) * MASTERY_RATES.construction;
+              b.masteryConstructionCost = 0;
               b.upgrading = false;
               b.energy = ["miner", "missile"].includes(b.type) ? 1 : b.energy;
               this.networkDirty = true;
@@ -1511,13 +1518,17 @@ export class Simulation {
         Math.min(Math.max(0, target.hp || 0), Math.max(0, amount)) *
         XP_RATES.combat;
     target.hp = (target.hp ?? 20) - amount;
-    if (wasAlive && target.hp <= 0) target.defeatedByPlayer = true;
+    if (wasAlive && target.hp <= 0) {
+      target.defeatedByPlayer = true;
+      if (!target.interceptable) this.masteryEarned += MASTERY_RATES.kill;
+    }
     if (target.interceptable && target.hp <= 0) target.life = 0;
   }
   creditRepair(target, amount) {
     const eligible = Math.min(target.repairXpDebt || 0, amount);
     target.repairXpDebt = Math.max(0, (target.repairXpDebt || 0) - eligible);
     this.xpEarned += eligible * XP_RATES.repair;
+    this.masteryEarned += eligible * MASTERY_RATES.repair;
   }
   finish(status) {
     if (this.status !== "playing") return;
@@ -1546,6 +1557,8 @@ export class Simulation {
         intelCollected: this.intelCollected,
         xpEarned: this.xpEarned,
         xpCredit: this.xpCredit,
+        masteryEarned: this.masteryEarned,
+        masteryCredit: this.masteryCredit,
         combatKills: this.combatKills,
         intelCredit: this.intelCredit,
         clearedWave: this.clearedWave || 0,
@@ -1588,6 +1601,8 @@ export class Simulation {
       "intelCollected",
       "xpEarned",
       "xpCredit",
+      "masteryEarned",
+      "masteryCredit",
       "buildings",
       "asteroids",
       "enemies",
@@ -1617,6 +1632,8 @@ export class Simulation {
       this.intelCredit = { rare: this.intelCollected, earned: 0 };
     // Legacy operations start XP tracking now; do not re-credit historic activity.
     if (!Number.isFinite(s.xpCredit)) this.xpCredit = this.xpEarned;
+    if (!Number.isFinite(s.masteryCredit))
+      this.masteryCredit = this.masteryEarned;
     for (const b of this.buildings) {
       b.research = this.rules;
       b.construction ??= 1;

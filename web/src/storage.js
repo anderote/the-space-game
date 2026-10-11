@@ -13,7 +13,7 @@ export function freshProgress() {
     progressionVersion: 2,
     research: { owned: [], active: [] },
     intel: { rare: 0, legacy: 0 },
-    experience: { xp: 0, ranks: {}, towers: {} },
+    experience: { xp: 0, masteryXp: 0, ranks: {}, towers: {} },
     completed: {},
     challenges: {},
     livery: "mint",
@@ -124,13 +124,27 @@ export function bankIntel(progress, sim) {
   return earned;
 }
 export function bankExperience(progress, sim) {
-  if (!earnsFieldIntel(sim.mission)) return { xp: 0, levels: 0 };
+  if (!earnsFieldIntel(sim.mission))
+    return { xp: 0, levels: 0, mastery: 0, masteryLevels: 0 };
   progress.experience = normalizeExperience(progress.experience);
   const before = experienceLevel(progress.experience.xp);
+  const masteryBefore = experienceLevel(progress.experience.masteryXp);
+  const mastery = Math.max(
+    0,
+    (sim.masteryEarned || 0) - (sim.masteryCredit || 0),
+  );
+  progress.experience.masteryXp += mastery;
+  sim.masteryCredit = Math.max(sim.masteryCredit || 0, sim.masteryEarned || 0);
   const xp = Math.max(0, sim.xpEarned - sim.xpCredit);
   progress.experience.xp += xp;
   sim.xpCredit = Math.max(sim.xpCredit, sim.xpEarned);
-  return { xp, levels: experienceLevel(progress.experience.xp) - before };
+  return {
+    xp,
+    levels: experienceLevel(progress.experience.xp) - before,
+    mastery,
+    masteryLevels:
+      experienceLevel(progress.experience.masteryXp) - masteryBefore,
+  };
 }
 export function starsTotal(p) {
   return Object.values(p.completed).reduce((s, c) => s + (c.stars || 0), 0);

@@ -47,11 +47,11 @@ Armor reduces hull damage before powered shielding, while derelict mission objec
 
 ## Tower mastery
 
-A third progression tab specializes nine classes: relay, miner, solar, energy store, repair, Basic laser, Pulser, THEL and missile. Their 52 tracks cover appropriate combat/utility improvements plus health, armor and powered shields on every class. Each rank costs one shared XP point. Purchases apply to existing and future buildings of that class, stack with technology/base stats, and persist. Classic disables them. Mineral tier upgrades remain separate. The complete effects and conservation rules are in [TOWER_MASTERY.md](TOWER_MASTERY.md).
+A third progression tab specializes nine classes: relay, miner, solar, energy store, repair, Basic laser, Pulser, THEL and missile. Their 52 tracks cover appropriate combat/utility improvements plus health, armor and powered shields on every class. Each rank costs one independent mastery point. Purchases apply to existing and future buildings of that class, stack with technology/base stats, and persist. Classic disables them. Mineral tier upgrades remain separate. The complete effects and conservation rules are in [TOWER_MASTERY.md](TOWER_MASTERY.md).
 
 ## Saves, migration and reset
 
-The profile holds Intel and XP; snapshots hold cumulative collected rewards and their last banked counters. Only positive uncredited deltas are banked, and profile plus snapshot are saved together. Reloading cannot duplicate a kill or mining cycle. Legacy snapshots begin the new counters at migration.
+The profile holds Intel, Command XP and Mastery XP; snapshots hold cumulative collected rewards and their last banked counters. Only positive uncredited deltas are banked, and profile plus snapshot are saved together. Reloading cannot duplicate a kill or mining cycle. Legacy snapshots begin the new counters at migration.
 
 The old currency schedule is frozen into a one-time legacy Intel credit, preserving existing balances and purchases. All valid owned technology IDs become active, including formerly unequipped upgrades. Recorded historical mining/combat totals convert once into XP at 0.2 XP/mineral and 5 XP/recorded kill; historical repair activity is not estimated. Legacy conversion disappears after the new profile schema is saved.
 

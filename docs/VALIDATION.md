@@ -4,8 +4,8 @@
 
 ## Automated
 
-- `npm test`: **130 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~694 kB / 190 kB gzip; CSS ~33 kB / 7.6 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **136 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~696 kB / 191 kB gzip; CSS ~33 kB / 7.6 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
@@ -64,6 +64,14 @@ Screenshots: [expanded tree](screenshots/research-expanded.jpg), [XP base stats]
 - The player's main save was preserved. This follow-up claims desktop QA only.
 
 Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the isolated QA profile.
+
+## Independent mastery XP follow-up
+
+- `npm test`: 136 passed. New simulation checks cover once-only ship-kill rewards, real paid construction/upgrade completion, canceled/free builds, real repair debt, independent purchasing, snapshot banking, save round trips, migration and testing-mode exclusions.
+- Added a third persistent economy: mastery earns 10 XP per ship kill, 0.1 per mineral paid for completed construction/upgrades, and 0.1 per eligible hull repair. Level thresholds mirror Command XP; only tower specialization purchases spend mastery points.
+- Dedicated desktop Chrome QA on isolated port 5179 showed old Basic laser Damage rank one preserved, mastery level two funded with 100 XP, zero available mastery points and one returned base-stat point. Intel remained 14 and Command level six remained intact. All three currencies and earning rules were visible; no console warnings/errors.
+- Main player save was not used for QA. New game rewards were validated in actual simulation tests; this browser check verifies migration and UI, not a complete campaign playthrough.
+- Screenshot: [Independent mastery XP](screenshots/mastery-xp.jpg).
 
 ## Limits
 

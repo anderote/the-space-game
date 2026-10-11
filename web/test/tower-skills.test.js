@@ -147,14 +147,15 @@ test("live Clock and mastery upgrades preserve the elapsed fraction of active cy
   assert.equal(sun.energy, energy);
 });
 
-test("base stats and tower skills spend the same persistent XP budget", () => {
+test("base stats and tower skills spend independent persistent XP budgets", () => {
   const p = freshProgress();
   p.experience.xp = 250;
+  p.experience.masteryXp = 100;
   assert.equal(buyBaseStat(p, "economy").ok, true);
   assert.equal(buyTowerSkill(p, "laser", "damage").ok, true);
-  assert.equal(experienceBudget(p).available, 0);
+  assert.equal(experienceBudget(p).available, 1);
   assert.equal(buyTowerSkill(p, "repair", "repairRate").ok, false);
-  assert.equal(buyBaseStat(p, "fabrication").ok, false);
+  assert.equal(buyBaseStat(p, "fabrication").ok, true);
   assert.equal(buyTowerSkill(p, "laser", "unknown").ok, false);
   let saved;
   const store = {

@@ -63,13 +63,23 @@ test("banking and resuming cannot duplicate rare Intel or XP", () => {
   s.intelCollected = 5;
   s.xpEarned = 260;
   assert.equal(bankIntel(p, s), 5);
-  assert.deepEqual(bankExperience(p, s), { xp: 260, levels: 2 });
+  assert.deepEqual(bankExperience(p, s), {
+    xp: 260,
+    levels: 2,
+    mastery: 0,
+    masteryLevels: 0,
+  });
   p.active = s.snapshot();
   saveProgress(p, store);
   const restored = loadProgress(store),
     run = new Simulation(CAMPAIGN[1], "normal", restored.active);
   assert.equal(bankIntel(restored, run), 0);
-  assert.deepEqual(bankExperience(restored, run), { xp: 0, levels: 0 });
+  assert.deepEqual(bankExperience(restored, run), {
+    xp: 0,
+    levels: 0,
+    mastery: 0,
+    masteryLevels: 0,
+  });
   run.intelCollected += 2;
   run.xpEarned += 20;
   assert.equal(bankIntel(restored, run), 2);

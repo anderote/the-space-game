@@ -54,7 +54,7 @@ test("XP crosses exact increasing level thresholds and points cannot be overspen
   assert.equal(experienceBudget(p).available, 0);
   assert.deepEqual(
     normalizeExperience({ xp: Infinity, ranks: { armor: 50 } }),
-    { xp: 0, ranks: {}, towers: {} },
+    { xp: 0, ranks: {}, masteryXp: 0, towers: {} },
   );
   assert.deepEqual(
     normalizeExperience({ xp: 100, ranks: { armor: 999, harvest: 999 } }).ranks,

@@ -88,18 +88,26 @@ const threshold = (level) => 25 * (level - 1) ** 2 + 75 * (level - 1);
 export function normalizeExperience(value = {}) {
   const xp = safe(value?.xp);
   const ranks = normalizeRanks(value?.ranks, experienceLevel(xp) - 1);
-  const spent = Object.values(ranks).reduce((n, rank) => n + rank, 0);
+  // Old mastery purchases retain their ranks, funded by a one-time migration.
+  const legacyTowers = normalizeTowerRanks(
+    value?.towers,
+    experienceLevel(xp) - 1 - Object.values(ranks).reduce((a, b) => a + b, 0),
+  );
+  const masteryXp =
+    value?.masteryXp === undefined
+      ? threshold(towerPoints(legacyTowers) + 1)
+      : safe(value.masteryXp);
   return {
     xp,
     ranks,
-    towers: normalizeTowerRanks(value?.towers, experienceLevel(xp) - 1 - spent),
+    masteryXp,
+    towers: normalizeTowerRanks(value?.towers, experienceLevel(masteryXp) - 1),
   };
 }
 export function experienceBudget(progress) {
   const e = normalizeExperience(progress.experience);
   const level = experienceLevel(e.xp);
-  const spent =
-    Object.values(e.ranks).reduce((a, b) => a + b, 0) + towerPoints(e.towers);
+  const spent = Object.values(e.ranks).reduce((a, b) => a + b, 0);
   return {
     ...e,
     level,
@@ -109,6 +117,22 @@ export function experienceBudget(progress) {
     needed: threshold(level + 1) - threshold(level),
   };
 }
+export function masteryBudget(progress) {
+  const e = normalizeExperience(progress.experience),
+    level = experienceLevel(e.masteryXp),
+    spent = towerPoints(e.towers);
+  return {
+    ...e,
+    xp: e.masteryXp,
+    level,
+    spent,
+    available: level - 1 - spent,
+    into: e.masteryXp - threshold(level),
+    needed: threshold(level + 1) - threshold(level),
+  };
+}
+export const MASTERY_RATES = { kill: 10, construction: 0.1, repair: 0.1 };
+
 export function buyBaseStat(progress, id) {
   const stat = BASE_STATS.find((s) => s.id === id);
   if (!stat) return { ok: false, reason: "Unknown base stat" };
@@ -127,8 +151,11 @@ export function buyTowerSkill(progress, type, id) {
   const ranks = progress.experience.towers[type] || {};
   const rank = ranks[id] || 0;
   if (rank >= skill.max) return { ok: false, reason: "Maximum rank reached" };
-  if (experienceBudget(progress).available < 1)
-    return { ok: false, reason: "Earn another level to gain a stat point" };
+  if (masteryBudget(progress).available < 1)
+    return {
+      ok: false,
+      reason: "Earn another mastery level to gain a tower point",
+    };
   progress.experience.towers[type] = { ...ranks, [id]: rank + 1 };
   return { ok: true };
 }

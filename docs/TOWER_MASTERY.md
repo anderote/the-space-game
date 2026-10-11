@@ -1,6 +1,6 @@
 # Clock speed, fabrication economy and tower mastery
 
-Modern XP skill upgrades added 2026-10-11. Press **I** during play, then choose **Base stats** or **Tower mastery**. All purchases use one persistent XP-point budget, cost one point per rank, and apply immediately. Technology research still uses Intel. Classic disables these persistent bonuses; Sandbox can use them without earning XP.
+Modern XP skill upgrades added 2026-10-11. Press **I** during play, then choose **Base stats** or **Tower mastery**. Base stats use Command XP points; tower specializations use a separate persistent Mastery XP pool. Each rank costs one point and applies immediately. Technology research still uses Intel. Classic disables these persistent bonuses; Sandbox can use them without earning XP.
 
 ## Global skills
 
@@ -38,4 +38,12 @@ There are nine independent class specializations and 52 skill tracks. Every trac
 - Live cadence changes preserve each timer’s elapsed fraction. Accelerated callbacks carry small timestep overshoots rather than accumulating rounding delays; source supply and fixed simulation steps still constrain actual throughput.
 - Saves include tower ranks and operation rules. Old profiles gain an empty specialization map while retaining existing global purchases and XP. Shared-point normalization rejects unknown tracks, excess ranks and overspending.
 
-The inspector displays configured output, cycle/burst/salvo intervals, hull, range and defensive percentages. The tree shows each class’s invested points, rank caps and disabled purchases when the shared budget is empty. Numbers remain initial balance tuning.
+The inspector displays configured output, cycle/burst/salvo intervals, hull, range and defensive percentages. The tree shows each class’s invested points, rank caps and disabled purchases when the mastery budget is empty. Numbers remain initial balance tuning.
+
+## Independent mastery experience
+
+The third progression currency is Mastery XP: player-attributed ship kills award 10 XP each; completed paid construction and upgrades award 0.1 XP per mineral actually paid; restoring tracked battle/objective damage awards 0.1 XP per hull point. Free starting structures, canceled construction, intercepted missiles, mining, overkill and untracked maintenance grant no mastery reward. One point arrives at 100 XP, then subsequent levels require 150, 200, 250 XP, and so on.
+
+Mastery points can be assigned to any of the nine classes. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. Classic and Sandbox award none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
+
+Migration retains old mastery ranks, grants exactly enough mastery XP to fund them, and returns their former cost to the Command point budget. Subsequent normalization is idempotent. Existing operations start tracking mastery now; historical activity is not guessed.

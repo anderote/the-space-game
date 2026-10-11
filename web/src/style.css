@@ -2113,7 +2113,7 @@ input {
 .progression-sources {
   grid-column: 1/-1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   padding: 18px 28px;
   border-bottom: 1px solid var(--line);
@@ -2435,4 +2435,8 @@ input {
   .tower-specialization .base-stat-card p {
     min-height: 0;
   }
+}
+
+.mastery-wallet strong {
+  color: #8dc6ff;
 }
