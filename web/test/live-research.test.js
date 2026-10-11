@@ -110,9 +110,9 @@ test("legacy snapshots start new tracking now and malformed counters are sanitiz
   });
 });
 
-test("Classic and Sandbox earn no progression; losses retain banked Intel and XP", () => {
+test("Classic earns no progression; losses retain banked Intel and XP", () => {
   const p = freshProgress();
-  for (const m of [CLASSIC[0], skirmish(42, "sandbox")]) {
+  for (const m of [CLASSIC[0]]) {
     const s = new Simulation(m);
     s.intelCollected = 100;
     s.xpEarned = 1000;

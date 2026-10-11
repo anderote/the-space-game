@@ -21,7 +21,7 @@ Every profile begins with 6 Intel. A gold-marked elite appears as the first ordi
 
 Every purchased technology stays active: no equipment slots, weight limits or equip/unequip controls. Dependencies must be researched; purchasing deducts the listed Intel once. Free technology respec refunds the exact invested Intel and preserves XP/base stats. Some mid-tree technologies retain explicit tradeoffs: solar overdrive reduces hull, broader warheads reduce impact damage, and stronger THEL beams consume proportionally more energy. Later upgrades can offset these costs.
 
-Research and XP persist across games and campaigns. Expedition, Challenges and Endless earn progression. Sandbox uses existing bonuses but awards no Intel/XP. Classic disables both research and XP modifiers. Press I, the HUD progression counter or the mission-menu Research button to pause and open Technology tree / Base stats. The previous pause state returns on exit.
+Research and XP persist across games and campaigns. Expedition, Challenges, Endless and Sandbox all earn Intel, Command XP and Mastery XP. Classic disables both research and XP modifiers. Press I, the HUD progression counter or the mission-menu Research button to pause and open Technology tree / Base stats. The previous pause state returns on exit.
 
 ## Command XP and base stats
 

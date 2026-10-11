@@ -107,9 +107,9 @@ test("legacy mastery migration retains ranks and releases command points once", 
   assert.deepEqual(normalizeExperience(e), e);
   assert.deepEqual(normalizeExperience({ ...e, masteryXp: 0 }).towers, {});
 });
-test("testing modes cannot bank mastery and old snapshots start fresh", () => {
+test("Classic cannot bank mastery and old snapshots start fresh", () => {
   const p = freshProgress();
-  for (const mission of [CLASSIC[0], { ...skirmish(1), sandbox: true }]) {
+  for (const mission of [CLASSIC[0]]) {
     const s = new Simulation(mission);
     s.masteryEarned = 100;
     assert.equal(bankExperience(p, s).mastery, 0);

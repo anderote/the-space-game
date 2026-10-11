@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **136 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **144 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~696 kB / 191 kB gzip; CSS ~33 kB / 7.6 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -72,6 +72,12 @@ Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the is
 - Dedicated desktop Chrome QA on isolated port 5179 showed old Basic laser Damage rank one preserved, mastery level two funded with 100 XP, zero available mastery points and one returned base-stat point. Intel remained 14 and Command level six remained intact. All three currencies and earning rules were visible; no console warnings/errors.
 - Main player save was not used for QA. New game rewards were validated in actual simulation tests; this browser check verifies migration and UI, not a complete campaign playthrough.
 - Screenshot: [Independent mastery XP](screenshots/mastery-xp.jpg).
+
+## Free play and Challenge rewards
+
+- `npm test`: 144 passed. Each of the six modern Challenges, Endless and Sandbox now has a real enemy-kill/repair integration test verifying Intel, Command XP and Mastery XP banking without duplicate rewards on resume.
+- Endless and modern Challenges were already eligible. Removed Sandbox’s reward exclusion; its generous resources and manual waves remain available. Classic retains its original progression exclusion.
+- Updated mode/progression help and current design documentation. Production build and diff checks pass.
 
 ## Limits
 

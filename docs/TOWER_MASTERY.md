@@ -1,6 +1,6 @@
 # Clock speed, fabrication economy and tower mastery
 
-Modern XP skill upgrades added 2026-10-11. Press **I** during play, then choose **Base stats** or **Tower mastery**. Base stats use Command XP points; tower specializations use a separate persistent Mastery XP pool. Each rank costs one point and applies immediately. Technology research still uses Intel. Classic disables these persistent bonuses; Sandbox can use them without earning XP.
+Modern XP skill upgrades added 2026-10-11. Press **I** during play, then choose **Base stats** or **Tower mastery**. Base stats use Command XP points; tower specializations use a separate persistent Mastery XP pool. Each rank costs one point and applies immediately. Technology research still uses Intel. Classic disables these persistent bonuses; Sandbox earns progression too.
 
 ## Global skills
 
@@ -44,6 +44,6 @@ The inspector displays configured output, cycle/burst/salvo intervals, hull, ran
 
 The third progression currency is Mastery XP: player-attributed ship kills award 10 XP each; completed paid construction and upgrades award 0.1 XP per mineral actually paid; restoring tracked battle/objective damage awards 0.1 XP per hull point. Free starting structures, canceled construction, intercepted missiles, mining, overkill and untracked maintenance grant no mastery reward. One point arrives at 100 XP, then subsequent levels require 150, 200, 250 XP, and so on.
 
-Mastery points can be assigned to any of the nine classes. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. Classic and Sandbox award none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
+Mastery points can be assigned to any of the nine classes. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. All modern Free play and Challenge modes award rewards; Classic awards none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
 
 Migration retains old mastery ranks, grants exactly enough mastery XP to fund them, and returns their former cost to the Command point budget. Subsequent normalization is idempotent. Existing operations start tracking mastery now; historical activity is not guessed.

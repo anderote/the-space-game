@@ -11,7 +11,7 @@ export function intelActivity(progress) {
   return { earned: totals.rare, rare: totals.rare };
 }
 export function earnsFieldIntel(mission) {
-  return !mission.classic && !mission.sandbox;
+  return !mission.classic;
 }
 // Freeze the previous economy at migration so existing balances are preserved,
 // while future mining, normal kills and medals no longer manufacture Intel.
