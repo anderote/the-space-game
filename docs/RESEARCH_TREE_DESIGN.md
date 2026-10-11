@@ -31,18 +31,23 @@ Research and XP persist across games and campaigns. Expedition, Challenges and E
 | Enemy hull damage | 1 per 20 HP | Actual damage, excluding shields, overkill and projectiles |
 | Battle-damage repairs | 1 per 10 HP | Drone/autoseal restoration of recorded incoming damage or initial objective damage; no drone dock servicing |
 
-The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every track costs one point per rank and caps at twenty. Technology and stat multipliers stack.
+The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every base-stat track costs one point per rank and caps at twenty. Tower mastery uses the same point pool, with seven base tracks and 52 tower-specific tracks total. Technology and stat multipliers stack.
 
 | Base stat | Per rank | Maximum bonus |
 | --- | --- | --- |
 | Armor | 2 percentage points incoming hull damage reduction | 40% reduction |
-| Build speed | +5% construction/upgrade speed | +100% |
+| Clock speed | +5% construction, mining and solar cycle speed | +100% |
 | Harvesting | +5% minerals per cycle | +100% |
 | Firepower | +3% laser/Pulser/THEL/missile damage | +60% |
 | Repair efficiency | +5% drone throughput | +100% |
-| Power output | +5% solar generation | +100% |
+| Power output | +5% energy per solar pulse | +100% |
+| Efficient fabrication | 1% cheaper buildings/upgrades | 20% discount |
 
-Armor reduces hull damage before powered shielding, while derelict mission objectives retain baseline behavior. Build speed does not remove construction energy costs. Harvesting consumes finite ore faster. Repairs continue spending one drone energy per healed hull. Firepower raises THEL’s energy demand as well as damage. Rank increases apply immediately when purchased in an active operation.
+Armor reduces hull damage before powered shielding, while derelict mission objectives retain baseline behavior. Clock speed preserves cost per construction/mining increment and energy per solar pulse; output/yield ranks separately improve each pulse. Existing Build speed ranks retain their fabrication ID and become Clock speed. Efficient fabrication discounts the actual charged price, with refunds based on historical amounts paid. Harvesting consumes finite ore faster. Repairs continue spending one drone energy per healed hull. Firepower raises THEL’s energy demand as well as damage. Rank increases apply immediately when purchased in an active operation.
+
+## Tower mastery
+
+A third progression tab specializes nine classes: relay, miner, solar, energy store, repair, Basic laser, Pulser, THEL and missile. Their 52 tracks cover appropriate combat/utility improvements plus health, armor and powered shields on every class. Each rank costs one shared XP point. Purchases apply to existing and future buildings of that class, stack with technology/base stats, and persist. Classic disables them. Mineral tier upgrades remain separate. The complete effects and conservation rules are in [TOWER_MASTERY.md](TOWER_MASTERY.md).
 
 ## Saves, migration and reset
 
@@ -50,7 +55,7 @@ The profile holds Intel and XP; snapshots hold cumulative collected rewards and 
 
 The old currency schedule is frozen into a one-time legacy Intel credit, preserving existing balances and purchases. All valid owned technology IDs become active, including formerly unequipped upgrades. Recorded historical mining/combat totals convert once into XP at 0.2 XP/mineral and 5 XP/recorded kill; historical repair activity is not estimated. Legacy conversion disappears after the new profile schema is saved.
 
-On launch or resume, the UI applies the current profile’s full technology tree and base-stat ranks. Live hull changes preserve health percentage, reserve increases do not charge free energy, reserve decreases clamp stored energy, and link changes rebuild eligible connections. Freight adds cargo only to a new operation; it never adds cargo on resuming or purchasing mid-operation.
+On launch or resume, the UI applies the current profile’s full technology tree, base-stat ranks and tower mastery. Live hull changes preserve health percentage, reserve increases do not charge free energy, reserve decreases clamp stored energy, and link changes rebuild eligible connections. Freight adds cargo only to a new operation; it never adds cargo on resuming or purchasing mid-operation.
 
 Settings offers Start fresh: save a local backup and download the previous profile before clearing campaign records, technologies, Intel, XP, stats and the active operation. Settings remain. Other tabs receive the reset marker and stop autosaving an old operation. The owner requested one fresh reset on 2026-10-11; persistence remains enabled afterward.
 

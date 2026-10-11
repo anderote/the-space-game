@@ -2,6 +2,7 @@ import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
 import { ASTEROID_ORE_MULTIPLIER } from "./structure-upgrades.js";
 import { XP_RATES, normalizeRanks } from "./experience.js";
+import { normalizeTowerRanks } from "./tower-skills.js";
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export function rng(seed) {
   let n = seed >>> 0;
@@ -63,6 +64,7 @@ export function stats(b) {
     },
     b.type,
     b.research,
+    b.level,
   );
   statCache.set(b, {
     type: b.type,
@@ -80,6 +82,7 @@ export class Simulation {
     snapshot = null,
     researchIds = [],
     statRanks = {},
+    towerRanks = {},
   ) {
     this.researchIds = mission.classic
       ? []
@@ -87,7 +90,14 @@ export class Simulation {
     this.statRanks = mission.classic
       ? {}
       : normalizeRanks(snapshot?.statRanks || statRanks);
-    this.rules = researchRules(this.researchIds, this.statRanks);
+    this.towerRanks = mission.classic
+      ? {}
+      : normalizeTowerRanks(snapshot?.towerRanks || towerRanks);
+    this.rules = researchRules(
+      this.researchIds,
+      this.statRanks,
+      this.towerRanks,
+    );
     this.mission = mission;
     this.difficulty = difficulty;
     this.diff = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;
@@ -156,24 +166,51 @@ export class Simulation {
     }
     this.rebuildNetwork();
   }
-  setResearchLoadout(ids, ranks = this.statRanks) {
-    const oldLinkBonus = this.rules.linkBonus;
+  setResearchLoadout(ids, ranks = this.statRanks, towers = this.towerRanks) {
+    const oldRules = this.rules;
     this.researchIds = this.mission.classic ? [] : [...new Set(ids)];
     this.statRanks = this.mission.classic ? {} : normalizeRanks(ranks);
-    this.rules = researchRules(this.researchIds, this.statRanks);
+    this.towerRanks = this.mission.classic ? {} : normalizeTowerRanks(towers);
+    this.rules = researchRules(
+      this.researchIds,
+      this.statRanks,
+      this.towerRanks,
+    );
     for (const b of this.buildings) {
+      const previous = stats(b);
       // Preserve damage percentage: swapping hull modifiers cannot heal a ship.
       const health = b.hp / b.maxHp;
       b.research = this.rules;
       const configured = stats(b);
+      if (Number.isFinite(b.buildCooldown))
+        b.buildCooldown *= oldRules.buildSpeed / this.rules.buildSpeed;
+      for (const [timer, interval] of [
+        ["mineCooldown", "miningInterval"],
+        ["generationCooldown", "generationInterval"],
+        ["cooldown", "interval"],
+      ])
+        if (Number.isFinite(b[timer]) && previous[interval] > 0)
+          b[timer] *= configured[interval] / previous[interval];
+      for (const timer of ["burstCooldown", "salvoCooldown"])
+        if (Number.isFinite(b[timer]))
+          b[timer] *= previous.fireRate / configured.fireRate;
       b.maxHp = configured.hp;
       b.hp = Math.min(1, health) * b.maxHp;
       b.repairXpDebt = Math.min(b.repairXpDebt || 0, b.maxHp - b.hp);
       b.energy = Math.min(b.energy, configured.capacity || 0);
-      if (oldLinkBonus !== this.rules.linkBonus) b.linkInitialized = false;
+      if (
+        previous.link !== configured.link ||
+        previous.maxLinks !== configured.maxLinks
+      )
+        b.linkInitialized = false;
     }
-    for (const d of this.drones)
-      d.energy = Math.min(d.energy, 80 * this.rules.droneCapacity);
+    for (const d of this.drones) {
+      const home = this.buildings.find((b) => b.id === d.homeId);
+      d.energy = Math.min(
+        d.energy,
+        home ? stats(home).droneEnergy : 80 * this.rules.droneCapacity,
+      );
+    }
     // Capacity upgrades must charge normally. Freight is a launch benefit only.
     this.rebuildNetwork();
     this.energy = this.buildings.reduce((total, b) => total + b.energy, 0);
@@ -282,6 +319,7 @@ export class Simulation {
     b.research = this.rules;
     const configured = stats(b);
     b.hp = b.maxHp = configured.hp;
+    b.baseCost = b.investment = configured.cost;
     b.energy = free ? (configured.capacity || 0) * 0.7 : 0;
     this.buildings.push(b);
     this.networkDirty = true;
@@ -371,8 +409,9 @@ export class Simulation {
   build(type, x, y) {
     const check = this.placement(type, x, y);
     if (!check.ok) return check;
-    this.minerals -= BUILDINGS[type].cost;
-    this.spent += BUILDINGS[type].cost;
+    const cost = this.buildingCost(type);
+    this.minerals -= cost;
+    this.spent += cost;
     const b = this.addBuilding(type, x, y);
     this.rebuildNetwork();
     this.emit("build", { x, y });
@@ -466,13 +505,19 @@ export class Simulation {
   }
   upgradeCost(b, branch) {
     if (branch === "thel" && b.type === "laser" && b.level === 1)
-      return BUILDINGS.thel.upgradeCosts?.[0] || 250;
+      return this.discountCost(BUILDINGS.thel.upgradeCosts?.[0] || 250);
     if (b.level >= BUILDINGS[b.type].levels) return Infinity;
-    return (
+    return this.discountCost(
       BUILDINGS[b.type].upgradeCosts?.[
         b.type === "thel" ? b.level : b.level - 1
-      ] ?? Math.round(BUILDINGS[b.type].cost * (b.level === 1 ? 1.5 : 2))
+      ] ?? Math.round(BUILDINGS[b.type].cost * (b.level === 1 ? 1.5 : 2)),
     );
+  }
+  buildingCost(type) {
+    return stats({ type, level: 1, research: this.rules }).cost;
+  }
+  discountCost(cost) {
+    return Math.max(1, Math.round(cost * this.rules.constructionCost));
   }
   upgrade(id, branch = null) {
     const b = this.buildings.find((o) => o.id === id);
@@ -827,13 +872,16 @@ export class Simulation {
       b.powerPulse = Math.max(0, (b.powerPulse || 0) - dt * 3);
       const st = stats(b);
       if (b.type === "solar" && b.construction >= 1) {
-        b.generationCooldown = (b.generationCooldown ?? 0.55) - dt;
-        if (b.generationCooldown <= 0) {
-          b.generationCooldown += 0.55;
+        b.generationCooldown =
+          (b.generationCooldown ?? st.generationInterval) - dt;
+        if (b.generationCooldown <= 1e-9) {
+          b.generationCooldown += st.generationInterval;
           b.energy = Math.min(
             st.capacity,
             b.energy +
-              st.generation * 0.55 * (storm ? this.rules.stormOutput : 1),
+              st.generation *
+                st.generationInterval *
+                (storm ? this.rules.stormOutput : 1),
           );
         }
       }
@@ -878,7 +926,9 @@ export class Simulation {
                           ? 0.75
                           : 0.65
                         : 0.4;
-          b.buildCooldown = interval / this.rules.buildSpeed;
+          b.buildCooldown =
+            interval / this.rules.buildSpeed +
+            (this.rules.buildSpeed > 1 ? Math.max(-dt, b.buildCooldown) : 0);
           if (b.type === "solar" && b.upgrading) b.buildEnergy = 1;
           else
             b.buildEnergy =
@@ -934,13 +984,15 @@ export class Simulation {
           this.useEnergy(b, s.miningEnergy || 1)
         ) {
           const target = targets[Math.floor(this.random() * targets.length)],
-            mined = Math.min(target.ore, s.rate * 3);
+            mined = Math.min(target.ore, s.rate * s.miningInterval);
           target.ore -= mined;
           this.minerals += mined;
           this.mined += mined;
           this.xpEarned += mined * XP_RATES.mining;
           minedTick += mined;
-          b.mineCooldown = 3;
+          b.mineCooldown =
+            s.miningInterval +
+            (s.miningInterval < 3 ? Math.max(-dt, b.mineCooldown) : 0);
           b.targetId = target.id;
           b.miningTarget = target.id;
           b.activity = 1;
@@ -967,7 +1019,7 @@ export class Simulation {
             homeId: b.id,
             x: b.x,
             y: b.y,
-            energy: 80 * this.rules.droneCapacity,
+            energy: s.droneEnergy,
             hp: 20,
             targetId: null,
             mode: "dock",
@@ -1026,7 +1078,8 @@ export class Simulation {
               (s.damage + (b.beamTime * 20 + 1) / 4) *
               20 *
               dt *
-              this.rules.thelDamage;
+              s.beamDamageMultiplier *
+              s.fireRate;
             if (this.useEnergy(b, damage * 0.05)) {
               this.damageEnemy(target, damage, true);
               b.activity = 1;
@@ -1050,7 +1103,8 @@ export class Simulation {
             if (b.cooldown <= 0 && !b.salvoRemaining) {
               b.salvoRemaining = s.salvo || 1;
               b.salvoCooldown = 0;
-              b.cooldown = s.interval;
+              b.cooldown =
+                s.interval + (s.fireRate > 1 ? Math.max(-dt, b.cooldown) : 0);
             }
             b.salvoCooldown = (b.salvoCooldown || 0) - dt;
             if (
@@ -1061,7 +1115,9 @@ export class Simulation {
             ) {
               this.minerals -= 5;
               b.salvoRemaining--;
-              b.salvoCooldown = 0.75;
+              b.salvoCooldown =
+                0.75 / s.fireRate +
+                (s.fireRate > 1 ? Math.max(-dt, b.salvoCooldown) : 0);
               b.activity = 1;
               this.projectiles.push({
                 id: ++this.uid,
@@ -1082,7 +1138,8 @@ export class Simulation {
           } else {
             if (b.cooldown <= 0) {
               b.burstRemaining = s.burst || 1;
-              b.cooldown = s.interval;
+              b.cooldown =
+                s.interval + (s.fireRate > 1 ? Math.max(-dt, b.cooldown) : 0);
               b.burstCooldown = 0;
             }
             b.burstCooldown = (b.burstCooldown || 0) - dt;
@@ -1092,7 +1149,9 @@ export class Simulation {
               this.useEnergy(b, s.shotEnergy)
             ) {
               b.burstRemaining--;
-              b.burstCooldown = 0.05;
+              b.burstCooldown =
+                0.05 / s.fireRate +
+                (s.fireRate > 1 ? Math.max(-dt, b.burstCooldown) : 0);
               this.damageEnemy(target, s.damage);
               b.activity = 1;
               this.effect("beam", b.x, b.y, {
@@ -1113,7 +1172,7 @@ export class Simulation {
         continue;
       }
       const range = stats(home).range,
-        maxEnergy = 80 * this.rules.droneCapacity;
+        maxEnergy = stats(home).droneEnergy;
       if (d.hp <= 0) continue;
       d.launchCooldown = Math.max(0, (d.launchCooldown || 0) - dt);
       let target = this.buildings.find(
@@ -1422,13 +1481,14 @@ export class Simulation {
       this.finish("won");
   }
   damageBuilding(target, amount) {
-    if (target.type !== "station") amount *= 1 - this.rules.armor;
+    const protection = stats(target);
+    if (target.type !== "station") amount *= 1 - protection.armor;
     if (
-      this.rules.shield &&
+      protection.shield &&
       target.type !== "station" &&
       target.construction >= 1
     ) {
-      const absorbed = amount * this.rules.shield;
+      const absorbed = amount * protection.shield;
       if (this.useEnergy(target, absorbed * 0.1)) {
         amount -= absorbed;
         target.shieldPulse = 1;
@@ -1482,6 +1542,7 @@ export class Simulation {
         missionId: this.mission.id,
         researchIds: this.researchIds,
         statRanks: this.statRanks,
+        towerRanks: this.towerRanks,
         intelCollected: this.intelCollected,
         xpEarned: this.xpEarned,
         xpCredit: this.xpCredit,

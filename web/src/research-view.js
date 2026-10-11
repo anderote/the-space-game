@@ -8,6 +8,7 @@ import {
   earnsFieldIntel,
 } from "./research.js";
 import { BASE_STATS, experienceBudget } from "./experience.js";
+import { towerMasteryView } from "./tower-view.js";
 const escape = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -20,7 +21,7 @@ export function researchView(
   progress,
   selectedId,
   icon,
-  { inGame = false, mission = null, page = "tech" } = {},
+  { inGame = false, mission = null, page = "tech", tower = "laser" } = {},
 ) {
   const r = normalizeResearch(progress.research),
     budget = researchBudget(progress),
@@ -61,7 +62,7 @@ export function researchView(
   ${owned ? '<div class="technology-active">✓ Active permanently · no equipment limit</div>' : `<button class="primary" data-action="tech-buy" data-id="${selected.id}" ${eligible.ok ? "" : "disabled"}>Research · ${selected.cost} Intel <span>↗</span></button>${!eligible.ok ? `<p class="tech-reason">${escape(eligible.reason)}</p>` : ""}`}
   <p class="research-scope">${selected.modifiers.startingMinerals ? "LAUNCH ONLY · Freight adds minerals when a new operation begins." : inGame ? "LIVE UPGRADE · Research applies immediately to existing and new structures. Your previous pause state is preserved." : "Every purchased technology stays active. Research with I during modern operations; Classic disables persistent bonuses."}</p></aside>`;
   return `<div class="screen-shade research-shade"><section class="research-window"><header class="research-header"><div><div class="eyebrow">${inGame ? "OPERATION PAUSED / LIVE RESEARCH" : "EXPEDITION SCIENCE DIVISION"}</div><h2>Build a better frontier.</h2><p>Discover breakthroughs. Develop your command.</p></div><div class="research-wallet"><strong>${budget.available}<span> INTEL</span></strong><small>${r.owned.length} / ${TECHNOLOGIES.length} TECHNOLOGIES ACTIVE</small></div><div class="research-wallet xp-wallet"><strong>${xp.level}<span> LEVEL</span></strong><small>${xp.available} STAT POINT${xp.available === 1 ? "" : "S"} AVAILABLE</small></div><button class="secondary" data-action="research-back">${inGame ? "← Return to operation" : "← Command"}</button></header>
-  <nav class="progression-tabs"><button class="tab ${page === "tech" ? "active" : ""}" data-progression="tech">Technology tree · ${TECHNOLOGIES.length}</button><button class="tab ${page === "stats" ? "active" : ""}" data-progression="stats">Base stats${xp.available ? ` · ${xp.available} points` : ""}</button><span>All researched technologies remain active together.</span></nav>
-  <div class="research-body ${page === "stats" ? "stats-body" : ""}">${sources}${page === "stats" ? stats : tree}</div>
+  <nav class="progression-tabs"><button class="tab ${page === "tech" ? "active" : ""}" data-progression="tech">Technology tree · ${TECHNOLOGIES.length}</button><button class="tab ${page === "stats" ? "active" : ""}" data-progression="stats">Base stats${xp.available ? ` · ${xp.available} point${xp.available === 1 ? "" : "s"}` : ""}</button><button class="tab ${page === "towers" ? "active" : ""}" data-progression="towers">Tower mastery</button><span>All upgrades stay active together.</span></nav>
+  <div class="research-body ${page !== "tech" ? "stats-body" : ""}">${sources}${page === "stats" ? stats : page === "towers" ? towerMasteryView(xp, tower, icon) : tree}</div>
   <footer class="research-footer"><div><strong>Two paths. One stronger outpost.</strong><span>Intel unlocks technology · XP earns base-stat points · 6 starting Intel</span></div>${page === "tech" ? `<button class="quiet" data-action="tech-reset" ${!r.owned.length ? "disabled" : ""}>Respec · refund ${budget.spent} Intel</button>` : `<span>${canEarn ? "XP and Intel persist after a loss." : "Testing mode · no progression rewards"}</span>`}</footer></section></div>`;
 }

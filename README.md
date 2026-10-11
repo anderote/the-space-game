@@ -30,7 +30,9 @@ npm run preview
 - **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and rare ships carrying Intel.
 - **Sandbox:** generous resources, all structures and manual wave controls.
 - **Research division:** 40 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
-- **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a point for Armor, Build speed, Harvesting, Firepower, Repair efficiency or Power output. All six tracks have 20 ranks.
+- **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a shared skill point. Seven base tracks cover Armor, Clock speed, Harvesting, Firepower, Repair efficiency, Power output and Efficient fabrication. Clock speed accelerates construction, mining and solar cycles; Efficient fabrication reaches 20% cheaper buildings and upgrades.
+
+- **Tower mastery:** nine building/weapon specializations with 52 skill tracks for combat, utility output, health, armor and powered shields. Spend the same XP points on a specific class, including separate Basic laser, Pulser and THEL tracks. [Skill effects](docs/TOWER_MASTERY.md).
 
 Research, Intel, XP and base stats persist across modern games and campaigns, including losses. Begin with **6 Intel**; defeat a gold-marked elite for **2 Intel** or a mothership for **3**. One elite appears every third wave. Mining and ordinary combat earn XP: **5 minerals**, **20 enemy hull damage** or **10 damage repairs** each grant 1 XP. The first point costs 100 XP, then each subsequent level requires 50 more XP than the last. Classic and Sandbox award no progression; Sandbox can use existing upgrades. Freight research applies only when launching a new operation. [Progression design](docs/RESEARCH_TREE_DESIGN.md).
 

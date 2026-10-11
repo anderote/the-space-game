@@ -54,7 +54,7 @@ test("XP crosses exact increasing level thresholds and points cannot be overspen
   assert.equal(experienceBudget(p).available, 0);
   assert.deepEqual(
     normalizeExperience({ xp: Infinity, ranks: { armor: 50 } }),
-    { xp: 0, ranks: {} },
+    { xp: 0, ranks: {}, towers: {} },
   );
   assert.deepEqual(
     normalizeExperience({ xp: 100, ranks: { armor: 999, harvest: 999 } }).ranks,
@@ -74,10 +74,10 @@ test("XP stats affect real defenses, building, harvesting, weapons, repairs and 
   const repair = s.addBuilding("repair", -60, 0, true);
   s.rebuildNetwork();
   assert.ok(
-    Math.abs(stats(solar).generation / BUILDINGS.solar.generation - 1.32) <
+    Math.abs(stats(solar).generation / BUILDINGS.solar.generation - 1.452) <
       1e-8,
   );
-  assert.ok(Math.abs(stats(miner).rate - (4 / 3) * 1.25 * 1.1) < 1e-8);
+  assert.ok(Math.abs(stats(miner).rate - (4 / 3) * 1.25 * 1.1 * 1.1) < 1e-8);
   assert.ok(Math.abs(stats(laser).damage - 30 * 1.15 * 1.06) < 1e-8);
   assert.ok(Math.abs(stats(repair).rate - 20 * 1.25 * 1.1) < 1e-8);
   assert.equal(s.rules.buildSpeed, 1.1);

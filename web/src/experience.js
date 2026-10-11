@@ -1,4 +1,9 @@
 // Command experience is separate from the Intel technology economy.
+import {
+  normalizeTowerRanks,
+  towerPoints,
+  TOWER_BY_ID,
+} from "./tower-skills.js";
 export const XP_RATES = { mining: 0.2, combat: 0.05, repair: 0.1 };
 export const BASE_STATS = [
   {
@@ -12,11 +17,11 @@ export const BASE_STATS = [
   },
   {
     id: "fabrication",
-    name: "Build speed",
+    name: "Clock speed",
     icon: "relay",
-    effect: "+5% construction and upgrade speed",
+    effect: "+5% construction, mining and solar cycle speed",
     perRank: 5,
-    unit: "% build speed",
+    unit: "% clock speed",
     max: 20,
   },
   {
@@ -55,6 +60,15 @@ export const BASE_STATS = [
     unit: "% generation",
     max: 20,
   },
+  {
+    id: "economy",
+    name: "Efficient fabrication",
+    icon: "relay",
+    effect: "1% cheaper buildings and upgrades",
+    perRank: 1,
+    unit: "% construction discount",
+    max: 20,
+  },
 ];
 const safe = (n) => (Number.isFinite(n) ? Math.min(1e12, Math.max(0, n)) : 0);
 export function normalizeRanks(value = {}, budget = Infinity) {
@@ -73,12 +87,19 @@ export function experienceLevel(xp) {
 const threshold = (level) => 25 * (level - 1) ** 2 + 75 * (level - 1);
 export function normalizeExperience(value = {}) {
   const xp = safe(value?.xp);
-  return { xp, ranks: normalizeRanks(value?.ranks, experienceLevel(xp) - 1) };
+  const ranks = normalizeRanks(value?.ranks, experienceLevel(xp) - 1);
+  const spent = Object.values(ranks).reduce((n, rank) => n + rank, 0);
+  return {
+    xp,
+    ranks,
+    towers: normalizeTowerRanks(value?.towers, experienceLevel(xp) - 1 - spent),
+  };
 }
 export function experienceBudget(progress) {
   const e = normalizeExperience(progress.experience);
   const level = experienceLevel(e.xp);
-  const spent = Object.values(e.ranks).reduce((a, b) => a + b, 0);
+  const spent =
+    Object.values(e.ranks).reduce((a, b) => a + b, 0) + towerPoints(e.towers);
   return {
     ...e,
     level,
@@ -99,10 +120,26 @@ export function buyBaseStat(progress, id) {
   progress.experience.ranks[id] = rank + 1;
   return { ok: true };
 }
+export function buyTowerSkill(progress, type, id) {
+  const skill = TOWER_BY_ID[type]?.skills.find((s) => s.id === id);
+  if (!skill) return { ok: false, reason: "Unknown tower skill" };
+  progress.experience = normalizeExperience(progress.experience);
+  const ranks = progress.experience.towers[type] || {};
+  const rank = ranks[id] || 0;
+  if (rank >= skill.max) return { ok: false, reason: "Maximum rank reached" };
+  if (experienceBudget(progress).available < 1)
+    return { ok: false, reason: "Earn another level to gain a stat point" };
+  progress.experience.towers[type] = { ...ranks, [id]: rank + 1 };
+  return { ok: true };
+}
 export function applyBaseStats(rules, values) {
   const ranks = normalizeRanks(values);
   rules.armor = (ranks.armor || 0) * 0.02;
-  rules.buildSpeed *= 1 + (ranks.fabrication || 0) * 0.05;
+  const clock = 1 + (ranks.fabrication || 0) * 0.05;
+  rules.buildSpeed *= clock;
+  rules.miningSpeed = clock;
+  rules.generationSpeed = clock;
+  rules.constructionCost = 1 - (ranks.economy || 0) * 0.01;
   rules.miningYield *= 1 + (ranks.harvest || 0) * 0.05;
   for (const key of ["laserDamage", "thelDamage", "missileDamage"])
     rules[key] *= 1 + (ranks.firepower || 0) * 0.03;

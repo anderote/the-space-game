@@ -2331,3 +2331,108 @@ input {
     gap: 10px;
   }
 }
+.tower-mastery-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+}
+.tower-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.tower-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  background: #0d1d28;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  text-align: left;
+}
+.tower-choice svg {
+  flex-shrink: 0;
+  color: var(--branch);
+}
+.tower-choice span {
+  font-size: 12px;
+}
+.tower-choice small {
+  display: block;
+  margin-top: 6px;
+  font: 8px monospace;
+  color: var(--muted);
+}
+.tower-choice.active {
+  border-color: var(--branch);
+  color: var(--branch);
+  background: color-mix(in srgb, var(--branch) 8%, #09161e);
+}
+.tower-specialization > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 5px 0 20px;
+  color: var(--branch);
+}
+.tower-specialization > header > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tower-specialization h3 {
+  font-size: 24px;
+  font-weight: 450;
+  margin: 0;
+}
+.tower-specialization > header > span {
+  font: 9px monospace;
+  color: var(--muted);
+}
+.tower-specialization .base-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.tower-specialization .base-stat-card {
+  padding: 18px;
+}
+.tower-specialization .base-stat-card p {
+  min-height: 40px;
+}
+@media (max-width: 1150px) {
+  .tower-mastery-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .tower-specialization .base-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 650px) {
+  .tower-mastery-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .tower-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tower-choice {
+    padding: 10px;
+    gap: 8px;
+  }
+  .tower-choice span {
+    font-size: 10px;
+  }
+  .tower-specialization .base-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .tower-specialization > header > span {
+    display: none;
+  }
+  .tower-specialization .base-stat-card p {
+    min-height: 0;
+  }
+}

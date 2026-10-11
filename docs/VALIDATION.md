@@ -4,8 +4,8 @@
 
 ## Automated
 
-- `npm test`: **111 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~686 kB / 188 kB gzip; CSS ~31 kB / 7.3 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **130 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~694 kB / 190 kB gzip; CSS ~33 kB / 7.6 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
@@ -53,6 +53,17 @@ Captured research screenshots in [screenshots/](screenshots/). These show an iso
 - Owner-authorized fresh reset was performed on the main preview. The old profile was saved locally and exported to a JSON download, then home showed 6 starting Intel and no saved operation. Research/XP persistence remains enabled for future games. The backup was successfully imported into the isolated QA profile; the main fresh profile was not used for QA purchases.
 
 Screenshots: [expanded tree](screenshots/research-expanded.jpg), [XP base stats](screenshots/base-stats.jpg), [six-petal solar and compact repair hub](screenshots/solar-petals.jpg). Screenshots of upgraded progress are from the isolated QA origin.
+
+## Clock speed, discounts and tower mastery
+
+- `npm test`: 130 passed, including actual mining, solar pulses, laser bursts, missile salvos, repair throughput, armor/shield energy, shared XP budgets, save migration, live timer/hull/capacity conservation, relay links, Classic exclusions and paid-cost refunds.
+- Added seven global XP tracks and 52 class-specific tracks across nine building/weapon classes. Existing fabrication ranks migrate to Clock speed; progression remains persistent.
+- Dedicated desktop Chrome QA used the isolated `127.0.0.1:5179` save. Purchased Clock speed, Efficient fabrication and Basic laser Damage for one XP point each; available points fell from three to zero, with Intel unchanged at 14.
+- Returning to the same operation showed mining 110 → 116 minerals/min, generation 11.8 → 12.4 E/s, laser cost 99 and THEL conversion 495. Basic laser damage showed 36. Reload preserved purchases and effects.
+- Tower mastery displayed all nine classes, independent Basic laser/Pulser ranks, repair-specific throughput/range/reserves and disabled purchases when no points remained. Browser console warnings/errors: none.
+- The player's main save was preserved. This follow-up claims desktop QA only.
+
+Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the isolated QA profile.
 
 ## Limits
 

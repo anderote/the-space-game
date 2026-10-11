@@ -13,7 +13,7 @@ export function freshProgress() {
     progressionVersion: 2,
     research: { owned: [], active: [] },
     intel: { rare: 0, legacy: 0 },
-    experience: { xp: 0, ranks: {} },
+    experience: { xp: 0, ranks: {}, towers: {} },
     completed: {},
     challenges: {},
     livery: "mint",

@@ -1,6 +1,7 @@
 // Modern progression. Classic disables persistent research and base stats.
 import { applyBaseStats } from "./experience.js";
 import { expandedTechnologies } from "./research-expansion.js";
+import { normalizeTowerRanks, applyTowerStats } from "./tower-skills.js";
 export function normalizeIntel(value = {}) {
   const count = (n) => (Number.isFinite(n) ? Math.floor(Math.max(0, n)) : 0);
   return { rare: count(value?.rare), legacy: count(value?.legacy) };
@@ -369,7 +370,7 @@ export function resetResearch(progress) {
 export function researchLoadout(progress, mission) {
   return mission.classic ? [] : normalizeResearch(progress.research).active;
 }
-export function researchRules(ids = [], ranks = {}) {
+export function researchRules(ids = [], ranks = {}, towers = {}) {
   const r = {
     generation: 1,
     storageCapacity: 1,
@@ -411,17 +412,23 @@ export function researchRules(ids = [], ranks = {}) {
       else r[key] *= value;
     }
   }
+  r.towers = normalizeTowerRanks(towers);
   return applyBaseStats(r, ranks);
 }
-export function applyResearchStats(s, type, r) {
+export function applyResearchStats(s, type, r, level = 1) {
   if (!r || type === "station") return s;
+  s.cost = Math.max(1, Math.round(s.cost * r.constructionCost));
   s.hp *= r.hull * (type === "solar" ? r.solarHull : 1);
   s.link += r.linkBonus;
-  if (type === "solar") s.generation *= r.generation;
+  if (type === "solar") {
+    s.generation *= r.generation * r.generationSpeed;
+    s.generationInterval = 0.55 / r.generationSpeed;
+  }
   if (type === "battery") s.capacity *= r.storageCapacity;
   if (type === "miner") {
     s.range += r.miningRange;
-    s.rate *= r.miningYield;
+    s.rate *= r.miningYield * r.miningSpeed;
+    s.miningInterval = 3 / r.miningSpeed;
   }
   if (["laser", "thel", "missile"].includes(type))
     s.capacity *= r.weaponCapacity;
@@ -433,5 +440,5 @@ export function applyResearchStats(s, type, r) {
     s.splash *= r.missileSplash;
   }
   if (type === "repair") s.rate *= r.repairRate;
-  return s;
+  return applyTowerStats(s, type, level, r);
 }
