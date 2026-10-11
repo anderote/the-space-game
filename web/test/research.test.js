@@ -158,7 +158,7 @@ test("research and base stats persist across new games; saved cargo is never reg
     ids,
     p.experience.ranks,
   );
-  assert.equal(first.minerals, 1480);
+  assert.equal(first.minerals, CAMPAIGN[1].minerals + 900);
   tick(first, 6);
   const saved = new Simulation(CAMPAIGN[1], "normal", first.snapshot());
   assert.equal(saved.minerals, first.minerals);

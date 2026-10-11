@@ -347,6 +347,9 @@ test("victory is awarded for actual extraction", () => {
   s.update(0.025);
   assert.equal(s.status, "playing");
   s.mined = s.mission.goal;
+  s.wave = s.mission.waves;
+  s.time = s.mission.minDuration;
+  s.enemies = [];
   s.update(0.025);
   assert.equal(s.status, "won");
 });

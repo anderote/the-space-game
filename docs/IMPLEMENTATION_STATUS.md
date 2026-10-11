@@ -36,3 +36,7 @@ Graphics work is reduced through material-batched static structures, consolidate
 7. **Presentation:** original music, sounds, art, menus, portals, achievements and online score services are not reused. The modern scene is a visual redesign. Original short transfer flashes are extended to 0.28s and enriched with glow/jitter for readability.
 
 These are explicit fidelity limits, not claims that every original feature is complete. The earlier audit documents retain the pre-fix findings to explain the source evidence; this file describes the resulting implementation.
+
+## Longer expedition and wave reconnaissance
+
+All twelve modern campaign sectors now have authored formations, longer objective/hold requirements and wave-clear victory gating. The first two mining sectors include raids and a starting defensive laser. Later sectors introduce multi-front attacks, mixed bomber/swarm escorts, suicide wings and separate late mothership assaults. `expedition.js` defines pacing and spawn groups. The next-wave preview shares actual spawn bearings, exposes all fronts, and survives pause/save; the HUD countdown and minimap entry markers are available in modern modes. Classic wave scheduling is unchanged. See [EXPEDITION_WAVES.md](EXPEDITION_WAVES.md) for timing and remaining playtesting limits.

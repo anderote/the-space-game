@@ -169,7 +169,7 @@ function home() {
   demoScene();
   app.innerHTML = `<main class="home"><header class="home-top">${brand()}<span class="connection"><i class="status-dot"></i> NETWORK ONLINE <span style="color:#46606b">/</span> BROWSER EDITION</span></header><div class="home-content"><div class="eyebrow">MINE. CONNECT. DEFEND.</div><h1>THE SPACE<br><span>GAME</span></h1><p class="intro">A foothold in an endless frontier.<br>Build your network. Harvest the belt.<br>Keep the lights on.</p>${progress.active ? `<button class="secondary home-continue" data-action="continue">↳ Resume operation <span style="float:right">${clock(progress.active.time)}</span></button>` : ""}<button class="primary" data-action="campaign">Begin expedition <span>↗</span></button><div class="home-actions"><button class="secondary" data-action="challenges">Challenges</button><button class="secondary" data-action="freeplay">Free play</button></div><button class="secondary home-research" data-action="research"><span>Research division ↗</span><span>${researchBudget(progress).available} INTEL</span></button><div class="home-rule"></div><div class="home-caption">12 NEW SECTORS · 6 CHALLENGES · <button class="link-button" data-action="classic">9 CLASSIC MISSIONS</button></div><p class="touch-note">Best experienced with a mouse and keyboard.</p></div><div class="sector-tag"><div class="eyebrow">LIVE ORBITAL FEED</div><h2>Ceres mining outpost</h2><p>SECTOR 01 / 2.77 AU / SOL SYSTEM</p></div><div class="home-stats"><div><strong>07</strong><span>CORE STRUCTURES</span></div><div><strong>04</strong><span>DIFFICULTY LEVELS</span></div><div><strong>∞</strong><span>POSSIBILITIES</span></div></div><footer class="home-bottom"><span>A new browser recreation of the 2009 game by<br>David Scott &amp; Casual Collective.</span><span><button class="link-button" data-action="controls">Flight manual</button> &nbsp; / &nbsp; <button class="link-button" data-action="settings">Settings</button> &nbsp; / &nbsp; <button class="link-button" data-action="credits">Origins &amp; credits</button></span></footer></main>`;
 }
-function missionGoal(m) {
+function primaryGoal(m) {
   if (m.kind === "mine")
     return m.classic
       ? "Mine 50% of the asteroid field"
@@ -182,6 +182,14 @@ function missionGoal(m) {
   if (m.kind === "boss")
     return `Destroy ${m.goal} mothership${m.goal > 1 ? "s" : ""} and their escorts`;
   return "Build your own story";
+}
+function missionGoal(m) {
+  return (
+    primaryGoal(m) +
+    (m.requireWaves
+      ? ` · Clear all ${m.waves} waves${["survive", "defend"].includes(m.kind) ? "" : " · Hold " + clock(m.minDuration)}`
+      : "")
+  );
 }
 function researchScreen() {
   const scroll = document.querySelector(".research-body")?.scrollTop || 0;
@@ -330,7 +338,7 @@ function launch(m, snapshot = null) {
   sound.play("build");
 }
 function renderHud() {
-  app.innerHTML = `<div class="hud"><header class="hud-top"><div class="hud-logo">${brand()}<div class="mission-name">${esc(sim.mission.name)} / ${DIFFICULTIES[sim.difficulty].name}</div></div><div class="resource-group"><div class="resource minerals"><div class="small-label">MINERALS</div><strong id="minerals">0</strong><span class="unit">M</span><div class="rate" id="income">+0 / MIN</div></div><div class="resource"><div class="small-label">ENERGY RESERVE</div><strong id="energy">0</strong><span class="unit" id="capacity">/ 0</span><div class="power-meter"><i id="power-bar" style="width:0%"></i></div></div><div class="resource"><div class="small-label">POWER BALANCE</div><strong id="balance">0</strong><span class="unit">E/S</span><div class="rate" id="power-rate">GENERATED / CONSUMED</div></div></div><div class="hud-controls"><button class="speed-btn" data-action="pause" title="Pause simulation; building remains available" aria-label="Pause">Ⅱ</button><button class="speed-btn" data-speed="0.5">½×</button><button class="speed-btn active" data-speed="1">1×</button><button class="speed-btn" data-speed="2">2×</button><button class="icon-btn" data-action="controls" title="Keyboard controls" aria-label="Controls">?</button><button class="icon-btn intel-button" data-action="run-research" aria-label="Research tree" title="Research tree · I"><span>◈ <b id="intel-count">0</b></span><small id="xp-hud">INTEL · I</small></button><button class="icon-btn" data-action="menu" title="Mission menu" aria-label="Mission menu">☰</button></div></header><section class="objective-panel"><div class="eyebrow">${sim.mission.id === "skirmish" ? "OPEN OPERATION" : "MISSION OBJECTIVE"}</div><h3>${esc(sim.mission.name)}</h3><div class="objective-value" id="objective-text"></div><div class="progress-track"><i id="objective-progress" style="width:0%"></i></div><p>${esc(sim.mission.tip)}</p></section><div class="radar-panel"><div class="small-label" id="contact-label">NEXT CONTACT</div><div class="contact-time" id="contact-time"></div><div class="enemy-count" id="enemy-count"></div><div class="time-label" id="elapsed"></div></div><div class="status-strip" id="status-strip"></div><div class="minimap-wrap"><div class="small-label"><span>SECTOR MAP</span><span id="zoom-label">100%</span></div><canvas id="minimap" width="292" height="180" aria-label="Minimap: click to move camera"></canvas></div><div class="bottom-dock"><div class="dock-title"><span>CONSTRUCTION / 1–7</span><span>SHIFT + CLICK TO REPEAT · R TO RECYCLE</span></div><div class="build-deck">${BUILD_ORDER.map((t) => `<button class="build-card" data-build="${t}" title="${BUILDINGS[t].key} · ${BUILDINGS[t].name} · ${BUILDINGS[t].description}" aria-label="Build ${BUILDINGS[t].name}"><span class="shortcut">${BUILDINGS[t].key}</span><span class="cost">${sim.buildingCost(t)}</span>${icon(t)}<span class="name">${BUILDINGS[t].name}</span></button>`).join("")}</div></div><div class="network-toggles"><button class="quiet" data-action="miners" id="miners-toggle">Miners on</button><button class="quiet" data-action="missiles" id="missiles-toggle">Missiles on</button><button class="quiet" data-action="grid" title="Toggle placement grid">Grid</button></div><aside class="inspector" id="inspector"></aside><div class="tutorial-tip" id="tutorial-tip">Select a structure to inspect it. Drag the field to pan. Scroll to zoom.</div></div>`;
+  app.innerHTML = `<div class="hud"><header class="hud-top"><div class="hud-logo">${brand()}<div class="mission-name">${esc(sim.mission.name)} / ${DIFFICULTIES[sim.difficulty].name}</div></div><div class="resource-group"><div class="resource minerals"><div class="small-label">MINERALS</div><strong id="minerals">0</strong><span class="unit">M</span><div class="rate" id="income">+0 / MIN</div></div><div class="resource"><div class="small-label">ENERGY RESERVE</div><strong id="energy">0</strong><span class="unit" id="capacity">/ 0</span><div class="power-meter"><i id="power-bar" style="width:0%"></i></div></div><div class="resource"><div class="small-label">POWER BALANCE</div><strong id="balance">0</strong><span class="unit">E/S</span><div class="rate" id="power-rate">GENERATED / CONSUMED</div></div></div><div class="hud-controls"><button class="speed-btn" data-action="pause" title="Pause simulation; building remains available" aria-label="Pause">Ⅱ</button><button class="speed-btn" data-speed="0.5">½×</button><button class="speed-btn active" data-speed="1">1×</button><button class="speed-btn" data-speed="2">2×</button><button class="icon-btn" data-action="controls" title="Keyboard controls" aria-label="Controls">?</button><button class="icon-btn intel-button" data-action="run-research" aria-label="Research tree" title="Research tree · I"><span>◈ <b id="intel-count">0</b></span><small id="xp-hud">INTEL · I</small></button><button class="icon-btn" data-action="menu" title="Mission menu" aria-label="Mission menu">☰</button></div></header><section class="objective-panel"><div class="eyebrow">${sim.mission.id === "skirmish" ? "OPEN OPERATION" : "MISSION OBJECTIVE"}</div><h3>${esc(sim.mission.name)}</h3><div class="objective-value" id="objective-text"></div><div class="progress-track"><i id="objective-progress" style="width:0%"></i></div><p>${esc(sim.mission.tip)}</p></section><div class="radar-panel"><div class="small-label" id="contact-label">NEXT CONTACT</div><div class="contact-time" id="contact-time"></div><div class="wave-bearing" id="wave-bearing"></div><div class="wave-name" id="wave-name"></div><div class="enemy-count" id="enemy-count"></div><div class="time-label" id="elapsed"></div></div><div class="status-strip" id="status-strip"></div><div class="minimap-wrap"><div class="small-label"><span>SECTOR MAP</span><span id="zoom-label">100%</span></div><canvas id="minimap" width="292" height="180" aria-label="Minimap: click to move camera"></canvas></div><div class="bottom-dock"><div class="dock-title"><span>CONSTRUCTION / 1–7</span><span>SHIFT + CLICK TO REPEAT · R TO RECYCLE</span></div><div class="build-deck">${BUILD_ORDER.map((t) => `<button class="build-card" data-build="${t}" title="${BUILDINGS[t].key} · ${BUILDINGS[t].name} · ${BUILDINGS[t].description}" aria-label="Build ${BUILDINGS[t].name}"><span class="shortcut">${BUILDINGS[t].key}</span><span class="cost">${sim.buildingCost(t)}</span>${icon(t)}<span class="name">${BUILDINGS[t].name}</span></button>`).join("")}</div></div><div class="network-toggles"><button class="quiet" data-action="miners" id="miners-toggle">Miners on</button><button class="quiet" data-action="missiles" id="missiles-toggle">Missiles on</button><button class="quiet" data-action="grid" title="Toggle placement grid">Grid</button></div><aside class="inspector" id="inspector"></aside><div class="tutorial-tip" id="tutorial-tip">Select a structure to inspect it. Drag the field to pan. Scroll to zoom.</div></div>`;
   document.querySelector("#minimap").addEventListener("pointerdown", (e) => {
     const r = e.currentTarget.getBoundingClientRect(),
       scale = sim.mission.world * 1.25;
@@ -436,20 +444,43 @@ function updateHud() {
     text = `${sim.bossKills} / ${m.goal} MOTHERSHIPS DESTROYED`;
   if (m.id === "skirmish")
     text = `${sim.wave} WAVES · ${sim.kills} SHIPS DESTROYED`;
+  if (m.requireWaves)
+    text += ` · ${Math.min(sim.clearedWave || 0, m.waves)}/${m.waves} WAVES CLEARED · ${clock(Math.max(0, m.minDuration - sim.time))} HOLD`;
   set("objective-text", text);
   const pr = document.getElementById("objective-progress");
   if (pr) pr.style.width = sim.objectiveProgress() * 100 + "%";
   const noMore = sim.wave >= sim.mission.waves || sim.mission.sandbox;
-  set("contact-label", noMore ? "SECTOR STATUS" : "NEXT CONTACT");
+  const incoming = sim.nextWavePreview();
+  set(
+    "contact-label",
+    incoming
+      ? `NEXT WAVE ${incoming.number}${Number.isFinite(m.waves) ? "/" + m.waves : ""}`
+      : noMore
+        ? "SECTOR STATUS"
+        : "NEXT CONTACT",
+  );
+  const bearing = document.getElementById("wave-bearing");
+  if (bearing)
+    bearing.innerHTML = incoming
+      ? incoming.angles
+          .map(
+            (a, i) =>
+              `<span><i style="transform:rotate(${(-a * 180) / Math.PI}deg)">➜</i> FROM ${incoming.directions[i]}</span>`,
+          )
+          .join(" · ")
+      : "";
+  set("wave-name", incoming?.name || "");
   set(
     "contact-time",
     sim.mission.miningWaves && sim.wave < sim.mission.waves
       ? `${sim.mission.miningWaves[sim.wave][0]}% MINED`
-      : noMore
-        ? sim.enemies.length
-          ? "ENGAGED"
-          : "CLEAR"
-        : clock(sim.nextWave - sim.time),
+      : incoming?.manual
+        ? "ON YOUR SIGNAL"
+        : noMore
+          ? sim.enemies.length
+            ? "ENGAGED"
+            : "CLEAR"
+          : clock(sim.nextWave - sim.time),
   );
   set(
     "enemy-count",

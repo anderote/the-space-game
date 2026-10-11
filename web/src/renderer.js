@@ -1156,6 +1156,24 @@ export class SpaceRenderer {
       c.fillStyle = "#f28575";
       c.fillRect(p.x - 1, p.y - 1, 2.5, 2.5);
     }
+    const incoming = sim.nextWavePreview();
+    if (incoming)
+      for (const angle of incoming.angles) {
+        const r = sim.mission.world * 0.5,
+          p = point({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate(-angle + Math.PI);
+        c.fillStyle =
+          incoming.seconds <= 15 && !incoming.manual ? "#ff795f" : "#eeb778";
+        c.beginPath();
+        c.moveTo(6, 0);
+        c.lineTo(-4, -4);
+        c.lineTo(-4, 4);
+        c.closePath();
+        c.fill();
+        c.restore();
+      }
     const pos = point({ x: this.cameraX, y: this.cameraY });
     c.strokeStyle = "#96b7c57a";
     c.strokeRect(

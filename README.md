@@ -75,3 +75,5 @@ This is an independent recreation, not an official release or bit-exact emulator
 Models, textures, shaders and synthesized effects in the browser edition are newly created. Three.js and Vite retain their upstream licenses. The game name and original design are credited to their creators.
 
 The earlier Panda3D prototype remains in `game/`, `config/`, and the Python files. Its [previous README](docs/PANDA3D_README.md) and older design documents are historical prototype material, not the browser build’s specification.
+
+Expedition missions now have 4–12 authored waves and minimum operation times from 3:30 to 11:00. Every sector has enemies, with distinct swarm, bomber, flanking and capital-ship formations. Complete the sector objective, hold through the operation and clear every wave to win. The HUD shows the next-wave countdown and incoming compass bearings; matching arrows mark approaches on the sector map. [Expedition pacing](docs/EXPEDITION_WAVES.md).

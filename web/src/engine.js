@@ -1,3 +1,4 @@
+import { approachAngle, bearingLabel } from "./expedition.js";
 import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
 import { ASTEROID_ORE_MULTIPLIER } from "./structure-upgrades.js";
@@ -164,8 +165,9 @@ export class Simulation {
     }
     if (mission.id !== 0 && !mission.classic) {
       this.addBuilding("miner", 45, 52, true);
-      if (mission.waves > 0) this.addBuilding("laser", -52, 42, true);
     }
+    if (!mission.classic && mission.waves > 0)
+      this.addBuilding("laser", -52, 42, true);
     this.rebuildNetwork();
   }
   setResearchLoadout(ids, ranks = this.statRanks, towers = this.towerRanks) {
@@ -667,8 +669,30 @@ export class Simulation {
     this.enemies.push(e);
     return e;
   }
+  nextWavePreview() {
+    if (this.wave >= this.mission.waves || this.mission.classic) return null;
+    const plan = this.mission.wavePlan?.[this.wave];
+    const angle = plan?.angle ?? approachAngle(this.mission, this.wave + 1);
+    const angles = [
+      ...new Set(
+        (plan?.groups || [{ offset: 0 }]).map((g) => angle + (g.offset || 0)),
+      ),
+    ];
+    return {
+      number: this.wave + 1,
+      name: plan?.name || `Wave ${this.wave + 1}`,
+      seconds: Math.max(0, this.nextWave - this.time),
+      manual: Boolean(this.mission.sandbox),
+      angles,
+      directions: angles.map(bearingLabel),
+    };
+  }
   callWave() {
-    if (this.status !== "playing") return;
+    if (
+      this.status !== "playing" ||
+      (this.mission.requireWaves && this.wave >= this.mission.waves)
+    )
+      return;
     this.wave++;
     this.waveAnnounce = 5;
     this.nextWave =
@@ -726,6 +750,23 @@ export class Simulation {
       this.emit("wave", { wave: this.wave });
       return;
     }
+    const plan = this.mission.wavePlan?.[this.wave - 1];
+    if (plan) {
+      this.nextWave = this.time + plan.gap;
+      let elitePending = this.wave % 3 === 0;
+      for (const g of plan.groups)
+        for (let i = 0; i < Math.ceil(g.count * this.diff.count); i++) {
+          const rare = elitePending && g.type !== "mothership";
+          if (rare) elitePending = false;
+          this.spawnEnemy(
+            g.type,
+            plan.angle + (g.offset || 0) + (this.random() - 0.5) * 0.3,
+            rare,
+          );
+        }
+      this.emit("wave", { wave: this.wave, name: plan.name });
+      return;
+    }
     const tier = this.mission.enemyTier;
     const count = Math.min(
       100,
@@ -733,7 +774,7 @@ export class Simulation {
         (2 + this.wave * (this.mission.swarm ? 2.8 : 1.3)) * this.diff.count,
       ),
     );
-    const a = this.random() * Math.PI * 2;
+    const a = approachAngle(this.mission, this.wave);
     for (let i = 0; i < count; i++) {
       const type = this.mission.swarm
         ? "swarm"
@@ -1470,8 +1511,16 @@ export class Simulation {
     if (this.lowPowerTime > 12 && !this.mission.sandbox) this.finish("lost");
     const m = this.mission;
     const station = this.buildings.find((b) => b.type === "station");
-    if (m.kind === "mine" && this.mined >= m.goal) this.finish("won");
+    const operationReady =
+      !m.requireWaves ||
+      (this.time >= m.minDuration &&
+        this.wave >= m.waves &&
+        this.enemies.length === 0 &&
+        !this.spawnQueue?.length);
+    if (operationReady && m.kind === "mine" && this.mined >= m.goal)
+      this.finish("won");
     if (
+      operationReady &&
       (m.kind === "survive" || m.kind === "defend") &&
       this.time >= m.goal &&
       this.enemies.length === 0 &&
@@ -1479,12 +1528,18 @@ export class Simulation {
     )
       this.finish("won");
     if (
+      operationReady &&
       m.kind === "boss" &&
       this.bossKills >= m.goal &&
       this.enemies.length === 0
     )
       this.finish("won");
-    if (m.kind === "repair" && station && station.hp / station.maxHp >= m.goal)
+    if (
+      operationReady &&
+      m.kind === "repair" &&
+      station &&
+      station.hp / station.maxHp >= m.goal
+    )
       this.finish("won");
   }
   damageBuilding(target, amount) {
@@ -1537,13 +1592,21 @@ export class Simulation {
   }
   objectiveProgress() {
     const m = this.mission;
-    if (m.kind === "mine") return Math.min(1, this.mined / m.goal);
+    const finishProgress = m.requireWaves
+      ? Math.min(
+          1,
+          this.time / m.minDuration,
+          (this.clearedWave || 0) / m.waves,
+        )
+      : 1;
+    if (m.kind === "mine") return Math.min(finishProgress, this.mined / m.goal);
     if (m.kind === "survive" || m.kind === "defend")
-      return Math.min(1, this.time / m.goal);
-    if (m.kind === "boss") return Math.min(1, this.bossKills / m.goal);
+      return Math.min(finishProgress, this.time / m.goal);
+    if (m.kind === "boss")
+      return Math.min(finishProgress, this.bossKills / m.goal);
     if (m.kind === "repair") {
       const b = this.buildings.find((n) => n.type === "station");
-      return b ? Math.min(1, b.hp / b.maxHp / m.goal) : 0;
+      return b ? Math.min(finishProgress, b.hp / b.maxHp / m.goal) : 0;
     }
     return 0;
   }

@@ -1,3 +1,4 @@
+import { expandExpedition } from "./expedition.js";
 import { applyOriginalStats, makeClassic } from "./classic.js";
 import { extendStructureUpgrades } from "./structure-upgrades.js";
 // Source-backed structure order and base prices; see docs/ORIGINAL_MECHANICS.md.
@@ -253,7 +254,7 @@ export const CAMPAIGN = [
     "THE INNER BELT",
     "mine",
     180,
-    "A quiet pocket of the belt. Establish a mining operation and learn to move energy through the void.",
+    "A lightly patrolled pocket of the belt. Establish a mining operation, power your defenses, and hold off the prospectors.",
     "Press 2, then place a miner within the gold ring of an asteroid and the blue link radius of your solar station.",
     { waves: 0, minerals: 400, asteroids: 12, world: 1000, par: 140 },
   ),
@@ -458,6 +459,7 @@ export const CAMPAIGN = [
     },
   ),
 ];
+CAMPAIGN.forEach((m, i) => Object.assign(m, expandExpedition(m, i)));
 export const CHALLENGES = [
   mission(
     "c0",

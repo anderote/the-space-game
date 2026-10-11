@@ -4,8 +4,8 @@
 
 ## Automated
 
-- `npm test`: **144 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~696 kB / 191 kB gzip; CSS ~33 kB / 7.6 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **150 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~701 kB / 193 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
@@ -78,6 +78,13 @@ Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the is
 - `npm test`: 144 passed. Each of the six modern Challenges, Endless and Sandbox now has a real enemy-kill/repair integration test verifying Intel, Command XP and Mastery XP banking without duplicate rewards on resume.
 - Endless and modern Challenges were already eligible. Removed Sandbox’s reward exclusion; its generous resources and manual waves remain available. Classic retains its original progression exclusion.
 - Updated mode/progression help and current design documentation. Production build and diff checks pass.
+
+## Longer expeditions and next-wave bearings
+
+- `npm test`: 150 passed. Tests validate all twelve authored plans, viable mining deposits, varied enemy classes, exact formation counts, advertised spawn bearings, every victory kind’s wave/time gates, automatic arrivals, paused countdowns, snapshot previews, multiple fronts and staggered capital goals.
+- First light now requires 600 mined minerals, four cleared waves and 3:30 minimum duration. The final sector has twelve waves, three staggered motherships and an 11:00 minimum. Briefings and HUD show compound objectives.
+- Isolated desktop Chrome QA launched First light, showed a powered initial laser, NEXT WAVE 1/4 countdown, FROM N arrow, formation name and matching northern minimap entry arrow. Countdown decreased from 1:04 to 0:50 and froze when paused. No console warnings/errors. Main player save was preserved.
+- Screenshot: [Expedition countdown and approach](screenshots/expedition-waves.jpg). Production build passes. Campaign balance remains initial tuning; this is not a full playthrough.
 
 ## Limits
 
