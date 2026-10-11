@@ -1,9 +1,16 @@
-import { normalizeResearch, researchBudget } from "./research.js";
+import {
+  normalizeResearch,
+  researchBudget,
+  normalizeIntel,
+  intelActivity,
+  earnsFieldIntel,
+} from "./research.js";
 const KEY = "the-space-game-v2";
 export function freshProgress() {
   return {
     version: 2,
     research: { owned: [], active: [] },
+    intel: { mined: 0, kills: 0 },
     completed: {},
     challenges: {},
     livery: "mint",
@@ -24,6 +31,7 @@ export function loadProgress(storage = globalThis.localStorage) {
       ...freshProgress(),
       ...p,
       research: normalizeResearch(p.research, researchBudget(p).earned),
+      intel: normalizeIntel(p.intel),
       completed: p.completed || {},
       challenges: p.challenges || {},
       settings: normalizeSettings(p.settings),
@@ -57,6 +65,21 @@ export function saveProgress(progress, storage = globalThis.localStorage) {
   } catch {
     return false;
   }
+}
+// Save the profile and snapshot together: a resumed operation must not credit
+// the same mining or combat twice. Partial progress carries across operations.
+export function bankIntel(progress, sim) {
+  if (!earnsFieldIntel(sim.mission)) return 0;
+  const before = intelActivity(progress).earned;
+  progress.intel = normalizeIntel(progress.intel);
+  const credit = sim.intelCredit;
+  progress.intel.mined += Math.max(0, sim.mined - credit.mined);
+  progress.intel.kills += Math.max(0, sim.combatKills - credit.kills);
+  credit.mined = Math.max(credit.mined, sim.mined);
+  credit.kills = Math.max(credit.kills, sim.combatKills);
+  const earned = intelActivity(progress).earned - before;
+  credit.earned += earned;
+  return earned;
 }
 export function starsTotal(p) {
   return Object.values(p.completed).reduce((s, c) => s + (c.stars || 0), 0);

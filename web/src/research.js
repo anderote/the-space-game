@@ -1,5 +1,23 @@
 // Modern progression. Classic operations always use the original rules.
 export const RESEARCH_CAPACITY = 6;
+export const INTEL_RATES = { mined: 200, kills: 5 };
+export function normalizeIntel(value = {}) {
+  const count = (n) => (Number.isFinite(n) ? Math.max(0, n) : 0);
+  return { mined: count(value?.mined), kills: Math.floor(count(value?.kills)) };
+}
+export function intelActivity(progress) {
+  const totals = normalizeIntel(progress.intel);
+  return {
+    earned:
+      Math.floor(totals.mined / INTEL_RATES.mined) +
+      Math.floor(totals.kills / INTEL_RATES.kills),
+    mined: totals.mined % INTEL_RATES.mined,
+    kills: totals.kills % INTEL_RATES.kills,
+  };
+}
+export function earnsFieldIntel(mission) {
+  return !mission.classic && !mission.sandbox;
+}
 export const BRANCHES = [
   {
     id: "power",
@@ -320,6 +338,7 @@ export function researchBudget(progress) {
     );
   const earned =
     6 +
+    intelActivity(progress).earned +
     2 * (stars(progress.completed) + stars(progress.challenges)) +
     4 * Math.floor(Math.max(0, Number(progress.endless?.cleared) || 0) / 5);
   const research = normalizeResearch(progress.research),

@@ -19,7 +19,7 @@ Updated 2026-10-11. The full original `thespacegame.v83.swf` and `tsgmissions.v1
 
 12 authored Expedition missions; six Challenges; Endless and Sandbox; medal progression; cosmetic liveries; persistent saves; four difficulty choices; research; WebGL 2 models/materials/lights/bloom; procedural nebula/asteroid textures; synthesized audio; performance/reduced-motion settings; responsive command screens.
 
-Research has 20 real technologies, diamond prerequisites, 6 weighted deployment slots, Intel tied to new best achievements, and free refunds. It modifies new modern operations only. Classic ignores the research profile. Its full node table and source lessons are in [RESEARCH_TREE_DESIGN.md](RESEARCH_TREE_DESIGN.md).
+Research has 20 real technologies, diamond prerequisites, 6 weighted deployment slots, Intel from mining/combat plus new best achievements, and free refunds. The in-game tree pauses time and applies loadout changes immediately to modern operations; Expedition freight only grants cargo on a new launch. Classic ignores the research profile. Its full node table and source lessons are in [RESEARCH_TREE_DESIGN.md](RESEARCH_TREE_DESIGN.md).
 
 ## Remaining differences and uncertainties
 

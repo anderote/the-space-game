@@ -28,9 +28,9 @@ npm run preview
 - **Challenges:** six independent economy, combat, power and rescue scenarios.
 - **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and research rewards for cleared milestones.
 - **Sandbox:** generous resources, all structures and manual wave controls.
-- **Research division:** 20 technologies in Power, Industry, Ballistics and Engineering. Six loadout slots, prerequisite branches, capstone tradeoffs and free refunds. Your equipped research takes effect when starting a modern operation; saved operations retain their original loadout.
+- **Research division:** 20 technologies in Power, Industry, Ballistics and Engineering. Six loadout slots, prerequisite branches, capstone tradeoffs and free refunds. Open the tree with **I** or the HUD Intel button during a modern operation. Time pauses while you research; equipped bonuses apply immediately to the active network.
 
-Research starts with 6 Intel. Each new best Expedition/Challenge star earns 2, and each newly cleared five-wave Endless milestone earns 4. Replaying an unchanged result or simply calling a wave earns nothing. [Research design and sources](docs/RESEARCH_TREE_DESIGN.md).
+Research starts with 6 Intel. Mine **200 minerals** or defeat **5 enemy ships** to bank **1 Intel** during play. Partial progress carries between operations, even after a loss. Each new best Expedition/Challenge star also earns 2, and each newly cleared five-wave Endless milestone earns 4. Classic and Sandbox do not earn Intel; Sandbox can use researched technologies. Expedition freight remains a next-launch benefit. [Research design and sources](docs/RESEARCH_TREE_DESIGN.md).
 
 ## Original shortcuts
 

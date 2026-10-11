@@ -1987,3 +1987,97 @@ input {
     font-size: 14px;
   }
 }
+
+/* In-operation research and persistent activity Intel. */
+.intel-button {
+  color: var(--mint);
+  min-width: 63px;
+  padding: 6px 9px;
+}
+.intel-button span {
+  display: block;
+  font: 13px monospace;
+}
+.intel-button small {
+  display: block;
+  font: 7px monospace;
+  margin-top: 4px;
+  letter-spacing: 0.8px;
+}
+.intel-sources {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  padding: 17px 28px;
+  background: #0c202c;
+  border-bottom: 1px solid var(--line);
+}
+.intel-source strong {
+  display: block;
+  color: var(--gold);
+  font: 17px monospace;
+  margin-top: 9px;
+}
+.intel-source small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.intel-source b {
+  float: right;
+  font: 9px monospace;
+  margin-top: 4px;
+}
+.intel-source.combat strong {
+  color: #b2c5ff;
+}
+.intel-meter {
+  height: 3px;
+  margin-top: 10px;
+  background: #263d4b;
+}
+.intel-meter i {
+  height: 100%;
+  display: block;
+  background: var(--gold);
+}
+.combat .intel-meter i {
+  background: #a2b9ff;
+}
+.intel-sources p {
+  margin: 0;
+  align-self: center;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (max-width: 1000px) {
+  .intel-sources {
+    grid-template-columns: 1fr 1fr;
+  }
+  .intel-sources p {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 620px) {
+  .intel-sources {
+    padding: 15px 17px;
+    gap: 16px;
+  }
+  .intel-source strong {
+    font-size: 14px;
+  }
+  .intel-source small {
+    font-size: 8px;
+  }
+  .intel-source b {
+    display: block;
+    float: none;
+  }
+  .intel-sources p {
+    font-size: 10px;
+  }
+  .intel-button {
+    min-width: 49px;
+  }
+}

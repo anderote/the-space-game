@@ -84,6 +84,8 @@ export class Simulation {
       this.rules.startingMinerals;
     this.mined = 0;
     this.kills = 0;
+    this.combatKills = 0;
+    this.intelCredit = { mined: 0, kills: 0, earned: 0 };
     this.bossKills = 0;
     this.lost = 0;
     this.spent = 0;
@@ -121,6 +123,36 @@ export class Simulation {
       if (mission.waves > 0) this.addBuilding("laser", -52, 42, true);
     }
     this.rebuildNetwork();
+  }
+  setResearchLoadout(ids) {
+    const oldLinkBonus = this.rules.linkBonus;
+    this.researchIds = this.mission.classic ? [] : [...new Set(ids)];
+    this.rules = researchRules(this.researchIds);
+    for (const b of this.buildings) {
+      // Preserve damage percentage: swapping hull modifiers cannot heal a ship.
+      const health = b.hp / b.maxHp;
+      b.research = this.rules;
+      const configured = stats(b);
+      b.maxHp = configured.hp;
+      b.hp = Math.min(1, health) * b.maxHp;
+      b.energy = Math.min(b.energy, configured.capacity || 0);
+      if (oldLinkBonus !== this.rules.linkBonus) b.linkInitialized = false;
+    }
+    for (const d of this.drones)
+      d.energy = Math.min(d.energy, 80 * this.rules.droneCapacity);
+    // Capacity upgrades must charge normally. Freight is a launch benefit only.
+    this.rebuildNetwork();
+    this.energy = this.buildings.reduce((total, b) => total + b.energy, 0);
+    this.capacity = this.buildings.reduce(
+      (total, b) => total + (stats(b).capacity || 0),
+      0,
+    );
+    this.generation =
+      this.buildings.reduce(
+        (total, b) =>
+          total + (b.construction >= 1 ? stats(b).generation || 0 : 0),
+        0,
+      ) * (this.storm ? this.rules.stormOutput : 1);
   }
   generateField() {
     const add = (x, y, r, ore) =>
@@ -1211,6 +1243,16 @@ export class Simulation {
     for (const e of this.enemies) if (deadParents.has(e.parentId)) e.hp = 0;
     for (const e of this.enemies.filter((e) => e.hp <= 0)) {
       this.kills++;
+      if (
+        e.defeatedByPlayer ||
+        this.enemies.some(
+          (parent) =>
+            parent.id === e.parentId &&
+            deadParents.has(parent.id) &&
+            parent.defeatedByPlayer,
+        )
+      )
+        this.combatKills++;
       if (e.type === "mothership") this.bossKills++;
       this.effect("explosion", e.x, e.y, {
         size: ENEMIES[e.type].radius * 3,
@@ -1308,12 +1350,14 @@ export class Simulation {
     target.lastDamaged = this.time;
   }
   damageEnemy(target, amount, pierce = false) {
+    const wasAlive = target.hp > 0;
     if (!pierce && target.shield > 0) {
       const absorbed = Math.min(target.shield, amount);
       target.shield -= absorbed;
       amount -= absorbed;
     }
     target.hp = (target.hp ?? 20) - amount;
+    if (wasAlive && target.hp <= 0) target.defeatedByPlayer = true;
     if (target.interceptable && target.hp <= 0) target.life = 0;
   }
   finish(status) {
@@ -1338,6 +1382,8 @@ export class Simulation {
       JSON.stringify({
         missionId: this.mission.id,
         researchIds: this.researchIds,
+        combatKills: this.combatKills,
+        intelCredit: this.intelCredit,
         clearedWave: this.clearedWave || 0,
         mission:
           this.mission.id === "skirmish"
@@ -1373,6 +1419,8 @@ export class Simulation {
   restore(s) {
     for (const key of [
       "clearedWave",
+      "combatKills",
+      "intelCredit",
       "buildings",
       "asteroids",
       "enemies",
@@ -1397,6 +1445,13 @@ export class Simulation {
       "status",
     ])
       if (s[key] !== undefined) this[key] = s[key];
+    // Legacy snapshots start tracking from their current extraction total.
+    if (!s.intelCredit)
+      this.intelCredit = {
+        mined: this.mined,
+        kills: this.combatKills,
+        earned: 0,
+      };
     for (const b of this.buildings) {
       b.research = this.rules;
       b.construction ??= 1;

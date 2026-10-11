@@ -4,8 +4,8 @@
 
 ## Automated
 
-- `npm test`: **74 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~660 kB / 179 kB gzip; CSS ~26 kB / 6.5 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **84 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~664 kB / 181 kB gzip; CSS ~28 kB / 6.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
@@ -24,6 +24,17 @@ Tested in a dedicated Chrome automation surface; an isolated second local origin
 - Browser console check returned no warnings or errors during final research interaction.
 
 Captured research screenshots in [screenshots/](screenshots/). These show an isolated QA profile, not the player's main save.
+
+## Live research follow-up
+
+- Added 10 regression tests for threshold/carryover accounting, idempotent banking across reloads, legacy snapshots, losses and excluded modes, real extraction versus recycle refunds, player-attributed kills, immediate modifiers, reversible hull changes, capacity conservation, link rebuilding and the live UI's earning/launch-only labels.
+- In the isolated browser profile, resumed A wider orbit, opened the tree using I, bought Resonant drills with 2 Intel, and returned to the same operation with Escape. Extraction increased to five minerals per cycle.
+- At 223 total minerals extracted, the HUD showed the first new activity Intel and 15/200 progress toward the next. The legacy snapshot had eight minerals before activity tracking began.
+- At 02:27, manually paused the mission, opened research, unequipped Prismatic cells and returned. The mission remained paused and its generation immediately changed from 2.0 to 1.6 E/s. Re-equipping restored 2.0 E/s with time still 02:27.
+- Reloaded and resumed: balance remained 1 Intel, progress remained 35/200, and the two equipped technologies persisted. No duplicate reward.
+- Live respec refunded 12 Intel (balance 1 → 13), removed the active solar bonus, and returned to the operation. The mission-menu research path also returned to the same running operation correctly.
+- The new acquisition bars and live return control were checked at desktop and 390×844. Narrow-screen node selection scrolled to usable upgrade details. Viewport override was reset. Console warnings/errors: none.
+- Screenshot: [live research](screenshots/research-in-game.jpg), captured from the isolated QA profile. Player's main preview/save was not used for purchases or respec tests.
 
 ## Limits
 
