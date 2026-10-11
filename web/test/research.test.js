@@ -3,11 +3,9 @@ import assert from "node:assert/strict";
 import {
   TECHNOLOGIES,
   TECH_BY_ID,
-  RESEARCH_CAPACITY,
   normalizeResearch,
   researchBudget,
   buyResearch,
-  toggleResearch,
   resetResearch,
   researchLoadout,
   researchRules,
@@ -31,8 +29,7 @@ const tick = (s, t) => {
 };
 const rich = () => {
   const p = freshProgress();
-  for (const m of [...CAMPAIGN, ...CHALLENGES])
-    recordVictory(p, m, { lost: 0, time: 0 });
+  p.intel.rare = 1000;
   return p;
 };
 function lab(ids = []) {
@@ -49,19 +46,19 @@ function lab(ids = []) {
   return s;
 }
 const add = (s, type, x = 0, y = 0) => s.addBuilding(type, x, y, true);
-test("research graph is a complete acyclic set of four five-node branches", () => {
+test("research graph is a complete acyclic set of four ten-node branches", () => {
   const seen = new Set();
   for (const t of TECHNOLOGIES) {
     assert.ok(
       t.requires.every((id) => seen.has(id)),
       t.id,
     );
-    assert.ok(t.cost > 0 && t.load > 0);
+    assert.ok(t.cost > 0);
     seen.add(t.id);
   }
-  assert.equal(seen.size, 20);
+  assert.equal(seen.size, 40);
   for (const branch of ["power", "industry", "weapons", "support"])
-    assert.equal(TECHNOLOGIES.filter((t) => t.branch === branch).length, 5);
+    assert.equal(TECHNOLOGIES.filter((t) => t.branch === branch).length, 10);
 });
 test("starter Intel buys and equips a root exactly once", () => {
   const p = freshProgress();
@@ -80,46 +77,32 @@ test("research requires prerequisites and enough Intel", () => {
   assert.equal(buyResearch(p, "long_links").ok, false);
   assert.equal(researchBudget(p).available, 0);
 });
-test("only new best stars award Intel; classic results and replay wins do not farm it", () => {
+test("new achievement records do not award rare-ship Intel", () => {
   const p = freshProgress();
-  recordVictory(p, CAMPAIGN[0], { lost: 1, time: 9999 });
-  assert.equal(researchBudget(p).earned, 8);
-  recordVictory(p, CAMPAIGN[0], { lost: 1, time: 9999 });
-  assert.equal(researchBudget(p).earned, 8);
-  recordVictory(p, CAMPAIGN[0], { lost: 0, time: 0 });
-  assert.equal(researchBudget(p).earned, 12);
-  recordVictory(p, CLASSIC[0], { lost: 0, time: 0 });
-  assert.equal(researchBudget(p).earned, 12);
-});
-test("endless Intel depends on cleared milestones, never spawned waves", () => {
-  const p = freshProgress();
-  p.endless = { wave: 200, cleared: 4 };
+  for (const m of [CAMPAIGN[0], CHALLENGES[0], CLASSIC[0]])
+    recordVictory(p, m, { lost: 0, time: 0 });
   assert.equal(researchBudget(p).earned, 6);
-  p.endless.cleared = 5;
-  assert.equal(researchBudget(p).earned, 10);
-  p.endless.cleared = 9;
-  assert.equal(researchBudget(p).earned, 10);
-  p.endless.cleared = 10;
-  assert.equal(researchBudget(p).earned, 14);
+  assert.equal(p.completed[0].stars, 3);
 });
-test("equipped research respects weighted six-slot capacity", () => {
+
+test("endless wave records cannot generate Intel without rare-ship kills", () => {
+  const p = freshProgress();
+  p.endless = { wave: 200, cleared: 200 };
+  assert.equal(researchBudget(p).earned, 6);
+});
+
+test("every owned technology stays active with no equipment limit", () => {
   const p = rich();
-  for (const t of TECHNOLOGIES) buyResearch(p, t.id);
-  assert.ok(researchBudget(p).load <= RESEARCH_CAPACITY);
-  p.research.active = [
-    "solar_cells",
-    "deep_storage",
-    "long_links",
-    "storm_shield",
-    "precision_drills",
-    "survey_optics",
-  ];
-  assert.equal(toggleResearch(p, "solar_overdrive").ok, false);
-  toggleResearch(p, "survey_optics");
-  toggleResearch(p, "precision_drills");
-  assert.equal(toggleResearch(p, "solar_overdrive").ok, true);
-  assert.equal(researchBudget(p).load, 6);
+  for (const t of TECHNOLOGIES)
+    assert.equal(buyResearch(p, t.id).ok, true, t.id);
+  assert.equal(p.research.owned.length, 40);
+  assert.deepEqual(p.research.active, p.research.owned);
+  p.research.active = [];
+  assert.equal(researchLoadout(p, CAMPAIGN[1]).length, 40);
+  const loaded = loadProgress({ getItem: () => JSON.stringify(p) });
+  assert.equal(loaded.research.active.length, 40);
 });
+
 test("free respec refunds exactly invested Intel", () => {
   const p = rich();
   buyResearch(p, "solar_cells");
@@ -162,29 +145,36 @@ test("classic operations ignore every research effect and never mutate shared bu
   new Simulation(CAMPAIGN[0], "normal", null, ids);
   assert.equal(BUILDINGS.solar.hp, 600);
 });
-test("saved operations keep their loadout after profile respec without regranting cargo", () => {
+test("research and base stats persist across new games; saved cargo is never regranted", () => {
   const p = rich();
   for (const t of TECHNOLOGIES.filter((t) => t.branch === "industry"))
     buyResearch(p, t.id);
-  p.research.active = ["expedition_cargo", "precision_drills"];
-  const s = new Simulation(
+  p.experience = { xp: 250, ranks: { harvest: 2 } };
+  const ids = researchLoadout(p, CAMPAIGN[1]);
+  const first = new Simulation(
     CAMPAIGN[1],
     "normal",
     null,
-    researchLoadout(p, CAMPAIGN[1]),
+    ids,
+    p.experience.ranks,
   );
-  assert.equal(s.minerals, 880);
-  tick(s, 6);
-  const snap = s.snapshot();
-  resetResearch(p);
-  const resumed = new Simulation(CAMPAIGN[1], "normal", snap, []);
-  assert.deepEqual(resumed.researchIds, [
-    "expedition_cargo",
-    "precision_drills",
-  ]);
-  assert.equal(resumed.minerals, s.minerals);
-  assert.deepEqual(resumed.buildings, s.buildings);
+  assert.equal(first.minerals, 1480);
+  tick(first, 6);
+  const saved = new Simulation(CAMPAIGN[1], "normal", first.snapshot());
+  assert.equal(saved.minerals, first.minerals);
+  assert.deepEqual(saved.statRanks, { harvest: 2 });
+  const next = new Simulation(
+    CAMPAIGN[2],
+    "normal",
+    null,
+    researchLoadout(p, CAMPAIGN[2]),
+    p.experience.ranks,
+  );
+  assert.deepEqual(next.researchIds, first.researchIds);
+  assert.deepEqual(next.statRanks, first.statRanks);
+  assert.ok(next.rules.miningYield > 1.7);
 });
+
 test("old active snapshots remain unmodified even after buying new research", () => {
   const s = new Simulation(CAMPAIGN[0]),
     snap = s.snapshot();

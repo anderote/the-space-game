@@ -1,22 +1,33 @@
-// Modern progression. Classic operations always use the original rules.
-export const RESEARCH_CAPACITY = 6;
-export const INTEL_RATES = { mined: 200, kills: 5 };
+// Modern progression. Classic disables persistent research and base stats.
+import { applyBaseStats } from "./experience.js";
+import { expandedTechnologies } from "./research-expansion.js";
 export function normalizeIntel(value = {}) {
-  const count = (n) => (Number.isFinite(n) ? Math.max(0, n) : 0);
-  return { mined: count(value?.mined), kills: Math.floor(count(value?.kills)) };
+  const count = (n) => (Number.isFinite(n) ? Math.floor(Math.max(0, n)) : 0);
+  return { rare: count(value?.rare), legacy: count(value?.legacy) };
 }
 export function intelActivity(progress) {
   const totals = normalizeIntel(progress.intel);
-  return {
-    earned:
-      Math.floor(totals.mined / INTEL_RATES.mined) +
-      Math.floor(totals.kills / INTEL_RATES.kills),
-    mined: totals.mined % INTEL_RATES.mined,
-    kills: totals.kills % INTEL_RATES.kills,
-  };
+  return { earned: totals.rare, rare: totals.rare };
 }
 export function earnsFieldIntel(mission) {
   return !mission.classic && !mission.sandbox;
+}
+// Freeze the previous economy at migration so existing balances are preserved,
+// while future mining, normal kills and medals no longer manufacture Intel.
+export function legacyIntel(progress) {
+  const count = (n) => (Number.isFinite(n) ? Math.max(0, n) : 0);
+  const stars = (collection) =>
+    Object.entries(collection || {}).reduce(
+      (n, [id, value]) =>
+        n + (id.startsWith("classic") ? 0 : Math.min(3, count(value?.stars))),
+      0,
+    );
+  return (
+    Math.floor(count(progress.intel?.mined) / 200) +
+    Math.floor(count(progress.intel?.kills) / 5) +
+    2 * (stars(progress.completed) + stars(progress.challenges)) +
+    4 * Math.floor(count(progress.endless?.cleared) / 5)
+  );
 }
 export const BRANCHES = [
   {
@@ -69,7 +80,6 @@ const node = (
   effect,
   detail,
   modifiers,
-  load: tier === 3 ? 2 : 1,
   ...extra,
 });
 export const TECHNOLOGIES = [
@@ -137,7 +147,7 @@ export const TECHNOLOGIES = [
     2,
     [],
     "+25% minerals per mining cycle",
-    "Harvest five minerals per basic cycle, or 12.5 when upgraded. Deposits remain finite.",
+    "Increase extraction by 25% at every level: five minerals per cycle at level one, 12.5 at level two. Deposits remain finite.",
     { miningYield: 1.25 },
   ),
   node(
@@ -298,6 +308,7 @@ export const TECHNOLOGIES = [
     { tag: "BULWARK" },
   ),
 ];
+TECHNOLOGIES.push(...expandedTechnologies(node));
 export const TECH_BY_ID = Object.fromEntries(
   TECHNOLOGIES.map((t) => [t.id, t]),
 );
@@ -313,42 +324,17 @@ export function normalizeResearch(value = {}, maxSpend = Infinity) {
       owned.push(t.id);
       maxSpend -= t.cost;
     }
-  const active = [];
-  let load = 0;
-  for (const id of Array.isArray(value?.active) ? value.active : [])
-    if (
-      owned.includes(id) &&
-      !active.includes(id) &&
-      load + TECH_BY_ID[id].load <= RESEARCH_CAPACITY
-    ) {
-      active.push(id);
-      load += TECH_BY_ID[id].load;
-    }
-  return { owned, active };
+  return { owned, active: [...owned] };
 }
 export function researchBudget(progress) {
-  const stars = (collection) =>
-    Object.entries(collection || {}).reduce(
-      (total, [id, value]) =>
-        total +
-        (id.startsWith("classic")
-          ? 0
-          : Math.max(0, Math.min(3, Number(value?.stars) || 0))),
-      0,
-    );
+  const intel = normalizeIntel(progress.intel);
   const earned =
     6 +
-    intelActivity(progress).earned +
-    2 * (stars(progress.completed) + stars(progress.challenges)) +
-    4 * Math.floor(Math.max(0, Number(progress.endless?.cleared) || 0) / 5);
+    intel.rare +
+    (progress.progressionVersion === 2 ? intel.legacy : legacyIntel(progress));
   const research = normalizeResearch(progress.research),
     spent = research.owned.reduce((n, id) => n + TECH_BY_ID[id].cost, 0);
-  return {
-    earned,
-    spent,
-    available: Math.max(0, earned - spent),
-    load: research.active.reduce((n, id) => n + TECH_BY_ID[id].load, 0),
-  };
+  return { earned, spent, available: Math.max(0, earned - spent) };
 }
 export function researchEligibility(progress, id) {
   const t = TECH_BY_ID[id];
@@ -374,26 +360,7 @@ export function buyResearch(progress, id) {
   if (!check.ok) return check;
   progress.research = normalizeResearch(progress.research);
   progress.research.owned.push(id);
-  if (researchBudget(progress).load + TECH_BY_ID[id].load <= RESEARCH_CAPACITY)
-    progress.research.active.push(id);
-  return { ok: true, equipped: progress.research.active.includes(id) };
-}
-export function toggleResearch(progress, id) {
-  progress.research = normalizeResearch(progress.research);
-  const r = progress.research,
-    t = TECH_BY_ID[id];
-  if (!t || !r.owned.includes(id))
-    return { ok: false, reason: "Research this technology first" };
-  if (r.active.includes(id)) {
-    r.active = r.active.filter((x) => x !== id);
-    return { ok: true };
-  }
-  if (researchBudget(progress).load + t.load > RESEARCH_CAPACITY)
-    return {
-      ok: false,
-      reason: `Needs ${t.load} loadout slot${t.load > 1 ? "s" : ""}. Unequip another technology first.`,
-    };
-  r.active.push(id);
+  progress.research.active = [...progress.research.owned];
   return { ok: true };
 }
 export function resetResearch(progress) {
@@ -402,7 +369,7 @@ export function resetResearch(progress) {
 export function researchLoadout(progress, mission) {
   return mission.classic ? [] : normalizeResearch(progress.research).active;
 }
-export function researchRules(ids = []) {
+export function researchRules(ids = [], ranks = {}) {
   const r = {
     generation: 1,
     storageCapacity: 1,
@@ -415,6 +382,7 @@ export function researchRules(ids = []) {
     upgradeRefund: 0.5,
     startingMinerals: 0,
     laserDamage: 1,
+    laserRange: 1,
     missileRange: 1,
     missileSpeed: 1,
     weaponCapacity: 1,
@@ -436,11 +404,14 @@ export function researchRules(ids = []) {
       else if (
         ["stormOutput", "upgradeRefund", "regeneration", "shield"].includes(key)
       )
-        r[key] = value;
+        r[key] =
+          typeof value === "boolean"
+            ? r[key] || value
+            : Math.max(r[key], value);
       else r[key] *= value;
     }
   }
-  return r;
+  return applyBaseStats(r, ranks);
 }
 export function applyResearchStats(s, type, r) {
   if (!r || type === "station") return s;
@@ -454,6 +425,7 @@ export function applyResearchStats(s, type, r) {
   }
   if (["laser", "thel", "missile"].includes(type))
     s.capacity *= r.weaponCapacity;
+  if (["laser", "thel"].includes(type)) s.range *= r.laserRange;
   if (type === "laser") s.damage *= r.laserDamage;
   if (type === "missile") {
     s.range *= r.missileRange;

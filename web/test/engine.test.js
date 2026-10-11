@@ -196,7 +196,7 @@ test("upgrade and recycle original refund math", () => {
   b.hp = b.maxHp * 0.5;
   assert.equal(s.recycle(b.id).refund, 75);
 });
-test("THEL branch has 500/800/1000 upgrade prices", () => {
+test("THEL retains original branch prices and adds a fourth tier", () => {
   const s = empty();
   s.mission.thel = true;
   const b = add(s, "laser", 0, 0);
@@ -207,6 +207,9 @@ test("THEL branch has 500/800/1000 upgrade prices", () => {
   b.construction = 1;
   s.upgrade(b.id);
   assert.equal(s.upgradeCost(b), 1000);
+  b.construction = 1;
+  s.upgrade(b.id);
+  assert.equal(s.upgradeCost(b), 1400);
   b.construction = 1;
   s.upgrade(b.id);
   assert.equal(s.upgradeCost(b), Infinity);

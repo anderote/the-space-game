@@ -16,6 +16,7 @@ Open **http://127.0.0.1:5178**. Progress, research, settings and your current op
 ```sh
 npm test
 npm run build
+npm run benchmark
 npm run preview
 ```
 
@@ -24,13 +25,22 @@ npm run preview
 ## Modes and progression
 
 - **Expedition:** 12 new missions, mining/rescue/defense/boss objectives, structure unlocks, three medals per mission and cosmetic liveries.
-- **Classic:** nine reconstructed missions with original budgets, structure access, extraction-driven waves and recovered survival schedules. Research bonuses are disabled.
+- **Classic:** nine reconstructed missions with original budgets, structure access, extraction-driven waves and recovered survival schedules. Research and XP stat bonuses are disabled. Building upgrades use the browser edition’s expanded tiers.
 - **Challenges:** six independent economy, combat, power and rescue scenarios.
-- **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and research rewards for cleared milestones.
+- **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and rare ships carrying Intel.
 - **Sandbox:** generous resources, all structures and manual wave controls.
-- **Research division:** 20 technologies in Power, Industry, Ballistics and Engineering. Six loadout slots, prerequisite branches, capstone tradeoffs and free refunds. Open the tree with **I** or the HUD Intel button during a modern operation. Time pauses while you research; equipped bonuses apply immediately to the active network.
+- **Research division:** 40 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
+- **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a point for Armor, Build speed, Harvesting, Firepower, Repair efficiency or Power output. All six tracks have 20 ranks.
 
-Research starts with 6 Intel. Mine **200 minerals** or defeat **5 enemy ships** to bank **1 Intel** during play. Partial progress carries between operations, even after a loss. Each new best Expedition/Challenge star also earns 2, and each newly cleared five-wave Endless milestone earns 4. Classic and Sandbox do not earn Intel; Sandbox can use researched technologies. Expedition freight remains a next-launch benefit. [Research design and sources](docs/RESEARCH_TREE_DESIGN.md).
+Research, Intel, XP and base stats persist across modern games and campaigns, including losses. Begin with **6 Intel**; defeat a gold-marked elite for **2 Intel** or a mothership for **3**. One elite appears every third wave. Mining and ordinary combat earn XP: **5 minerals**, **20 enemy hull damage** or **10 damage repairs** each grant 1 XP. The first point costs 100 XP, then each subsequent level requires 50 more XP than the last. Classic and Sandbox award no progression; Sandbox can use existing upgrades. Freight research applies only when launching a new operation. [Progression design](docs/RESEARCH_TREE_DESIGN.md).
+
+Settings includes **Start fresh · back up progress**. It saves a local backup and downloads a JSON before clearing campaign records, research, XP and the current operation. Settings are preserved. Import restores profile records and upgrades; it does not restore arbitrary running simulations.
+
+## Building and graphics updates
+
+Every buildable structure has at least four levels; solar stations have five, unfolding **2 → 3 → 4 → 5 → 6 petals**. Miners are 25% smaller, repair stations are 35% smaller with a minimalist four-port hub, other structures are 15% smaller, and enemy models are 40% smaller. Solar arrays retain full scale. Placement allows decorative overlap while protecting central hulls and cable cores. Newly generated asteroid fields contain **50% more minerals**; restored saves retain their remaining deposits.
+
+Static station parts are batched by material, shared power transfers draw one arc per cable, and offscreen electrical arcs are skipped. Jagged electricity and node pulses still follow real energy use. Performance graphics mode also uses a lower render resolution on high-density displays while keeping UI text crisp. [Upgrade definitions and performance notes](docs/STRUCTURE_UPGRADES.md).
 
 ## Original shortcuts
 

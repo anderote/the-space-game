@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { collectPowerSegments } from "./power-effects.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -6,7 +8,8 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { BUILDINGS, ENEMIES } from "./content.js";
 import { createNebula, rockMaps, hullTexture } from "./space-materials.js";
-import { rng, stats } from "./engine.js";
+import { rng, stats, placementRadius, asteroidRadius } from "./engine.js";
+import { ENEMY_SCALE, solarPetals } from "./structure-upgrades.js";
 const TAU = Math.PI * 2;
 function texture(kind) {
   const c = document.createElement("canvas");
@@ -188,10 +191,13 @@ export class SpaceRenderer {
     this.width = this.container.clientWidth;
     this.height = this.container.clientHeight;
     const dpr = Math.min(devicePixelRatio, 2);
+    const renderDpr = this.quality === "high" ? dpr : 1;
     this.overlay.width = this.width * dpr;
     this.overlay.height = this.height * dpr;
     this.overlay.style.width = this.width + "px";
     this.overlay.style.height = this.height + "px";
+    this.renderer.setPixelRatio(renderDpr);
+    this.composer.setPixelRatio(renderDpr);
     this.renderer.setSize(this.width, this.height);
     this.composer.setSize(this.width, this.height);
     this.updateCamera();
@@ -304,11 +310,12 @@ export class SpaceRenderer {
     const g = new THREE.Group(),
       d = BUILDINGS[b.type],
       m = this.materials,
-      r = d.radius;
+      r = d.radius / (d.visualScale || 1);
     g.userData.type = b.type;
-    const base = this.cylinder(g, r * 0.92, 5, m.dark, 0, 0, 1);
-    this.cylinder(g, r * 0.74, 3, m.hull, 0, 0, 5);
-    for (let i = 0; i < 4; i++) {
+    const minimal = b.type === "repair";
+    this.cylinder(g, r * 0.92, minimal ? 2 : 5, m.dark, 0, 0, 1);
+    this.cylinder(g, r * 0.74, minimal ? 2 : 3, m.hull, 0, 0, minimal ? 3 : 5);
+    for (let i = 0; !minimal && i < 4; i++) {
       const a = (i * TAU) / 4 + Math.PI / 4;
       this.cylinder(
         g,
@@ -321,14 +328,15 @@ export class SpaceRenderer {
         5,
       );
     }
-    const ring = this.mesh(
-      g,
-      new THREE.TorusGeometry(r * 0.88, 0.5, 5, 24),
-      m.edge,
-      0,
-      0,
-      4,
-    );
+    if (!minimal)
+      this.mesh(
+        g,
+        new THREE.TorusGeometry(r * 0.88, 0.5, 5, 24),
+        m.edge,
+        0,
+        0,
+        4,
+      );
     const glow = this.glow(d.color, 1.8);
     g.userData.lights = [];
     const core = (rad, z = 8) => {
@@ -337,17 +345,45 @@ export class SpaceRenderer {
       return o;
     };
     if (b.type === "solar") {
-      for (const side of [-1, 1]) {
-        this.mesh(g, new THREE.BoxGeometry(14, 34, 2), m.edge, side * 17, 0, 5);
+      const petals = solarPetals(b.level);
+      const shape = new THREE.Shape();
+      shape.moveTo(6, -2);
+      shape.bezierCurveTo(12, -3, 19, -8, 24, -4.5);
+      shape.quadraticCurveTo(28, -2.5, 28, 0);
+      shape.quadraticCurveTo(28, 2.5, 24, 4.5);
+      shape.bezierCurveTo(19, 8, 12, 3, 6, 2);
+      shape.closePath();
+      const frameGeometry = new THREE.ExtrudeGeometry(shape, {
+        depth: 1.6,
+        bevelEnabled: true,
+        bevelSize: 0.3,
+        bevelThickness: 0.3,
+        bevelSegments: 1,
+        curveSegments: 8,
+        steps: 1,
+      });
+      const panelGeometry = new THREE.ShapeGeometry(shape, 8);
+      const positions = panelGeometry.attributes.position;
+      const uv = panelGeometry.attributes.uv;
+      for (let i = 0; i < uv.count; i++)
+        uv.setXY(i, positions.getX(i) / 28, positions.getY(i) / 16 + 0.5);
+      for (let i = 0; i < petals; i++) {
+        const petal = new THREE.Group();
+        petal.name = `solar-petal-${i + 1}`;
+        petal.rotation.z = (i * TAU) / petals + Math.PI / 6;
+        this.mesh(petal, new THREE.BoxGeometry(19, 1.5, 2), m.hull, 12, 0, 5);
+        this.mesh(petal, frameGeometry, m.edge, 0, 0, 6);
+        const panel = this.mesh(petal, panelGeometry, m.solar, 1.1, 0, 7.95);
+        panel.scale.set(0.93, 0.83, 1);
         this.mesh(
-          g,
-          new THREE.BoxGeometry(12.5, 32, 0.5),
-          m.solar,
-          side * 17,
+          petal,
+          new THREE.BoxGeometry(15, 0.45, 0.3),
+          m.edge,
+          17,
           0,
-          6.3,
+          8.2,
         );
-        this.mesh(g, new THREE.BoxGeometry(32, 2.5, 3), m.hull, side * 8, 0, 4);
+        g.add(petal);
       }
       this.cylinder(g, 6, 9, m.edge, 0, 0, 8);
       core(2.4, 14);
@@ -389,26 +425,28 @@ export class SpaceRenderer {
       }
       this.mesh(g, new THREE.BoxGeometry(5, 26, 4), m.hull, 0, 0, 7);
     } else if (b.type === "repair") {
-      core(5, 9);
+      core(3, 5);
       for (let i = 0; i < 4; i++) {
         const a = (i * Math.PI) / 2;
         this.cylinder(
           g,
-          4,
-          4,
+          2.6,
+          2,
           m.edge,
-          Math.cos(a) * 12,
-          Math.sin(a) * 12,
-          7,
+          Math.cos(a) * 8,
+          Math.sin(a) * 8,
+          4,
           8,
         );
-        this.mesh(
+        this.cylinder(
           g,
-          new THREE.SphereGeometry(2.3, 8, 8),
+          1.3,
+          0.6,
           glow,
-          Math.cos(a) * 12,
-          Math.sin(a) * 12,
-          10,
+          Math.cos(a) * 8,
+          Math.sin(a) * 8,
+          5.3,
+          6,
         );
       }
     } else if (b.type === "laser" || b.type === "thel") {
@@ -452,17 +490,52 @@ export class SpaceRenderer {
         this.mesh(g, new THREE.BoxGeometry(48, 3, 4), m.edge, s * 23, 0, 2);
       }
     }
+    const tierLight = b.level > 1 ? this.glow("#fbebad", 1.7) : null;
     for (let i = 0; i < b.level - 1; i++)
       this.mesh(
         g,
         new THREE.BoxGeometry(2.6, 2, 1),
-        this.glow("#fbebad", 1.7),
+        tierLight,
         (i - (b.level - 2) / 2) * 5,
         -r * 0.8,
         7,
       );
+    if (["relay", "solar", "battery", "repair", "missile"].includes(b.type))
+      this.batchStructure(g);
+    g.scale.setScalar(d.visualScale || 1);
     g.position.set(b.x, b.y, 4);
     return g;
+  }
+  batchStructure(group) {
+    const batches = new Map();
+    const originals = new Set();
+    const lightMaterials = new Set(
+      group.userData.lights.map((o) => o.material),
+    );
+    group.updateMatrixWorld(true);
+    group.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      // Extruded solar frames are non-indexed; normalize before merging them
+      // with indexed bolts and struts, preserving every material and UV.
+      const geometry = (
+        mesh.geometry.index
+          ? mesh.geometry.toNonIndexed()
+          : mesh.geometry.clone()
+      ).applyMatrix4(mesh.matrixWorld);
+      if (!batches.has(mesh.material)) batches.set(mesh.material, []);
+      batches.get(mesh.material).push(geometry);
+      originals.add(mesh.geometry);
+    });
+    group.clear();
+    originals.forEach((geometry) => geometry.dispose());
+    group.userData.lights = [];
+    for (const [material, geometries] of batches) {
+      const merged = mergeGeometries(geometries);
+      geometries.forEach((g) => g.dispose());
+      const mesh = this.mesh(group, merged, material);
+      mesh.matrixAutoUpdate = false;
+      if (lightMaterials.has(material)) group.userData.lights.push(mesh);
+    }
   }
   enemy(e) {
     const group = new THREE.Group(),
@@ -541,6 +614,7 @@ export class SpaceRenderer {
       0,
       7,
     );
+    group.scale.setScalar(ENEMY_SCALE);
     return group;
   }
   disposeGroup(group) {
@@ -572,7 +646,7 @@ export class SpaceRenderer {
         this.scene.add(obj);
       }
       const g = this.objects.get(key);
-      g.scale.setScalar(0.72 + (0.28 * a.ore) / a.maxOre);
+      g.scale.setScalar(asteroidRadius(a) / a.radius);
     }
     for (const b of sim.buildings) {
       const key = "b" + b.id;
@@ -590,7 +664,10 @@ export class SpaceRenderer {
         this.scene.add(g);
       }
       if (g.userData.turret) g.userData.turret.rotation.z = b.angle;
-      g.scale.setScalar(b.construction < 1 ? 0.65 + b.construction * 0.35 : 1);
+      g.scale.setScalar(
+        (BUILDINGS[b.type].visualScale || 1) *
+          (b.construction < 1 ? 0.65 + b.construction * 0.35 : 1),
+      );
       for (const l of g.userData.lights || [])
         l.material.emissiveIntensity = b.powered
           ? 0.65 + b.activity * 0.5 + (b.powerPulse || 0) * 2.2
@@ -667,58 +744,84 @@ export class SpaceRenderer {
         }
     }
     const buildingIndex = new Map(sim.buildings.map((b) => [b.id, b]));
-    for (const edge of sim.links) {
-      const a = buildingIndex.get(edge.a),
-        b = buildingIndex.get(edge.b);
-      if (!a || !b) continue;
-      const pa = p(a.x, a.y),
-        pb = p(b.x, b.y);
-      const on = a.powered && b.powered;
-      line(pa, pb, on ? "#69bce767" : "#ce8b7250", on ? 1.2 : 1);
-    }
-    for (const flow of sim.flows || []) {
-      const alpha = Math.min(1, flow.life / flow.maxLife + 0.15),
-        power = Math.min(1, 0.35 + Math.sqrt(flow.amount) * 0.4);
-      c.save();
-      c.globalAlpha = alpha * power;
-      c.strokeStyle = "#9ceefe";
-      c.lineWidth = 1.2;
-      c.shadowColor = "#57cbf2";
-      c.shadowBlur = this.quality === "high" ? 8 : 0;
-      for (let i = 1; i < flow.path.length; i++) {
-        const from = buildingIndex.get(flow.path[i - 1]),
-          to = buildingIndex.get(flow.path[i]);
-        if (!from || !to) continue;
-        const a = p(from.x, from.y),
-          b = p(to.x, to.y);
-        const dx = b.x - a.x,
-          dy = b.y - a.y,
-          len = Math.hypot(dx, dy);
-        const segments = Math.max(3, Math.floor(len / 8));
-        c.beginPath();
+    const positions = new Map(sim.buildings.map((b) => [b.id, p(b.x, b.y)]));
+    // Batch passive cables into just two canvas strokes.
+    for (const powered of [false, true]) {
+      c.strokeStyle = powered ? "#69bce767" : "#ce8b7250";
+      c.lineWidth = powered ? 1.2 : 1;
+      c.beginPath();
+      for (const edge of sim.links) {
+        const from = buildingIndex.get(edge.a),
+          to = buildingIndex.get(edge.b);
+        if (!from || !to || Boolean(from.powered && to.powered) !== powered)
+          continue;
+        const a = positions.get(edge.a),
+          b = positions.get(edge.b);
         c.moveTo(a.x, a.y);
-        for (let j = 1; j < segments; j++) {
-          const f = j / segments;
-          const jitter = this.reducedMotion
-            ? 0
-            : Math.sin(j * 13.31 + Math.floor(sim.time * 28) * 4.9 + from.id) *
-              2.8 *
-              this.zoom *
-              Math.sin(f * Math.PI);
-          c.lineTo(
-            a.x + dx * f - (dy / len) * jitter,
-            a.y + dy * f + (dx / len) * jitter,
-          );
-        }
         c.lineTo(b.x, b.y);
+      }
+      c.stroke();
+    }
+    if (this.powerFrameSim !== sim || this.powerFrameTime !== sim.time) {
+      this.powerFrameSim = sim;
+      this.powerFrameTime = sim.time;
+      this.powerSegments = collectPowerSegments(sim.flows || []);
+    }
+    for (const flow of this.powerSegments) {
+      const a = positions.get(flow.a),
+        b = positions.get(flow.b);
+      if (!a || !b) continue;
+      // Offscreen power arcs do not need canvas geometry or glow work.
+      if (
+        Math.max(a.x, b.x) < -20 ||
+        Math.min(a.x, b.x) > this.width + 20 ||
+        Math.max(a.y, b.y) < -20 ||
+        Math.min(a.y, b.y) > this.height + 20
+      )
+        continue;
+      const alpha =
+        Math.min(1, flow.life / flow.maxLife + 0.15) *
+        Math.min(1, 0.35 + Math.sqrt(flow.amount) * 0.4);
+      const dx = b.x - a.x,
+        dy = b.y - a.y,
+        len = Math.hypot(dx, dy);
+      if (len < 1e-6) continue;
+      const segments = Math.min(18, Math.max(3, Math.floor(len / 10)));
+      c.save();
+      c.shadowBlur = 0;
+      c.beginPath();
+      c.moveTo(a.x, a.y);
+      for (let j = 1; j < segments; j++) {
+        const f = j / segments;
+        const jitter = this.reducedMotion
+          ? 0
+          : Math.sin(j * 13.31 + Math.floor(sim.time * 28) * 4.9 + flow.a) *
+            2.8 *
+            this.zoom *
+            Math.sin(f * Math.PI);
+        c.lineTo(
+          a.x + dx * f - (dy / len) * jitter,
+          a.y + dy * f + (dx / len) * jitter,
+        );
+      }
+      c.lineTo(b.x, b.y);
+      // A broad translucent stroke supplies glow without a blur filter per arc.
+      if (this.quality === "high") {
+        c.globalAlpha = alpha * 0.2;
+        c.strokeStyle = "#57cbf2";
+        c.lineWidth = 4;
         c.stroke();
-        if (!this.reducedMotion) {
-          const t = 1 - flow.life / flow.maxLife;
-          c.fillStyle = "#e2fdff";
-          c.beginPath();
-          c.arc(a.x + dx * t, a.y + dy * t, 1.7 * this.zoom, 0, TAU);
-          c.fill();
-        }
+      }
+      c.globalAlpha = alpha;
+      c.strokeStyle = "#b9f4ff";
+      c.lineWidth = 1.2;
+      c.stroke();
+      if (!this.reducedMotion) {
+        const t = 1 - flow.life / flow.maxLife;
+        c.fillStyle = "#e2fdff";
+        c.beginPath();
+        c.arc(a.x + dx * t, a.y + dy * t, 1.7 * this.zoom, 0, TAU);
+        c.fill();
       }
       c.restore();
     }
@@ -746,7 +849,7 @@ export class SpaceRenderer {
         c.strokeStyle = "#9ceeff";
         c.lineWidth = 1.2;
         c.shadowColor = "#66d6f5";
-        c.shadowBlur = 9;
+        c.shadowBlur = 0;
         c.beginPath();
         c.arc(a.x, a.y, r + (1 - b.powerPulse) * 7, 0, TAU);
         c.stroke();
@@ -823,22 +926,55 @@ export class SpaceRenderer {
       for (const e of sim.enemies) {
         const d = ENEMIES[e.type],
           a = p(
-            e.x - Math.cos(e.angle) * d.radius,
-            e.y - Math.sin(e.angle) * d.radius,
+            e.x - Math.cos(e.angle) * d.radius * ENEMY_SCALE,
+            e.y - Math.sin(e.angle) * d.radius * ENEMY_SCALE,
           ),
           b = p(
-            e.x - Math.cos(e.angle) * (d.radius + 18),
-            e.y - Math.sin(e.angle) * (d.radius + 18),
+            e.x - Math.cos(e.angle) * (d.radius + 18) * ENEMY_SCALE,
+            e.y - Math.sin(e.angle) * (d.radius + 18) * ENEMY_SCALE,
           );
         const g = c.createLinearGradient(a.x, a.y, b.x, b.y);
         g.addColorStop(0, d.color + "a0");
         g.addColorStop(1, d.color + "00");
-        line(a, b, g, Math.max(2, d.radius * 0.25 * this.zoom));
+        line(a, b, g, Math.max(2, d.radius * ENEMY_SCALE * 0.25 * this.zoom));
       }
     for (const e of sim.enemies) {
+      if (e.intelValue) {
+        const a = p(e.x, e.y),
+          radius = ENEMIES[e.type].radius * ENEMY_SCALE * this.zoom + 7;
+        if (
+          a.x >= -50 &&
+          a.x <= this.width + 50 &&
+          a.y >= -50 &&
+          a.y <= this.height + 50
+        ) {
+          c.strokeStyle = "#efcb76";
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(a.x, a.y - radius);
+          c.lineTo(a.x + radius, a.y);
+          c.lineTo(a.x, a.y + radius);
+          c.lineTo(a.x - radius, a.y);
+          c.closePath();
+          c.stroke();
+          c.font = '9px "SFMono-Regular",monospace';
+          c.textAlign = "center";
+          c.fillStyle = "#efcb76";
+          c.fillText(
+            `${e.rare ? "ELITE" : "COMMAND"} · ${e.intelValue} INTEL`,
+            a.x,
+            a.y - radius - 6,
+          );
+        }
+      }
       if (e.shield > 0) {
         const a = p(e.x, e.y);
-        this.range(c, a, ENEMIES[e.type].radius * this.zoom + 4, "#e5cd72");
+        this.range(
+          c,
+          a,
+          ENEMIES[e.type].radius * ENEMY_SCALE * this.zoom + 4,
+          "#e5cd72",
+        );
       }
       if (e.hp < e.maxHp || e.type === "mothership") {
         const a = p(e.x, e.y),
@@ -846,14 +982,14 @@ export class SpaceRenderer {
         c.fillStyle = "#170d16";
         c.fillRect(
           a.x - w / 2,
-          a.y + ENEMIES[e.type].radius * this.zoom + 8,
+          a.y + ENEMIES[e.type].radius * ENEMY_SCALE * this.zoom + 8,
           w,
           3,
         );
         c.fillStyle = "#fa887b";
         c.fillRect(
           a.x - w / 2,
-          a.y + ENEMIES[e.type].radius * this.zoom + 8,
+          a.y + ENEMIES[e.type].radius * ENEMY_SCALE * this.zoom + 8,
           (w * e.hp) / e.maxHp,
           3,
         );
@@ -863,7 +999,12 @@ export class SpaceRenderer {
       const a = p(e.x, e.y),
         f = e.life / e.maxLife;
       c.globalAlpha = f;
-      if (e.type === "beam") {
+      if (e.type === "intel") {
+        c.fillStyle = "#ffe098";
+        c.font = '12px "SFMono-Regular",monospace';
+        c.textAlign = "center";
+        c.fillText(`+${e.value} INTEL`, a.x, a.y - (1 - f) * 35);
+      } else if (e.type === "beam") {
         const b = p(e.toX, e.toY);
         c.shadowColor = e.color;
         c.shadowBlur = e.heavy ? 13 : 7;
@@ -937,7 +1078,7 @@ export class SpaceRenderer {
       c.fillStyle = check.ok ? "#87ebcc18" : "#ed8f7e18";
       c.lineWidth = 1.5;
       c.beginPath();
-      c.arc(a.x, a.y, d.radius * this.zoom, 0, TAU);
+      c.arc(a.x, a.y, placementRadius(state.buildType) * this.zoom, 0, TAU);
       c.fill();
       c.stroke();
       line({ x: a.x - 5, y: a.y }, { x: a.x + 5, y: a.y }, color);

@@ -1,4 +1,5 @@
 import { applyOriginalStats, makeClassic } from "./classic.js";
+import { extendStructureUpgrades } from "./structure-upgrades.js";
 // Source-backed structure order and base prices; see docs/ORIGINAL_MECHANICS.md.
 export const BUILD_ORDER = [
   "relay",
@@ -627,4 +628,5 @@ export const UPGRADES = [
 ];
 
 applyOriginalStats(BUILDINGS, ENEMIES);
+extendStructureUpgrades(BUILDINGS);
 export const CLASSIC = makeClassic(BUILD_ORDER);

@@ -4,12 +4,14 @@
 
 ## Automated
 
-- `npm test`: **84 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~664 kB / 181 kB gzip; CSS ~28 kB / 6.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **111 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~686 kB / 188 kB gzip; CSS ~31 kB / 7.3 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
-## Browser
+## Earlier browser checks
+
+These receipts predate the expanded progression below. Equip/unequip slots and the old activity-Intel schedule have since been replaced.
 
 Tested in a dedicated Chrome automation surface; an isolated second local origin protected the main preview's save.
 
@@ -25,7 +27,7 @@ Tested in a dedicated Chrome automation surface; an isolated second local origin
 
 Captured research screenshots in [screenshots/](screenshots/). These show an isolated QA profile, not the player's main save.
 
-## Live research follow-up
+## Earlier live research follow-up
 
 - Added 10 regression tests for threshold/carryover accounting, idempotent banking across reloads, legacy snapshots, losses and excluded modes, real extraction versus recycle refunds, player-attributed kills, immediate modifiers, reversible hull changes, capacity conservation, link rebuilding and the live UI's earning/launch-only labels.
 - In the isolated browser profile, resumed A wider orbit, opened the tree using I, bought Resonant drills with 2 Intel, and returned to the same operation with Escape. Extraction increased to five minerals per cycle.
@@ -35,6 +37,22 @@ Captured research screenshots in [screenshots/](screenshots/). These show an iso
 - Live respec refunded 12 Intel (balance 1 → 13), removed the active solar bonus, and returned to the operation. The mission-menu research path also returned to the same running operation correctly.
 - The new acquisition bars and live return control were checked at desktop and 390×844. Narrow-screen node selection scrolled to usable upgrade details. Viewport override was reset. Console warnings/errors: none.
 - Screenshot: [live research](screenshots/research-in-game.jpg), captured from the isolated QA profile. Player's main preview/save was not used for purchases or respec tests.
+
+## Compact structures, effects and expanded progression
+
+- `npm test`: 111 passed. Added real tier-construction/save/cap checks for all eight building branches; miner yield/energy, higher repair throughput, relay port increases, permissive placement, richer fields and preserved old deposits; actual solar/repair/enemy geometry; shared arc aggregation and cached-route invalidation.
+- Progression tests cover all forty nodes, unlimited active research, rare-ship rewards and exclusions, actual mining/combat/repair XP, level thresholds, point overspending, six stat effects, scenario-objective repairs, migration, persistence, save idempotency, Classic/Sandbox exclusions and recoverable fresh reset.
+- Synthetic benchmark: 120 structures, 1,200 steps and 12,000 requests. Before caches: median 1,539.8 ms. Final recorded run: median 70.9 ms / 0.059 ms per step. These are CPU simulation measurements, not browser FPS or GPU timings.
+- Actual model counts: basic relay 12 → 4 meshes; six-petal solar 6 meshes. Synthetic shared-cable workload: 1,680 overlapping path segments → 30 unique electrical arcs.
+- Dedicated Chrome QA at `127.0.0.1:5179` imported a backed-up profile through the normal save-import UI. All eight owned technologies became active; a ninth was purchased, reducing Intel 18 → 14 with no equipment restriction.
+- The base-stat screen showed level 6 and five available points. Buying Harvesting reduced points 5 → 4 while keeping Intel 18. A new Sandbox inherited the research and harvesting rank.
+- Opened live progression with I; bought another Harvesting rank; returned with Escape to the same operation. The miner inspector showed **110 minerals/min**, matching 80 × 1.25 research × 1.10 XP bonus. Intel remained 14. Sandbox did not earn new progression.
+- Upgraded solar through all five levels using both U and Space. Verified 2/3/4/5/6 petals, finite construction and the level-five maximum configuration. Built and visually checked the small four-port repair hub beside it.
+- Current desktop layout was reviewed at 1,911 × 1,085. Attempted narrow viewport emulation did not change the reported DOM size, so this receipt does not claim a new narrow-layout check. Temporary overrides were cleared.
+- Browser console during final gameplay/progression interaction: no warnings or errors.
+- Owner-authorized fresh reset was performed on the main preview. The old profile was saved locally and exported to a JSON download, then home showed 6 starting Intel and no saved operation. Research/XP persistence remains enabled for future games. The backup was successfully imported into the isolated QA profile; the main fresh profile was not used for QA purchases.
+
+Screenshots: [expanded tree](screenshots/research-expanded.jpg), [XP base stats](screenshots/base-stats.jpg), [six-petal solar and compact repair hub](screenshots/solar-petals.jpg). Screenshots of upgraded progress are from the isolated QA origin.
 
 ## Limits
 

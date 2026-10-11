@@ -1,5 +1,7 @@
 import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
+import { ASTEROID_ORE_MULTIPLIER } from "./structure-upgrades.js";
+import { XP_RATES, normalizeRanks } from "./experience.js";
 export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export function rng(seed) {
   let n = seed >>> 0;
@@ -28,11 +30,26 @@ export function segmentDistance(p, a, b) {
   );
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
+// Decorative panels and tips may overlap; the central construction hull cannot.
+export const placementRadius = (type) => BUILDINGS[type].radius * 0.82;
+export const linkClearance = (type) =>
+  Math.max(2, BUILDINGS[type].radius * 0.35);
+export const asteroidRadius = (a) =>
+  a.radius * (0.72 + 0.28 * Math.min(1, a.ore / (a.maxOre || a.ore || 1)));
+const statCache = new WeakMap();
 export function stats(b) {
+  const cached = statCache.get(b);
+  if (
+    cached &&
+    cached.type === b.type &&
+    cached.level === b.level &&
+    cached.research === b.research
+  )
+    return cached.value;
   const d = BUILDINGS[b.type],
     i = b.level - 1;
   const level = d.stats?.[i];
-  return applyResearchStats(
+  const value = applyResearchStats(
     {
       ...d,
       hp: d.hp * (1 + i * 0.5),
@@ -47,6 +64,13 @@ export function stats(b) {
     b.type,
     b.research,
   );
+  statCache.set(b, {
+    type: b.type,
+    level: b.level,
+    research: b.research,
+    value,
+  });
+  return value;
 }
 const relays = (b) => ["relay", "solar", "battery"].includes(b.type);
 export class Simulation {
@@ -55,11 +79,15 @@ export class Simulation {
     difficulty = "normal",
     snapshot = null,
     researchIds = [],
+    statRanks = {},
   ) {
     this.researchIds = mission.classic
       ? []
       : [...(snapshot ? snapshot.researchIds || [] : researchIds)];
-    this.rules = researchRules(this.researchIds);
+    this.statRanks = mission.classic
+      ? {}
+      : normalizeRanks(snapshot?.statRanks || statRanks);
+    this.rules = researchRules(this.researchIds, this.statRanks);
     this.mission = mission;
     this.difficulty = difficulty;
     this.diff = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;
@@ -85,7 +113,10 @@ export class Simulation {
     this.mined = 0;
     this.kills = 0;
     this.combatKills = 0;
-    this.intelCredit = { mined: 0, kills: 0, earned: 0 };
+    this.intelCollected = 0;
+    this.intelCredit = { rare: 0, earned: 0 };
+    this.xpEarned = 0;
+    this.xpCredit = 0;
     this.bossKills = 0;
     this.lost = 0;
     this.spent = 0;
@@ -117,6 +148,7 @@ export class Simulation {
     if (mission.station) {
       const b = this.addBuilding("station", 150, 75, true);
       b.hp = b.maxHp * mission.stationHealth;
+      b.repairXpDebt = b.maxHp - b.hp;
     }
     if (mission.id !== 0 && !mission.classic) {
       this.addBuilding("miner", 45, 52, true);
@@ -124,10 +156,11 @@ export class Simulation {
     }
     this.rebuildNetwork();
   }
-  setResearchLoadout(ids) {
+  setResearchLoadout(ids, ranks = this.statRanks) {
     const oldLinkBonus = this.rules.linkBonus;
     this.researchIds = this.mission.classic ? [] : [...new Set(ids)];
-    this.rules = researchRules(this.researchIds);
+    this.statRanks = this.mission.classic ? {} : normalizeRanks(ranks);
+    this.rules = researchRules(this.researchIds, this.statRanks);
     for (const b of this.buildings) {
       // Preserve damage percentage: swapping hull modifiers cannot heal a ship.
       const health = b.hp / b.maxHp;
@@ -135,6 +168,7 @@ export class Simulation {
       const configured = stats(b);
       b.maxHp = configured.hp;
       b.hp = Math.min(1, health) * b.maxHp;
+      b.repairXpDebt = Math.min(b.repairXpDebt || 0, b.maxHp - b.hp);
       b.energy = Math.min(b.energy, configured.capacity || 0);
       if (oldLinkBonus !== this.rules.linkBonus) b.linkInitialized = false;
     }
@@ -161,8 +195,8 @@ export class Simulation {
         x,
         y,
         radius: r,
-        ore,
-        maxOre: ore,
+        ore: ore * ASTEROID_ORE_MULTIPLIER,
+        maxOre: ore * ASTEROID_ORE_MULTIPLIER,
         rotation: this.random() * 6.28,
         seed: Math.floor(this.random() * 999999),
       });
@@ -256,13 +290,13 @@ export class Simulation {
   blocked(a, b) {
     return (
       this.asteroids.some(
-        (o) => o.ore > 0 && segmentDistance(o, a, b) < o.radius,
+        (o) => o.ore > 0 && segmentDistance(o, a, b) < asteroidRadius(o) * 0.88,
       ) ||
       this.buildings.some(
         (o) =>
           o.id !== a.id &&
           o.id !== b.id &&
-          segmentDistance(o, a, b) < BUILDINGS[o.type].radius * 0.6,
+          segmentDistance(o, a, b) < linkClearance(o.type),
       )
     );
   }
@@ -285,13 +319,18 @@ export class Simulation {
       return { ok: false, reason: "Outside the sector boundary" };
     if (
       this.buildings.some(
-        (b) => distance({ x, y }, b) < d.radius + BUILDINGS[b.type].radius + 3,
+        (b) =>
+          distance({ x, y }, b) <
+          placementRadius(type) + placementRadius(b.type),
       )
     )
       return { ok: false, reason: "Too close to another structure" };
     if (
       this.asteroids.some(
-        (a) => a.ore > 0 && distance({ x, y }, a) < a.radius + d.radius + 2,
+        (a) =>
+          a.ore > 0 &&
+          distance({ x, y }, a) <
+            asteroidRadius(a) * 0.88 + placementRadius(type),
       )
     )
       return { ok: false, reason: "Asteroid obstructs construction" };
@@ -300,7 +339,7 @@ export class Simulation {
       this.links.some((l) => {
         const a = byId.get(l.a),
           b = byId.get(l.b);
-        return a && b && segmentDistance({ x, y }, a, b) < d.radius * 0.65;
+        return a && b && segmentDistance({ x, y }, a, b) < linkClearance(type);
       })
     )
       return {
@@ -313,7 +352,7 @@ export class Simulation {
         relays(b) &&
         b.connected &&
         b.construction >= 1 &&
-        this.degree(b.id) < BUILDINGS[b.type].maxLinks &&
+        this.degree(b.id) < stats(b).maxLinks &&
         this.canLink(ghost, b),
     );
     const ore = this.asteroids.filter(
@@ -344,14 +383,15 @@ export class Simulation {
   }
   rebuildNetwork() {
     this.networkDirty = false;
+    this.energyRoutes = new Map();
     const byId = new Map(this.buildings.map((b) => [b.id, b]));
     this.byId = byId;
     const degrees = new Map();
     const links = [];
     const insert = (a, b) => {
       if (
-        (degrees.get(a.id) || 0) >= BUILDINGS[a.type].maxLinks ||
-        (degrees.get(b.id) || 0) >= BUILDINGS[b.type].maxLinks
+        (degrees.get(a.id) || 0) >= stats(a).maxLinks ||
+        (degrees.get(b.id) || 0) >= stats(b).maxLinks
       )
         return;
       links.push({ a: a.id, b: b.id });
@@ -463,6 +503,7 @@ export class Simulation {
     b.investment += cost;
     b.upgradeSpent = (b.upgradeSpent || 0) + cost;
     const oldMax = b.maxHp;
+    const oldLink = stats(b).link;
     if (branch === "thel") {
       b.type = "thel";
       b.level = 1;
@@ -470,6 +511,7 @@ export class Simulation {
     const s = stats(b);
     b.maxHp = s.hp;
     b.hp = Math.min(s.hp, b.hp + s.hp - oldMax);
+    if (s.link !== oldLink || b.type === "relay") b.linkInitialized = false;
     const more =
       b.type === "miner" || b.type === "laser"
         ? 5
@@ -541,7 +583,7 @@ export class Simulation {
       ...extra,
     });
   }
-  spawnEnemy(type, angle = null) {
+  spawnEnemy(type, angle = null, rare = false) {
     const d = ENEMIES[type];
     const a = angle ?? this.random() * Math.PI * 2,
       r = this.mission.classic ? 2500 : this.mission.world * 0.5;
@@ -560,7 +602,19 @@ export class Simulation {
       cooldown: this.random(),
       spawnCooldown: 8,
       angle: a + Math.PI,
+      intelValue: !this.mission.classic
+        ? type === "mothership"
+          ? 3
+          : rare
+            ? 2
+            : 0
+        : 0,
     };
+    if (rare && !this.mission.classic) {
+      e.hp *= 1.6;
+      e.maxHp = e.hp;
+      e.rare = true;
+    }
     this.enemies.push(e);
     return e;
   }
@@ -643,7 +697,11 @@ export class Simulation {
               : this.wave > 3 && i % 3 === 0
                 ? "swarm"
                 : "fighter";
-      this.spawnEnemy(type, a + (this.random() - 0.5) * 0.5);
+      this.spawnEnemy(
+        type,
+        a + (this.random() - 0.5) * 0.5,
+        i === 0 && this.wave % 3 === 0,
+      );
     }
     if (this.mission.boss && this.wave === Math.min(3, this.mission.waves))
       for (let n = 0; n < (this.mission.bossCount || 1); n++)
@@ -655,33 +713,48 @@ export class Simulation {
   requestEnergy(consumer, amount, solarOnly = false) {
     if (!consumer || amount <= 0) return 0;
     const byId = this.byId || new Map(this.buildings.map((b) => [b.id, b]));
-    const visited = new Set([consumer.id]);
-    const queue = [{ node: consumer, path: [consumer.id] }];
-    const sources = [];
-    while (queue.length) {
-      const { node, path } = queue.shift();
-      if (
-        node.id !== consumer.id &&
-        node.construction >= 1 &&
-        (node.type === "solar" || (!solarOnly && node.type === "battery")) &&
-        node.energy > 0.00001
-      )
-        sources.push({ node, path });
-      if (
-        node.id !== consumer.id &&
-        (!relays(node) || (node.constructionUnits ?? 10) < 10)
-      )
-        continue;
-      for (const id of this.adjacency.get(node.id) || [])
-        if (!visited.has(id)) {
-          visited.add(id);
-          queue.push({ node: byId.get(id), path: [...path, id] });
-        }
+    // Routes depend on topology, not energy balances. Keep current supply and
+    // construction checks below so caching never makes disconnected power usable.
+    this.energyRoutes ??= new Map();
+    let sources = this.energyRoutes.get(consumer.id);
+    if (!sources) {
+      let stable = true;
+      const visited = new Set([consumer.id]);
+      const queue = [{ node: consumer, path: [consumer.id] }];
+      sources = [];
+      for (let head = 0; head < queue.length; head++) {
+        const { node, path } = queue[head];
+        if (relays(node) && (node.constructionUnits ?? 10) < 10) stable = false;
+        if (
+          node.id !== consumer.id &&
+          (node.type === "solar" || node.type === "battery")
+        )
+          sources.push({ node, path });
+        if (
+          node.id !== consumer.id &&
+          (!relays(node) || (node.constructionUnits ?? 10) < 10)
+        )
+          continue;
+        for (const id of this.adjacency.get(node.id) || [])
+          if (!visited.has(id)) {
+            visited.add(id);
+            queue.push({ node: byId.get(id), path: [...path, id] });
+          }
+      }
+      // Keep the original farthest-hop supplier priority and stable equal-hop order.
+      sources.sort((a, b) => b.path.length - a.path.length);
+      // An unfinished relay can begin forwarding within this same fixed step.
+      // Revisit these temporary routes until construction makes them stable.
+      if (stable) this.energyRoutes.set(consumer.id, sources);
     }
-    // The original visits farthest-hop suppliers first. Conserve energy across partial withdrawals.
-    sources.sort((a, b) => b.path.length - a.path.length);
     let received = 0;
     for (const { node, path } of sources) {
+      if (
+        node.construction < 1 ||
+        node.energy <= 0.00001 ||
+        (solarOnly && node.type !== "solar")
+      )
+        continue;
       const taken = Math.min(node.energy, amount - received);
       if (taken <= 0) break;
       node.energy -= taken;
@@ -791,15 +864,15 @@ export class Simulation {
             b.type === "miner" || b.type === "relay"
               ? 0.05
               : b.type === "laser"
-                ? [0.4, 0.35, 0.3, 0.25][b.level - 1]
+                ? [0.4, 0.35, 0.3, 0.25][Math.min(b.level - 1, 3)]
                 : b.type === "solar"
-                  ? [0.5, 0.4, 0.3][b.level - 1]
+                  ? [0.5, 0.4, 0.3, 0.25, 0.2][Math.min(b.level - 1, 4)]
                   : b.type === "battery"
                     ? b.level === 1
                       ? 0.5
                       : 0.4
                     : b.type === "missile"
-                      ? [0.75, 0.5, 0.25][b.level - 1]
+                      ? [0.75, 0.5, 0.25, 0.2][Math.min(b.level - 1, 3)]
                       : b.type === "repair"
                         ? b.level === 1
                           ? 0.75
@@ -845,22 +918,27 @@ export class Simulation {
         this.time - (b.lastDamaged ?? 0) >= 8
       ) {
         const heal = Math.min(b.maxHp - b.hp, b.maxHp * 0.01 * dt, 20 * dt);
-        if (this.useEnergy(b, heal * 0.08)) b.hp += heal;
+        if (this.useEnergy(b, heal * 0.08)) {
+          b.hp += heal;
+          this.creditRepair(b, heal);
+        }
       }
       if (b.type === "miner" && this.minersOn) {
         b.mineCooldown = (b.mineCooldown || 0) - dt;
         const targets = this.asteroids.filter(
           (a) => a.ore > 0 && distance(b, a) - a.radius <= s.range,
         );
-        if (targets.length && b.mineCooldown <= 0 && this.useEnergy(b, 1)) {
+        if (
+          targets.length &&
+          b.mineCooldown <= 0 &&
+          this.useEnergy(b, s.miningEnergy || 1)
+        ) {
           const target = targets[Math.floor(this.random() * targets.length)],
-            mined = Math.min(
-              target.ore,
-              (b.level === 1 ? 4 : 10) * this.rules.miningYield,
-            );
+            mined = Math.min(target.ore, s.rate * 3);
           target.ore -= mined;
           this.minerals += mined;
           this.mined += mined;
+          this.xpEarned += mined * XP_RATES.mining;
           minedTick += mined;
           b.mineCooldown = 3;
           b.targetId = target.id;
@@ -1087,9 +1165,10 @@ export class Simulation {
           const heal = Math.min(
             target.maxHp - target.hp,
             d.energy,
-            20 * dt * this.rules.repairRate,
+            stats(home).rate * dt,
           );
           target.hp += heal;
+          this.creditRepair(target, heal);
           d.energy -= heal;
           d.mode = "repair";
         }
@@ -1254,6 +1333,14 @@ export class Simulation {
       )
         this.combatKills++;
       if (e.type === "mothership") this.bossKills++;
+      if (e.defeatedByPlayer && e.intelValue) {
+        this.intelCollected += e.intelValue;
+        this.effect("intel", e.x, e.y, {
+          value: e.intelValue,
+          life: 1.6,
+          maxLife: 1.6,
+        });
+      }
       this.effect("explosion", e.x, e.y, {
         size: ENEMIES[e.type].radius * 3,
         color: ENEMIES[e.type].color,
@@ -1335,6 +1422,7 @@ export class Simulation {
       this.finish("won");
   }
   damageBuilding(target, amount) {
+    if (target.type !== "station") amount *= 1 - this.rules.armor;
     if (
       this.rules.shield &&
       target.type !== "station" &&
@@ -1346,6 +1434,8 @@ export class Simulation {
         target.shieldPulse = 1;
       }
     }
+    target.repairXpDebt =
+      (target.repairXpDebt || 0) + Math.min(Math.max(0, target.hp), amount);
     target.hp -= amount;
     target.lastDamaged = this.time;
   }
@@ -1356,9 +1446,18 @@ export class Simulation {
       target.shield -= absorbed;
       amount -= absorbed;
     }
+    if (!target.interceptable)
+      this.xpEarned +=
+        Math.min(Math.max(0, target.hp || 0), Math.max(0, amount)) *
+        XP_RATES.combat;
     target.hp = (target.hp ?? 20) - amount;
     if (wasAlive && target.hp <= 0) target.defeatedByPlayer = true;
     if (target.interceptable && target.hp <= 0) target.life = 0;
+  }
+  creditRepair(target, amount) {
+    const eligible = Math.min(target.repairXpDebt || 0, amount);
+    target.repairXpDebt = Math.max(0, (target.repairXpDebt || 0) - eligible);
+    this.xpEarned += eligible * XP_RATES.repair;
   }
   finish(status) {
     if (this.status !== "playing") return;
@@ -1382,6 +1481,10 @@ export class Simulation {
       JSON.stringify({
         missionId: this.mission.id,
         researchIds: this.researchIds,
+        statRanks: this.statRanks,
+        intelCollected: this.intelCollected,
+        xpEarned: this.xpEarned,
+        xpCredit: this.xpCredit,
         combatKills: this.combatKills,
         intelCredit: this.intelCredit,
         clearedWave: this.clearedWave || 0,
@@ -1421,6 +1524,9 @@ export class Simulation {
       "clearedWave",
       "combatKills",
       "intelCredit",
+      "intelCollected",
+      "xpEarned",
+      "xpCredit",
       "buildings",
       "asteroids",
       "enemies",
@@ -1446,12 +1552,10 @@ export class Simulation {
     ])
       if (s[key] !== undefined) this[key] = s[key];
     // Legacy snapshots start tracking from their current extraction total.
-    if (!s.intelCredit)
-      this.intelCredit = {
-        mined: this.mined,
-        kills: this.combatKills,
-        earned: 0,
-      };
+    if (!Number.isFinite(s.intelCredit?.rare))
+      this.intelCredit = { rare: this.intelCollected, earned: 0 };
+    // Legacy operations start XP tracking now; do not re-credit historic activity.
+    if (!Number.isFinite(s.xpCredit)) this.xpCredit = this.xpEarned;
     for (const b of this.buildings) {
       b.research = this.rules;
       b.construction ??= 1;
@@ -1462,6 +1566,7 @@ export class Simulation {
       b.baseCost ??= BUILDINGS[b.type].cost;
       b.upgradeSpent ??= Math.max(0, b.investment - b.baseCost);
       b.beamTime ??= 0;
+      if (b.type === "station") b.repairXpDebt ??= b.maxHp - b.hp;
     }
     if (s.randomState !== undefined) this.random.restore(s.randomState);
     if (this.mission.classic && this.mission.kind === "mine")

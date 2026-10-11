@@ -184,7 +184,7 @@ export function makeClassic(buildOrder) {
     return {
       id: "classic" + n,
       name: `Mission ${n}`,
-      sector: "CLASSIC / 2009 RULESET",
+      sector: "CLASSIC / EXPANDED UPGRADES",
       classic: true,
       kind: mine ? "mine" : n === 6 ? "boss" : "survive",
       goal: mine ? 1 : n === 6 ? 35 : n === 3 ? 600 : 1200,

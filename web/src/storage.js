@@ -2,15 +2,18 @@ import {
   normalizeResearch,
   researchBudget,
   normalizeIntel,
-  intelActivity,
+  legacyIntel,
   earnsFieldIntel,
 } from "./research.js";
+import { normalizeExperience, experienceLevel } from "./experience.js";
 const KEY = "the-space-game-v2";
 export function freshProgress() {
   return {
     version: 2,
+    progressionVersion: 2,
     research: { owned: [], active: [] },
-    intel: { mined: 0, kills: 0 },
+    intel: { rare: 0, legacy: 0 },
+    experience: { xp: 0, ranks: {} },
     completed: {},
     challenges: {},
     livery: "mint",
@@ -27,18 +30,49 @@ export function loadProgress(storage = globalThis.localStorage) {
   try {
     const p = JSON.parse(storage.getItem(KEY));
     if (!p || p.version !== 2) return freshProgress();
-    return {
+    return migrateProgression({
       ...freshProgress(),
       ...p,
       research: normalizeResearch(p.research, researchBudget(p).earned),
-      intel: normalizeIntel(p.intel),
       completed: p.completed || {},
       challenges: p.challenges || {},
       settings: normalizeSettings(p.settings),
-    };
+      progressionVersion: p.progressionVersion,
+      intel: p.intel,
+    });
   } catch {
     return freshProgress();
   }
+}
+export function migrateProgression(progress) {
+  const legacy = progress.progressionVersion !== 2;
+  const oldIntel = legacy ? legacyIntel(progress) : 0;
+  const oldActivityXp = legacy
+    ? Math.max(
+        0,
+        Number.isFinite(progress.intel?.mined) ? progress.intel.mined : 0,
+      ) *
+        0.2 +
+      Math.max(
+        0,
+        Number.isFinite(progress.intel?.kills) ? progress.intel.kills : 0,
+      ) *
+        5
+    : 0;
+  return {
+    ...progress,
+    progressionVersion: 2,
+    intel: legacy
+      ? { rare: 0, legacy: oldIntel }
+      : normalizeIntel(progress.intel),
+    experience: normalizeExperience(
+      legacy ? { xp: oldActivityXp } : progress.experience,
+    ),
+    research: normalizeResearch(
+      progress.research,
+      researchBudget(progress).earned,
+    ),
+  };
 }
 export function normalizeSettings(value = {}) {
   const defaults = freshProgress().settings;
@@ -66,20 +100,37 @@ export function saveProgress(progress, storage = globalThis.localStorage) {
     return false;
   }
 }
+export function resetProgress(progress, storage = globalThis.localStorage) {
+  const backupKey = `${KEY}-backup-${Date.now()}`;
+  // A durable local backup makes this reset recoverable even if a download fails.
+  storage.setItem(backupKey, JSON.stringify(progress));
+  const next = freshProgress();
+  next.settings = normalizeSettings(progress.settings);
+  next.resetToken = backupKey;
+  if (!saveProgress(next, storage))
+    throw new Error("Could not save fresh progress");
+  return { progress: next, backupKey };
+}
 // Save the profile and snapshot together: a resumed operation must not credit
 // the same mining or combat twice. Partial progress carries across operations.
 export function bankIntel(progress, sim) {
   if (!earnsFieldIntel(sim.mission)) return 0;
-  const before = intelActivity(progress).earned;
   progress.intel = normalizeIntel(progress.intel);
   const credit = sim.intelCredit;
-  progress.intel.mined += Math.max(0, sim.mined - credit.mined);
-  progress.intel.kills += Math.max(0, sim.combatKills - credit.kills);
-  credit.mined = Math.max(credit.mined, sim.mined);
-  credit.kills = Math.max(credit.kills, sim.combatKills);
-  const earned = intelActivity(progress).earned - before;
+  const earned = Math.max(0, sim.intelCollected - credit.rare);
+  progress.intel.rare += earned;
+  credit.rare = Math.max(credit.rare, sim.intelCollected);
   credit.earned += earned;
   return earned;
+}
+export function bankExperience(progress, sim) {
+  if (!earnsFieldIntel(sim.mission)) return { xp: 0, levels: 0 };
+  progress.experience = normalizeExperience(progress.experience);
+  const before = experienceLevel(progress.experience.xp);
+  const xp = Math.max(0, sim.xpEarned - sim.xpCredit);
+  progress.experience.xp += xp;
+  sim.xpCredit = Math.max(sim.xpCredit, sim.xpEarned);
+  return { xp, levels: experienceLevel(progress.experience.xp) - before };
 }
 export function starsTotal(p) {
   return Object.values(p.completed).reduce((s, c) => s + (c.stars || 0), 0);

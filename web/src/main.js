@@ -10,6 +10,7 @@ import {
   skirmish,
 } from "./content.js";
 import { Simulation, stats, distance } from "./engine.js";
+import { solarPetals } from "./structure-upgrades.js";
 import { SpaceRenderer } from "./renderer.js";
 import {
   freshProgress,
@@ -20,20 +21,20 @@ import {
   isUnlocked,
   recordVictory,
   bankIntel,
+  bankExperience,
+  migrateProgression,
+  resetProgress,
 } from "./storage.js";
 import { Sound } from "./audio.js";
 import {
   TECHNOLOGIES,
   researchBudget,
   buyResearch,
-  toggleResearch,
   resetResearch,
   researchLoadout,
   normalizeResearch,
-  normalizeIntel,
-  INTEL_RATES,
-  intelActivity,
 } from "./research.js";
+import { experienceBudget, buyBaseStat } from "./experience.js";
 import { researchView } from "./research-view.js";
 const app = document.querySelector("#app");
 const esc = (s) =>
@@ -93,6 +94,7 @@ let uiTick = 0,
   keys = new Set(),
   resultHandled = false;
 let selectedTech = "solar_cells",
+  progressionPage = "tech",
   researchReturn = "home",
   pausedBeforeResearch = false;
 const sound = new Sound();
@@ -107,7 +109,9 @@ try {
 }
 function applySettings() {
   sound.enabled = progress.settings.sound;
+  const qualityChanged = renderer.quality !== progress.settings.quality;
   renderer.quality = progress.settings.quality;
+  if (qualityChanged) renderer.resize();
   renderer.reducedMotion = progress.settings.reducedMotion;
   renderer.accent =
     UPGRADES.find((u) => u.id === progress.livery)?.color || "#87ebcc";
@@ -179,6 +183,7 @@ function researchScreen() {
   modalOpen = false;
   keys.clear();
   app.innerHTML = researchView(progress, selectedTech, icon, {
+    page: progressionPage,
     inGame: researchReturn === "game",
     mission: researchReturn === "game" ? sim.mission : null,
   });
@@ -188,7 +193,7 @@ function runResearch() {
   if (sim.mission.classic) {
     if (modalOpen) closeModal();
     openModal(
-      `<div class="eyebrow">CLASSIC OPERATION</div><h2>Original rules.</h2><p>Classic missions use the original statistics and do not earn Intel. Live research is available in modern operations.</p><button class="primary" data-action="close">Return to operation</button>`,
+      `<div class="eyebrow">CLASSIC OPERATION</div><h2>Original rules.</h2><p>Classic scenarios use the original mission rules with the expanded building upgrades. They do not earn Intel. Live research is available in modern operations.</p><button class="primary" data-action="close">Return to operation</button>`,
     );
     return;
   }
@@ -218,7 +223,10 @@ function leaveResearch() {
 }
 function saveResearchChanges() {
   if (researchReturn === "game") {
-    sim.setResearchLoadout(researchLoadout(progress, sim.mission));
+    sim.setResearchLoadout(
+      researchLoadout(progress, sim.mission),
+      progress.experience.ranks,
+    );
     saveActive();
   } else saveProgress(progress);
 }
@@ -258,7 +266,7 @@ function selector(which = "campaign", selection = null) {
       })
       .join(
         "",
-      )}</div><aside class="briefing"><div class="eyebrow">${esc(m.sector)}</div><h3>${esc(m.name)}</h3><p>${esc(m.brief)}</p><div class="objective-label"><span class="small-label">PRIMARY OBJECTIVE</span><br>${esc(missionGoal(m))}</div><div class="research-summary">${m.classic ? "CLASSIC · ORIGINAL RULES · RESEARCH DISABLED" : researchLoadout(progress, m).length + " TECHNOLOGIES EQUIPPED · " + researchBudget(progress).load + "/6 SLOTS"}</div><label class="field-label">DIFFICULTY<select id="difficulty">${Object.entries(
+      )}</div><aside class="briefing"><div class="eyebrow">${esc(m.sector)}</div><h3>${esc(m.name)}</h3><p>${esc(m.brief)}</p><div class="objective-label"><span class="small-label">PRIMARY OBJECTIVE</span><br>${esc(missionGoal(m))}</div><div class="research-summary">${m.classic ? "CLASSIC SCENARIO · EXPANDED UPGRADES · RESEARCH DISABLED" : researchLoadout(progress, m).length + " TECHNOLOGIES ACTIVE · COMMAND LEVEL " + experienceBudget(progress).level}</div><label class="field-label">DIFFICULTY<select id="difficulty">${Object.entries(
       DIFFICULTIES,
     )
       .map(
@@ -295,6 +303,11 @@ function launch(m, snapshot = null) {
     snapshot?.difficulty || progress.settings.difficulty,
     snapshot,
     researchLoadout(progress, m),
+    progress.experience.ranks,
+  );
+  sim.setResearchLoadout(
+    researchLoadout(progress, m),
+    progress.experience.ranks,
   );
   sim.paused = false;
   resultHandled = false;
@@ -307,7 +320,7 @@ function launch(m, snapshot = null) {
   sound.play("build");
 }
 function renderHud() {
-  app.innerHTML = `<div class="hud"><header class="hud-top"><div class="hud-logo">${brand()}<div class="mission-name">${esc(sim.mission.name)} / ${DIFFICULTIES[sim.difficulty].name}</div></div><div class="resource-group"><div class="resource minerals"><div class="small-label">MINERALS</div><strong id="minerals">0</strong><span class="unit">M</span><div class="rate" id="income">+0 / MIN</div></div><div class="resource"><div class="small-label">ENERGY RESERVE</div><strong id="energy">0</strong><span class="unit" id="capacity">/ 0</span><div class="power-meter"><i id="power-bar" style="width:0%"></i></div></div><div class="resource"><div class="small-label">POWER BALANCE</div><strong id="balance">0</strong><span class="unit">E/S</span><div class="rate" id="power-rate">GENERATED / CONSUMED</div></div></div><div class="hud-controls"><button class="speed-btn" data-action="pause" title="Pause simulation; building remains available" aria-label="Pause">Ⅱ</button><button class="speed-btn" data-speed="0.5">½×</button><button class="speed-btn active" data-speed="1">1×</button><button class="speed-btn" data-speed="2">2×</button><button class="icon-btn" data-action="controls" title="Keyboard controls" aria-label="Controls">?</button><button class="icon-btn intel-button" data-action="run-research" aria-label="Research tree" title="Research tree · I"><span>◈ <b id="intel-count">0</b></span><small>INTEL · I</small></button><button class="icon-btn" data-action="menu" title="Mission menu" aria-label="Mission menu">☰</button></div></header><section class="objective-panel"><div class="eyebrow">${sim.mission.id === "skirmish" ? "OPEN OPERATION" : "MISSION OBJECTIVE"}</div><h3>${esc(sim.mission.name)}</h3><div class="objective-value" id="objective-text"></div><div class="progress-track"><i id="objective-progress" style="width:0%"></i></div><p>${esc(sim.mission.tip)}</p></section><div class="radar-panel"><div class="small-label" id="contact-label">NEXT CONTACT</div><div class="contact-time" id="contact-time"></div><div class="enemy-count" id="enemy-count"></div><div class="time-label" id="elapsed"></div></div><div class="status-strip" id="status-strip"></div><div class="minimap-wrap"><div class="small-label"><span>SECTOR MAP</span><span id="zoom-label">100%</span></div><canvas id="minimap" width="292" height="180" aria-label="Minimap: click to move camera"></canvas></div><div class="bottom-dock"><div class="dock-title"><span>CONSTRUCTION / 1–7</span><span>SHIFT + CLICK TO REPEAT · R TO RECYCLE</span></div><div class="build-deck">${BUILD_ORDER.map((t) => `<button class="build-card" data-build="${t}" title="${BUILDINGS[t].key} · ${BUILDINGS[t].name} · ${BUILDINGS[t].description}" aria-label="Build ${BUILDINGS[t].name}"><span class="shortcut">${BUILDINGS[t].key}</span><span class="cost">${BUILDINGS[t].cost}</span>${icon(t)}<span class="name">${BUILDINGS[t].name}</span></button>`).join("")}</div></div><div class="network-toggles"><button class="quiet" data-action="miners" id="miners-toggle">Miners on</button><button class="quiet" data-action="missiles" id="missiles-toggle">Missiles on</button><button class="quiet" data-action="grid" title="Toggle placement grid">Grid</button></div><aside class="inspector" id="inspector"></aside><div class="tutorial-tip" id="tutorial-tip">Select a structure to inspect it. Drag the field to pan. Scroll to zoom.</div></div>`;
+  app.innerHTML = `<div class="hud"><header class="hud-top"><div class="hud-logo">${brand()}<div class="mission-name">${esc(sim.mission.name)} / ${DIFFICULTIES[sim.difficulty].name}</div></div><div class="resource-group"><div class="resource minerals"><div class="small-label">MINERALS</div><strong id="minerals">0</strong><span class="unit">M</span><div class="rate" id="income">+0 / MIN</div></div><div class="resource"><div class="small-label">ENERGY RESERVE</div><strong id="energy">0</strong><span class="unit" id="capacity">/ 0</span><div class="power-meter"><i id="power-bar" style="width:0%"></i></div></div><div class="resource"><div class="small-label">POWER BALANCE</div><strong id="balance">0</strong><span class="unit">E/S</span><div class="rate" id="power-rate">GENERATED / CONSUMED</div></div></div><div class="hud-controls"><button class="speed-btn" data-action="pause" title="Pause simulation; building remains available" aria-label="Pause">Ⅱ</button><button class="speed-btn" data-speed="0.5">½×</button><button class="speed-btn active" data-speed="1">1×</button><button class="speed-btn" data-speed="2">2×</button><button class="icon-btn" data-action="controls" title="Keyboard controls" aria-label="Controls">?</button><button class="icon-btn intel-button" data-action="run-research" aria-label="Research tree" title="Research tree · I"><span>◈ <b id="intel-count">0</b></span><small id="xp-hud">INTEL · I</small></button><button class="icon-btn" data-action="menu" title="Mission menu" aria-label="Mission menu">☰</button></div></header><section class="objective-panel"><div class="eyebrow">${sim.mission.id === "skirmish" ? "OPEN OPERATION" : "MISSION OBJECTIVE"}</div><h3>${esc(sim.mission.name)}</h3><div class="objective-value" id="objective-text"></div><div class="progress-track"><i id="objective-progress" style="width:0%"></i></div><p>${esc(sim.mission.tip)}</p></section><div class="radar-panel"><div class="small-label" id="contact-label">NEXT CONTACT</div><div class="contact-time" id="contact-time"></div><div class="enemy-count" id="enemy-count"></div><div class="time-label" id="elapsed"></div></div><div class="status-strip" id="status-strip"></div><div class="minimap-wrap"><div class="small-label"><span>SECTOR MAP</span><span id="zoom-label">100%</span></div><canvas id="minimap" width="292" height="180" aria-label="Minimap: click to move camera"></canvas></div><div class="bottom-dock"><div class="dock-title"><span>CONSTRUCTION / 1–7</span><span>SHIFT + CLICK TO REPEAT · R TO RECYCLE</span></div><div class="build-deck">${BUILD_ORDER.map((t) => `<button class="build-card" data-build="${t}" title="${BUILDINGS[t].key} · ${BUILDINGS[t].name} · ${BUILDINGS[t].description}" aria-label="Build ${BUILDINGS[t].name}"><span class="shortcut">${BUILDINGS[t].key}</span><span class="cost">${BUILDINGS[t].cost}</span>${icon(t)}<span class="name">${BUILDINGS[t].name}</span></button>`).join("")}</div></div><div class="network-toggles"><button class="quiet" data-action="miners" id="miners-toggle">Miners on</button><button class="quiet" data-action="missiles" id="missiles-toggle">Missiles on</button><button class="quiet" data-action="grid" title="Toggle placement grid">Grid</button></div><aside class="inspector" id="inspector"></aside><div class="tutorial-tip" id="tutorial-tip">Select a structure to inspect it. Drag the field to pan. Scroll to zoom.</div></div>`;
   document.querySelector("#minimap").addEventListener("pointerdown", (e) => {
     const r = e.currentTarget.getBoundingClientRect(),
       scale = sim.mission.world * 1.25;
@@ -317,6 +330,23 @@ function renderHud() {
   });
   updateInspector();
   updateHud();
+}
+function structureOutput(b) {
+  const s = stats(b);
+  if (b.type === "solar")
+    return `${s.generation.toFixed(1)} E/S · ${solarPetals(b.level)} / 6 PETALS`;
+  if (b.type === "miner") return `${Math.round(s.rate * 60)} MINERALS/MIN`;
+  if (b.type === "relay")
+    return `${s.maxLinks} CONNECTIONS · ${s.link} LINK RANGE`;
+  if (b.type === "battery") return `${fmt(s.capacity)} ENERGY CAPACITY`;
+  if (b.type === "repair") return `${Math.round(s.rate)} HULL/S PER DRONE`;
+  if (b.type === "missile")
+    return `${s.salvo} MISSILES · ${fmt(s.damage)} DAMAGE EACH`;
+  if (b.type === "thel")
+    return `${fmt(s.damage * 20)} BASE DAMAGE/S + BEAM RAMP`;
+  if (b.type === "laser")
+    return `${fmt(s.damage)} DAMAGE · ${s.burst} SHOTS/BURST`;
+  return "";
 }
 function updateInspector() {
   const el = document.querySelector("#inspector");
@@ -338,7 +368,7 @@ function updateInspector() {
           b.hp) /
           b.maxHp,
       );
-    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3><div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${Number.isFinite(cost) ? `<button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
+    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
   } else {
     el.innerHTML = `<div class="eyebrow">NETWORK COMMAND</div><h3>Every connection counts.</h3><p>Build near a powered relay or station. Protect the links that keep your outpost alive.</p><p><kbd>1–7</kbd> Build &nbsp; <kbd>Q / E</kbd> Zoom<br><kbd>SPACE</kbd> Upgrade selection</p>${sim.mission.id === "skirmish" ? '<button class="secondary" data-action="wave">Call the next wave →</button>' : ""}<button class="quiet" data-action="center">Center camera</button>`;
   }
@@ -354,10 +384,16 @@ function updateHud() {
     sim.mission.classic ? "—" : researchBudget(progress).available,
   );
   const intelButton = document.querySelector('[data-action="run-research"]');
-  const activity = intelActivity(progress);
+  const command = experienceBudget(progress);
+  set(
+    "xp-hud",
+    sim.mission.classic
+      ? "CLASSIC · I"
+      : `LV ${command.level} · ${command.available} SP · I`,
+  );
   intelButton.title = sim.mission.classic
     ? "Classic · original rules"
-    : `Research tree · I | Mining ${Math.floor(activity.mined)}/${INTEL_RATES.mined} | Defeated ships ${activity.kills}/${INTEL_RATES.kills} | +1 Intel each`;
+    : `Progression · I | Intel from rare ships | Level ${command.level}: ${Math.floor(command.into)}/${command.needed} XP | ${command.available} stat points`;
   set("minerals", fmt(sim.minerals));
   set("income", `+${fmt(sim.income * 60)} / MIN`);
   set("energy", fmt(sim.energy));
@@ -483,9 +519,21 @@ function toast(message) {
   app.append(node);
   toastTimer = setTimeout(() => node.remove(), 3400);
 }
+function exportSave(filename = "the-space-game-save.json") {
+  const blob = new Blob([JSON.stringify(progress, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob),
+    a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function saveActive() {
   if (sim && sim.status === "playing") {
     bankIntel(progress, sim);
+    bankExperience(progress, sim);
     if (sim.mission.kind === "endless")
       progress.endless = {
         ...progress.endless,
@@ -519,12 +567,12 @@ function closeModal() {
 }
 function controls() {
   openModal(
-    `<button class="quiet close" data-action="close" aria-label="Close controls">×</button><div class="eyebrow">FLIGHT MANUAL / ORIGINAL CONTROLS</div><h2>Command at your fingertips.</h2><table class="control-table"><tr><td>1 — 7</td><td>Relay · Miner · Solar · Store · Repair · Laser · Missile</td></tr><tr><td>Space / U</td><td>Upgrade the selected structure</td></tr><tr><td>P / T</td><td>Basic laser → Pulser / THEL</td></tr><tr><td>R</td><td>Recycle the selected structure</td></tr><tr><td>Shift + click</td><td>Keep placing the same structure</td></tr><tr><td>Esc / right-click</td><td>Cancel placement or selection</td></tr><tr><td>WASD / arrows</td><td>Pan the camera</td></tr><tr><td>Drag empty space</td><td>Pan the camera</td></tr><tr><td>Q / E / wheel</td><td>Zoom in / out</td></tr><tr><td>Pause button</td><td>Pause time; continue planning and building</td></tr><tr><td>I</td><td>Research tree · pauses the operation (browser addition)</td></tr><tr><td>Home</td><td>Center the camera (browser addition)</td></tr></table><p>Solar stations, energy stores, and relays carry energy through the network. Miners and defenses are endpoints. Relays support six links; asteroids and structures can obstruct them.</p><button class="primary" data-action="close">Return to the field <span>↗</span></button>`,
+    `<button class="quiet close" data-action="close" aria-label="Close controls">×</button><div class="eyebrow">FLIGHT MANUAL / ORIGINAL CONTROLS</div><h2>Command at your fingertips.</h2><table class="control-table"><tr><td>1 — 7</td><td>Relay · Miner · Solar · Store · Repair · Laser · Missile</td></tr><tr><td>Space / U</td><td>Upgrade the selected structure</td></tr><tr><td>P / T</td><td>Basic laser → Pulser / THEL</td></tr><tr><td>R</td><td>Recycle the selected structure</td></tr><tr><td>Shift + click</td><td>Keep placing the same structure</td></tr><tr><td>Esc / right-click</td><td>Cancel placement or selection</td></tr><tr><td>WASD / arrows</td><td>Pan the camera</td></tr><tr><td>Drag empty space</td><td>Pan the camera</td></tr><tr><td>Q / E / wheel</td><td>Zoom in / out</td></tr><tr><td>Pause button</td><td>Pause time; continue planning and building</td></tr><tr><td>I</td><td>Research tree · pauses the operation (browser addition)</td></tr><tr><td>Home</td><td>Center the camera (browser addition)</td></tr></table><p>Solar stations, energy stores, and relays carry energy through the network. Miners and defenses are endpoints. Relays support six to twelve links with upgrades; asteroids and structures can obstruct them.</p><button class="primary" data-action="close">Return to the field <span>↗</span></button>`,
   );
 }
 function settings() {
   openModal(
-    `<button class="quiet close" data-action="close" aria-label="Close settings">×</button><div class="eyebrow">SYSTEM CONFIGURATION</div><h2>Make yourself at home.</h2><label class="settings-row">Sound effects<input type="checkbox" data-setting="sound" ${progress.settings.sound ? "checked" : ""}></label><label class="settings-row">Graphics<select data-setting="quality"><option value="high" ${progress.settings.quality === "high" ? "selected" : ""}>High · bloom</option><option value="low" ${progress.settings.quality === "low" ? "selected" : ""}>Performance</option></select></label><label class="settings-row">Reduce motion<input type="checkbox" data-setting="reducedMotion" ${progress.settings.reducedMotion ? "checked" : ""}></label><p>Progress and the current operation are saved in this browser. Liveries are cosmetic. Open Research or press I during modern operations to spend Intel and apply technologies immediately. Mining and defeated ships earn Intel; partial progress carries between operations. Classic missions retain the original rules.</p><div class="modal-foot"><button class="secondary" data-action="export">Export save</button><button class="secondary" data-action="import">Import save</button></div><input type="file" id="save-file" accept="application/json" hidden><div class="modal-foot"><button class="primary" data-action="close">Done</button></div>`,
+    `<button class="quiet close" data-action="close" aria-label="Close settings">×</button><div class="eyebrow">SYSTEM CONFIGURATION</div><h2>Make yourself at home.</h2><label class="settings-row">Sound effects<input type="checkbox" data-setting="sound" ${progress.settings.sound ? "checked" : ""}></label><label class="settings-row">Graphics<select data-setting="quality"><option value="high" ${progress.settings.quality === "high" ? "selected" : ""}>High · bloom</option><option value="low" ${progress.settings.quality === "low" ? "selected" : ""}>Performance</option></select></label><label class="settings-row">Reduce motion<input type="checkbox" data-setting="reducedMotion" ${progress.settings.reducedMotion ? "checked" : ""}></label><p>Progress and the current operation are saved in this browser. Liveries are cosmetic. Open Research or press I during modern operations to spend Intel and apply technologies immediately. Rare ships award Intel for permanent technology upgrades. Mining, combat and repairs earn XP for base stats. Classic disables persistent bonuses.</p><div class="modal-foot"><button class="secondary" data-action="export">Export save</button><button class="secondary" data-action="import">Import save</button></div><div class="modal-foot"><button class="quiet" data-action="fresh-start">Start fresh · back up progress</button></div><input type="file" id="save-file" accept="application/json" hidden><div class="modal-foot"><button class="primary" data-action="close">Done</button></div>`,
   );
 }
 function credits() {
@@ -542,6 +590,7 @@ function result() {
   if (resultHandled) return;
   const intelBefore = researchBudget(progress).earned;
   bankIntel(progress, sim);
+  bankExperience(progress, sim);
   resultHandled = true;
   const won = sim.status === "won";
   if (sim.mission.kind === "endless") {
@@ -601,6 +650,12 @@ app.addEventListener("click", (e) => {
   if (!button || button.disabled) return;
   sound.unlock();
   sound.play("click");
+  if (button.dataset.progression) {
+    progressionPage = button.dataset.progression;
+    researchScreen();
+    document.querySelector(".research-body").scrollTop = 0;
+    return;
+  }
   if (button.dataset.tech) {
     selectedTech = button.dataset.tech;
     researchScreen();
@@ -672,32 +727,29 @@ app.addEventListener("click", (e) => {
     runResearch();
     return;
   }
-  if (action === "tech-buy" || action === "tech-toggle") {
+  if (action === "tech-buy" || action === "stat-buy") {
     const result =
       action === "tech-buy"
         ? buyResearch(progress, button.dataset.id)
-        : toggleResearch(progress, button.dataset.id);
+        : buyBaseStat(progress, button.dataset.id);
     if (!result.ok) {
       toast(result.reason);
       return;
     }
     saveResearchChanges();
-    sound.play(action === "tech-buy" ? "upgrade" : "click");
+    sound.play("upgrade");
     researchScreen();
     toast(
-      action === "tech-buy" && !result.equipped
-        ? "Technology researched. Free a loadout slot to equip it."
-        : researchReturn === "game"
-          ? button.dataset.id === "expedition_cargo"
-            ? "Freight configured for the next launch. No cargo is added mid-operation."
-            : "Research applied. Your active network is updated."
-          : "Next-launch loadout updated.",
+      TECHNOLOGIES.find((t) => t.id === button.dataset.id)?.modifiers
+        .startingMinerals
+        ? "Freight researched for future launches."
+        : "Upgrade applied. Your command is stronger.",
     );
     return;
   }
   if (action === "tech-reset") {
     openModal(
-      `<div class="eyebrow">RECONFIGURE THE FRONTIER</div><h2>Try a different path.</h2><p>Refund all ${researchBudget(progress).spent} invested Intel and clear ${researchReturn === "game" ? "your active loadout. Research bonuses will be removed from this operation immediately." : "your next-launch loadout. Your saved operation keeps its current technologies."}</p><div class="modal-foot"><button class="secondary" data-action="close">Keep research</button><button class="primary" data-action="tech-reset-confirm">Refund research</button></div>`,
+      `<div class="eyebrow">RECONFIGURE THE FRONTIER</div><h2>Try a different path.</h2><p>Refund all ${researchBudget(progress).spent} invested Intel and clear ${researchReturn === "game" ? "your technology tree. Research bonuses will be removed from this operation; XP stats are kept." : "your technology tree. XP stats are kept. Saved operations update when resumed."}</p><div class="modal-foot"><button class="secondary" data-action="close">Keep research</button><button class="primary" data-action="tech-reset-confirm">Refund research</button></div>`,
     );
     return;
   }
@@ -838,15 +890,32 @@ app.addEventListener("click", (e) => {
     return;
   }
   if (action === "export") {
-    const blob = new Blob([JSON.stringify(progress, null, 2)], {
-        type: "application/json",
-      }),
-      url = URL.createObjectURL(blob),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = "the-space-game-save.json";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    saveActive();
+    exportSave();
+    return;
+  }
+  if (action === "fresh-start") {
+    openModal(
+      `<div class="eyebrow">A NEW FRONTIER</div><h2>Start fresh.</h2><p>Reset campaign progress, research, Intel, XP, base stats, and the saved operation. A backup is saved locally and downloaded first. Your settings are kept.</p><div class="modal-foot"><button class="secondary" data-action="close">Keep playing</button><button class="primary" data-action="fresh-start-confirm">Back up &amp; start fresh</button></div>`,
+    );
+    return;
+  }
+  if (action === "fresh-start-confirm") {
+    saveActive();
+    try {
+      const reset = resetProgress(progress);
+      exportSave("the-space-game-before-fresh-start.json");
+      progress = reset.progress;
+      sim = null;
+      state = { selected: null, buildType: null, mouse: null, grid: false };
+      selectedTech = "solar_cells";
+      progressionPage = "tech";
+      applySettings();
+      home();
+      toast("Fresh start ready. Previous progress is backed up.");
+    } catch {
+      toast("Backup or reset could not be saved. Progress was kept.");
+    }
     return;
   }
   if (action === "import") {
@@ -882,9 +951,11 @@ app.addEventListener("change", async (e) => {
         if (!Number.isInteger(c.stars) || c.stars < 1 || c.stars > 3)
           throw new Error("Invalid mission record");
       // Import campaign records only; arbitrary simulation snapshots are not trusted.
-      progress = {
+      progress = migrateProgression({
         ...freshProgress(),
-        intel: normalizeIntel(value.intel),
+        progressionVersion: value.progressionVersion,
+        intel: value.intel,
+        experience: value.experience,
         completed: value.completed,
         challenges: value.challenges,
         research: normalizeResearch(
@@ -901,7 +972,7 @@ app.addEventListener("change", async (e) => {
           ? value.livery
           : "mint",
         settings: normalizeSettings(value.settings),
-      };
+      });
       saveProgress(progress);
       applySettings();
       sim = null;
@@ -968,7 +1039,9 @@ canvas.addEventListener("pointerup", (e) => {
     const hit = sim.buildings
       .filter(
         (b) =>
-          distance(world, b) < BUILDINGS[b.type].radius + 7 / renderer.zoom,
+          distance(world, b) <
+          (BUILDINGS[b.type].pickRadius || BUILDINGS[b.type].radius) +
+            7 / renderer.zoom,
       )
       .sort((a, b) => distance(world, a) - distance(world, b))[0];
     state.selected = hit?.id || null;
@@ -1103,6 +1176,13 @@ function frame(now) {
       sound.play(event.type);
     }
     const earned = bankIntel(progress, sim);
+    const experience = bankExperience(progress, sim);
+    if (experience.levels > 0) {
+      saveActive();
+      toast(
+        `Command level ${experienceBudget(progress).level} · +${experience.levels} stat point${experience.levels > 1 ? "s" : ""} · Press I`,
+      );
+    }
     if (earned > 0) {
       saveActive();
       toast(
@@ -1131,3 +1211,19 @@ function frame(now) {
 }
 home();
 requestAnimationFrame(frame);
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== "the-space-game-v2" || !event.newValue) return;
+  try {
+    const next = JSON.parse(event.newValue);
+    if (next.resetToken && next.resetToken !== progress.resetToken) {
+      sim = null;
+      progress = loadProgress();
+      applySettings();
+      home();
+      toast("Progress reset in another tab. Fresh start ready.");
+    }
+  } catch {
+    /* Ignore malformed storage events; normal load sanitization remains. */
+  }
+});
