@@ -1,0 +1,454 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-11",
+  "target": "The Space Game by David Scott / The Casual Collective, and The Space Game: Missions",
+  "scope": "Research documentation and artifact provenance for an independently implemented modern browser reconstruction",
+  "repository_content_policy": "Only factual summaries, source URLs, and hashes are stored here. Original binaries, screenshots, extracted scripts, audio, and textures remain outside the repository.",
+  "verification_summary": {
+    "original_keyboard_handler": "Directly inspected in archived original v83 SWF",
+    "screenshots": "Downloaded and visually inspected",
+    "archive_packages": "Downloaded; ZIP members and SWF files inspected and hashed",
+    "ruffle_playback": "Not verified",
+    "youtube_playback": "Not reviewed"
+  },
+  "sources": [
+    {
+      "id": "original_archive_entry",
+      "title": "The Space Game — Flashpoint / 9o3o",
+      "url": "https://ooooooooo.ooo/?id=944ea5a3-558d-feda-4eb7-e900f3e60b06",
+      "kind": "archive_metadata",
+      "verification": "page_read",
+      "supports": [
+        "Original identity and archive ID",
+        "Version 1.07 metadata",
+        "Membership-unlocked default launch and separate original launcher"
+      ],
+      "notes": "Metadata release date February 16, 2009 differs by one day from contemporary review date. Full live playback not verified."
+    },
+    {
+      "id": "missions_archive_entry",
+      "title": "The Space Game: Missions — Flashpoint / 9o3o",
+      "url": "https://ooooooooo.ooo/?id=3f7c5f17-19df-30d3-2deb-a6c1b7252af3",
+      "kind": "archive_metadata",
+      "verification": "page_read",
+      "supports": [
+        "Missions archive ID",
+        "Launch command and complete archive location"
+      ]
+    },
+    {
+      "id": "kongregate_missions",
+      "title": "The Space Game: Missions — Kongregate developer listing",
+      "url": "https://www.kongregate.com/en/games/casualcollective/the-space-game-missions",
+      "kind": "publisher_listing",
+      "verification": "page_read",
+      "supports": [
+        "21 new missions",
+        "Four difficulty settings",
+        "Repair, jump-ship defense, mega-asteroid mining, super ships",
+        "July 20, 2009 listing date"
+      ],
+      "notes": "Modern FAQ material on host page is lower confidence than original developer description."
+    },
+    {
+      "id": "newgrounds_missions",
+      "title": "The Space Game: Missions — original author upload",
+      "url": "https://www.newgrounds.com/portal/view/504419",
+      "kind": "author_upload",
+      "verification": "page_read",
+      "supports": [
+        "July 22, 2009 upload",
+        "21 missions and four difficulties",
+        "Two tutorial levels",
+        "CasualCollective2 programming and Somatone credit"
+      ]
+    },
+    {
+      "id": "jig_original",
+      "title": "The Space Game — Jay Is Games review and comments",
+      "url": "https://jayisgames.com/review/the-space-game.php",
+      "kind": "contemporary_review",
+      "verification": "page_read",
+      "supports": [
+        "February 15, 2009 contemporary coverage",
+        "Free placement and relay economy",
+        "Numeric hotkeys and Space upgrade",
+        "Paused/slow building reported by players",
+        "Reception: accessibility, repetition, recycling tactics"
+      ],
+      "notes": "Review and comments are distinguishable evidence; player strategies are not exact tuning specifications."
+    },
+    {
+      "id": "jig_missions",
+      "title": "The Space Game: Missions — Jay Is Games review and comments",
+      "url": "https://jayisgames.com/review/the-space-game-missions.php",
+      "kind": "contemporary_review",
+      "verification": "page_read",
+      "supports": [
+        "July 22, 2009 sequel coverage",
+        "Moving escort and difficult optional mission reports",
+        "Demand for more varied objectives and peaceful persistent mining"
+      ],
+      "notes": "Player anecdotes; exact mission parameters not verified from this page."
+    },
+    {
+      "id": "chris_jean",
+      "title": "The Space Game — A Flash RTS",
+      "url": "https://chrisjean.com/the-space-game-a-flash-rts/",
+      "kind": "contemporary_explanation",
+      "verification": "page_read",
+      "supports": [
+        "Energy and mineral economy",
+        "Finite asteroids",
+        "Missile ammunition uses minerals"
+      ]
+    },
+    {
+      "id": "ayumi_original",
+      "title": "CasualCollective The Space Game Walkthrough, Tips, Review",
+      "url": "https://ayumilove.wordpress.com/2009/03/01/casualcollective-the-space-game-walkthrough-tips-review/",
+      "kind": "contemporary_walkthrough",
+      "verification": "page_read",
+      "supports": [
+        "Basic Laser branch to Pulser and THEL",
+        "Mothership and spawned fighters",
+        "Mission 6 screenshot and embedded video links"
+      ],
+      "notes": "Damage values may mix hit and frame units; exact simulation timing requires independent confirmation."
+    },
+    {
+      "id": "ayumi_missions",
+      "title": "The Space Game: Missions Walkthrough",
+      "url": "https://ayumilove.wordpress.com/2009/07/30/the-space-game-mission-walkthrough-official-guide/",
+      "kind": "contemporary_walkthrough",
+      "verification": "page_read",
+      "supports": [
+        "Missions achievements and completion context"
+      ],
+      "notes": "Linked save files were not downloaded or validated."
+    },
+    {
+      "id": "miniplay_controls",
+      "title": "The Space Game — Miniplay controls",
+      "url": "https://www.miniplay.com/game/the-space-game",
+      "kind": "host_instructions",
+      "verification": "page_read",
+      "supports": [
+        "Q/E zoom",
+        "U upgrade",
+        "T laser upgrade",
+        "R recycle"
+      ],
+      "notes": "Corroborates original binary keyboard inspection; not the sole source of control mapping."
+    },
+    {
+      "id": "addictinggames_controls",
+      "title": "The Space Game — Addicting Games instructions",
+      "url": "https://www.addictinggames.com/strategy/the-space-game",
+      "kind": "host_instructions",
+      "verification": "page_read",
+      "supports": [
+        "WASD movement",
+        "Q/E zoom",
+        "Mouse construction"
+      ],
+      "notes": "Host-specific listing date May 15, 2009 is not treated as first release date."
+    },
+    {
+      "id": "officegamespot",
+      "title": "The Space Game Missions — OfficeGameSpot",
+      "url": "https://www.officegamespot.com/flashgames/the-space-game-missions.htm",
+      "kind": "host_page",
+      "verification": "page_read",
+      "supports": [
+        "Embedded SWF URL",
+        "Host movement diagram",
+        "Mouse-first play with optional shortcuts"
+      ],
+      "notes": "Hosted SWF proved to be only a loader dependent on a defunct service."
+    },
+    {
+      "id": "nineo3o_faq",
+      "title": "9o3o FAQ",
+      "url": "https://ooooooooo.ooo/faq/",
+      "kind": "preservation_documentation",
+      "verification": "page_read",
+      "supports": [
+        "Experimental Flashpoint frontend",
+        "Ruffle for Flash",
+        "JSZip and request redirection"
+      ],
+      "notes": "Describes emulator architecture; not proof these particular games play correctly."
+    },
+    {
+      "id": "nineo3o_source",
+      "title": "9o3o source repository",
+      "url": "https://github.com/Dri0m/9o3o",
+      "kind": "preservation_source",
+      "verification": "repository_inspected",
+      "supports": [
+        "Archive URL construction",
+        "Image and ZIP server paths"
+      ],
+      "notes": "Inspected privately to resolve public archive artifacts; no source included in game implementation."
+    },
+    {
+      "id": "flashpoint_search",
+      "title": "Flashpoint database search",
+      "url": "https://flashpointproject.github.io/flashpoint-database/search/",
+      "kind": "preservation_database",
+      "verification": "public_api_queried",
+      "supports": [
+        "Exact original and Missions archive identifiers"
+      ],
+      "notes": "Public API https://db-api.unstable.life/search queried by title."
+    },
+    {
+      "id": "mission6_video",
+      "title": "Original Mission 6 walkthrough video",
+      "url": "https://www.youtube.com/watch?v=bAARH9NuTtE",
+      "kind": "gameplay_video",
+      "verification": "link_discovered_not_playback_reviewed",
+      "supports": [
+        "Historical video reference from Ayumilove embedded link"
+      ],
+      "notes": "Do not claim frame-by-frame observation or current playback availability."
+    },
+    {
+      "id": "energy_exploit_video",
+      "title": "Original infinite-energy exploit video",
+      "url": "https://www.youtube.com/watch?v=Ml5NKh8-vkE",
+      "kind": "gameplay_video",
+      "verification": "link_discovered_not_playback_reviewed",
+      "supports": [
+        "Historical exploit reference"
+      ],
+      "notes": "Excluded as normal-balance evidence."
+    },
+    {
+      "id": "community_wiki",
+      "title": "The Space Game: Missions — Kongregate Wiki",
+      "url": "https://kongregate.fandom.com/wiki/The_Space_Game%3A_Missions",
+      "kind": "community_reference",
+      "verification": "page_read",
+      "supports": [
+        "Candidate unit statistics",
+        "Terminology and achievements"
+      ],
+      "notes": "Timing includes explicit uncertainty; do not elevate reported values to binary-verified constants."
+    }
+  ],
+  "downloads": [
+    {
+      "url": "https://download.unstable.life/gib-roms/Games/944ea5a3-558d-feda-4eb7-e900f3e60b06-1631483058057.zip",
+      "bytes": 4772279,
+      "sha256": "80790aab1c8da74fa7d2202fc9a788e23e7480a7c41933ff5140c9f8534dd5ab",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "original_bundle",
+      "private_local_path": "/tmp/the-space-game-research/original-archive.zip",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_archive_inspected",
+      "playback_verified": false
+    },
+    {
+      "url": "https://download.unstable.life/gib-roms/Games/3f7c5f17-19df-30d3-2deb-a6c1b7252af3-1631483066872.zip",
+      "bytes": 3382593,
+      "sha256": "937d1e37774f82a1968f122e21d715e78988eac8579902cffb2c185da12b36b2",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "missions_bundle",
+      "private_local_path": "/tmp/the-space-game-research/missions-archive.zip",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_archive_inspected",
+      "playback_verified": false
+    },
+    {
+      "url": "https://infinity.unstable.life/images/Screenshots/94/4e/944ea5a3-558d-feda-4eb7-e900f3e60b06.png",
+      "bytes": 131133,
+      "sha256": "5b1f6c9e29cc31d32b5599351f7c88b8a805c20a4633bbd799554943d715284a",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "original_screenshot",
+      "private_local_path": "/tmp/the-space-game-research/fp-original.png",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        700,
+        525
+      ]
+    },
+    {
+      "url": "https://infinity.unstable.life/images/Screenshots/3f/7c/3f7c5f17-19df-30d3-2deb-a6c1b7252af3.png",
+      "bytes": 157294,
+      "sha256": "58ee8e6bfdf863adde57b039fcb3b2df51ab3deba3ac657aa542c66954bac2dc",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "missions_screenshot",
+      "private_local_path": "/tmp/the-space-game-research/fp-missions.png",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        697,
+        522
+      ]
+    },
+    {
+      "url": "https://ayumilove.files.wordpress.com/2009/03/cc_spacegame_mission6b.jpg",
+      "bytes": 95060,
+      "sha256": "f626d50ec253d867b25c9c2edcef01e9f8472fd147d82a5353b389d3ed9cfb88",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "mission6_screenshot",
+      "private_local_path": "/tmp/the-space-game-research/mission6.jpg",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        700,
+        502
+      ]
+    },
+    {
+      "url": "https://cdn.gamingcloud.com/img/general/games/screen/2863.jpg",
+      "bytes": 50003,
+      "sha256": "2550dd3d2f52da4153aa78f0caa456367d844a6c89c1b5cd994502011954b5de",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "tutorial_screenshot",
+      "private_local_path": "/tmp/the-space-game-research/mission-tutorial.jpg",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        701,
+        525
+      ]
+    },
+    {
+      "url": "https://jayisgames.com/images/hs_pam_thespacegame_newbase.jpg",
+      "bytes": 43251,
+      "sha256": "7cad4577d873fb9564244723f90b25c58ad45885ef12a9d6e86f1ed6d85b493a",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "survivor_screenshot",
+      "private_local_path": "/tmp/the-space-game-research/original-base.jpg",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        1280,
+        960
+      ]
+    },
+    {
+      "url": "https://www.officegamespot.com/office_games_images/the-space-game-control.gif",
+      "bytes": 9516,
+      "sha256": "76706c888b0eb40d7a48ccbbedfb18e28a790e0047d913c736700b245a5abb03",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "host_control_diagram",
+      "private_local_path": "/tmp/the-space-game-research/controls.gif",
+      "committed_to_repository": false,
+      "verification": "downloaded_and_visually_inspected",
+      "pixel_dimensions": [
+        300,
+        254
+      ]
+    },
+    {
+      "url": "https://www.officegamespot.com/flashgames/the-space-game-missions.swf",
+      "bytes": 16098,
+      "sha256": "d2ae5711f2aaf4f742630f0f14876c7031f90c2ca5375de01c4bb8c32846b2ef",
+      "purpose": "Private reference analysis, not redistributed",
+      "id": "missions_host_loader",
+      "private_local_path": "/tmp/the-space-game-research/missions-officegamespot.swf",
+      "committed_to_repository": false,
+      "verification": "downloaded_loader_inspected",
+      "limitation": "Only a loader; not a standalone playable game."
+    }
+  ],
+  "extracted_reference_files": [
+    {
+      "id": "original_game_v83",
+      "archive_id": "original_bundle",
+      "archive_member": "content/storage.cloud.casualcollective.com/zones/pub/10/thespacegame.v83.swf",
+      "private_local_path": "/tmp/the-space-game-research/10-thespacegame.v83.swf",
+      "bytes": 1942037,
+      "sha256": "8d193481fb87e994a53d390a96bf9774b26fa5d479e4af2f0e1dd3497955d237",
+      "role": "Actual original game; inspected for controls and identifiers",
+      "committed_to_repository": false,
+      "playback_verified": false
+    },
+    {
+      "id": "original_game_v83_alternate",
+      "archive_id": "original_bundle",
+      "archive_member": "content/storage.cloud.casualcollective.com/zones/pub/100/thespacegame.v83.swf",
+      "private_local_path": "/tmp/the-space-game-research/100-thespacegame.v83.swf",
+      "bytes": 1941696,
+      "sha256": "2b0dc9d8c5e87677cebdf61f16256687d13a33bafef8f126756636a601aa68e6",
+      "role": "Alternate numbered publication directory; behavior differences not characterized",
+      "committed_to_repository": false,
+      "playback_verified": false
+    },
+    {
+      "id": "original_loader",
+      "archive_id": "original_bundle",
+      "archive_member": "content/storage.cloud.casualcollective.com/games/thespacegame.swf",
+      "private_local_path": "/tmp/the-space-game-research/original.swf",
+      "bytes": 16745,
+      "sha256": "b37ddffae11996b89897780c724e6b743816cae1c791992a0df1254504a55a2a",
+      "role": "Original standard launcher, not standalone game",
+      "committed_to_repository": false,
+      "playback_verified": false
+    },
+    {
+      "id": "missions_game_v16",
+      "archive_id": "missions_bundle",
+      "archive_member": "content/storage.cloud.casualcollective.com/zones/pub/16/tsgmissions.v16.swf",
+      "private_local_path": "/tmp/the-space-game-research/tsgmissions.v16.swf",
+      "bytes": 2963297,
+      "sha256": "f88a785b9701e5cdcdb49c9349057d88f58e367a63a006c7d009f715464291cf",
+      "role": "Actual Missions game; private inspection only",
+      "committed_to_repository": false,
+      "playback_verified": false
+    }
+  ],
+  "primary_control_evidence": {
+    "artifact_id": "original_game_v83",
+    "method": "JPEXS inspection of keyboard handler",
+    "private_inspection_path": "/tmp/the-space-game-research/original-scripts/scripts/DefineSprite_1084/frame_1/DoAction.as",
+    "lines": [
+      618,
+      714
+    ],
+    "facts": {
+      "build_keys": {
+        "1": "relay",
+        "2": "miner",
+        "3": "solar",
+        "4": "storage",
+        "5": "repair",
+        "6": "basic laser",
+        "7": "missile"
+      },
+      "default_upgrade": [
+        "U",
+        "Space"
+      ],
+      "laser_pulser": "P",
+      "laser_thel": "T",
+      "recycle": "R",
+      "cancel_build": "Escape",
+      "pan": [
+        "WASD",
+        "arrow keys",
+        "left background drag"
+      ],
+      "zoom_in": "Q",
+      "zoom_out": "E",
+      "wheel_zoom": true,
+      "q_e_zoom_step_percentage_points": 30,
+      "zoom_bounds_percent": [
+        20,
+        100
+      ],
+      "pause_key_in_inspected_handler": null
+    }
+  },
+  "known_limitations": [
+    "Archive default original launcher is membership-unlocked; original launcher and alternate actual game publication directories are retained.",
+    "Current Ruffle compatibility and successful full gameplay were not established.",
+    "Every mission, simulation timing, energy transfer and target selection behavior were not verified in this research slice.",
+    "Modern additions must not be presented as features of the 2009 original."
+  ]
+}

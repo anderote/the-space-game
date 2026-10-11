@@ -1,0 +1,761 @@
+{
+  "source": {
+    "game": "The Space Game",
+    "developer": "David Scott / Casual Collective",
+    "version": "thespacegame.v83.swf",
+    "archive": "https://download.unstable.life/gib-roms/Games/944ea5a3-558d-feda-4eb7-e900f3e60b06-1631483058057.zip",
+    "archiveSha256": "80790aab1c8da74fa7d2202fc9a788e23e7480a7c41933ff5140c9f8534dd5ab",
+    "swfSha256": "8d193481fb87e994a53d390a96bf9774b26fa5d479e4af2f0e1dd3497955d237",
+    "method": "Primary constants inspected in archived original SWF; no source code/assets redistributed. Decompiler had obfuscated branches: only legible coherent class branches and cross-checked numeric tables used.",
+    "inspectionDate": "2026-10-11"
+  },
+  "controls": {
+    "1": "relay",
+    "2": "miner",
+    "3": "solar",
+    "4": "storage",
+    "5": "repair",
+    "6": "laser",
+    "7": "missile",
+    "U": "upgrade (basic laser becomes Pulser)",
+    "Space": "upgrade (not pause)",
+    "P": "basic laser to Pulser (not pause)",
+    "T": "basic laser to THEL",
+    "R": "recycle",
+    "Escape": "cancel build",
+    "Shift+click": "repeat placement",
+    "WASD/arrows": "pan",
+    "Q": "zoom in",
+    "E": "zoom out",
+    "drag": "pan",
+    "wheel": "zoom"
+  },
+  "network": {
+    "energyRange": 90,
+    "rangeComparison": "strictly less than 90 center-to-center",
+    "distributionTypes": [
+      "relay",
+      "solar",
+      "storage"
+    ],
+    "leafTypes": [
+      "miner",
+      "repair",
+      "laser",
+      "missile"
+    ],
+    "leafMaxLinks": 1,
+    "existingRelayMaxLinks": 6,
+    "solarMaxLinks": null,
+    "storageMaxLinks": null,
+    "placementGrid": 5,
+    "asteroidsBlockLinks": true,
+    "buildingsBlockLinks": true,
+    "newBuildingCannotOverlapExistingLink": true,
+    "note": "Only relay/solar/storage forward energy. Null max means no explicit count cap found. Connections are made when placed, not arbitrary power through every structure. Local buffers belong to individual producers/consumers."
+  },
+  "recycling": {
+    "baseRefundFraction": 1,
+    "upgradeRefundFraction": 0.5,
+    "healthScale": true,
+    "rounding": "floor",
+    "formula": "floor((baseCost + sumPaidUpgradeCosts * 0.5) * hp / maxHp)",
+    "recyclingAnyMinerAlsoRecyclesOtherDepletedMiners": true,
+    "note": "Original storage and repair upgrade decompilation includes inconsistent SecNum usage, likely original bugs; sensible expected refund follows formula, not accidental zero/NaN."
+  },
+  "structures": {
+    "relay": {
+      "key": 1,
+      "cost": 20,
+      "size": 8,
+      "levels": [
+        {
+          "hp": 100
+        }
+      ]
+    },
+    "miner": {
+      "key": 2,
+      "cost": 45,
+      "size": 15,
+      "mineRangeBeyondAsteroidSize": 35,
+      "energyPerMiningCycle": 1,
+      "mineRateCounter": 60,
+      "mineTickerIncrement": 8,
+      "levels": [
+        {
+          "hp": 300,
+          "quantityPerCycle": 4,
+          "displayedMineralsPerMinute": 80
+        },
+        {
+          "upgradeCost": 100,
+          "hp": 500,
+          "quantityPerCycle": 10,
+          "displayedMineralsPerMinute": 200
+        }
+      ],
+      "timingNote": "UI explicitly displays 80/200 per minute. Mining is scheduled in a staggered node loop; exact wall-clock interval needs live measurement rather than assuming UI rate equals actual throughput."
+    },
+    "solar": {
+      "key": 3,
+      "cost": 200,
+      "size": 25,
+      "generationTickReset": 10,
+      "generationPerEligibleTickFactor": 3,
+      "levels": [
+        {
+          "hp": 600,
+          "energyBuffer": 4,
+          "efficiency": 0.3,
+          "generationPerCycle": 0.9
+        },
+        {
+          "upgradeCost": 200,
+          "hp": 800,
+          "energyBuffer": 9,
+          "efficiency": 0.7,
+          "generationPerCycle": 2.1
+        },
+        {
+          "upgradeCost": 200,
+          "hp": 1000,
+          "energyBuffer": 14,
+          "efficiency": 1,
+          "generationPerCycle": 3
+        }
+      ],
+      "timingNote": "Normal root ticks at40Hz, general buildings every other tick. Solar generates then counts down10 ticks: at20Hz nominal rates are1.63636/3.81818/5.45455 energy/s. Requires runtime measurement before claiming exact throughput; community wiki9energy/s is not confirmed by inspected code."
+    },
+    "storage": {
+      "key": 4,
+      "cost": 300,
+      "size": 30,
+      "levels": [
+        {
+          "hp": 500,
+          "capacity": 200
+        },
+        {
+          "upgradeCost": 500,
+          "hp": 750,
+          "capacity": 600
+        }
+      ]
+    },
+    "repair": {
+      "key": 5,
+      "cost": 300,
+      "size": 24,
+      "energyBuffer": 5,
+      "droneCount": 4,
+      "levels": [
+        {
+          "hp": 400,
+          "range": 200
+        },
+        {
+          "upgradeCost": 150,
+          "hp": 600,
+          "range": 300
+        }
+      ],
+      "drone": {
+        "count": 4,
+        "maxHp": 60,
+        "initialHp": 20,
+        "speedPerMovingTick": 1.8,
+        "repairReachFromDrone": 50,
+        "localEnergyCapacity": 80,
+        "hpRepairedPerMovingTick": 1,
+        "localEnergyPerHp": 1,
+        "nominalHpPerSecondWhileFiringPerDrone": 20,
+        "nominalHpPerSecondFourDronesBeforeTravelOrRecharge": 80,
+        "localEnergyRechargePerStationEnergy": 6,
+        "droneHpRepairPerStationEnergy": 3,
+        "stationEnergyPerDroneCreation": 10,
+        "mineralCostPerRepair": 0,
+        "launchCooldownMovingTicks": 60,
+        "retargetCooldownMovingTicks": 20,
+        "note": "20Hz moving tick, so launch delay3s and retarget delay1s. Effective repair rate substantially lower than peak due movement, recharge, targets and energy contention."
+      }
+    },
+    "laser": {
+      "key": 6,
+      "cost": 100,
+      "size": 18,
+      "hp": 200,
+      "range": 90,
+      "damagePerFireTick": 30,
+      "canInterceptMissiles": true,
+      "energyNeededCounter": 2,
+      "branches": {
+        "pulser": [
+          {
+            "upgradeCost": 100,
+            "hp": 300,
+            "range": 110,
+            "damagePerFireTick": 12,
+            "fireStartTicks": 4,
+            "cooldownTicks": 10,
+            "energyNeededCounter": 5
+          },
+          {
+            "upgradeCost": 150,
+            "hp": 500,
+            "range": 115,
+            "damagePerFireTick": 14,
+            "fireStartTicks": 4,
+            "cooldownTicks": 8,
+            "energyNeededCounter": 10
+          },
+          {
+            "upgradeCost": 300,
+            "hp": 900,
+            "range": 130,
+            "damagePerFireTick": 16,
+            "fireStartTicks": 4,
+            "cooldownTicks": 6,
+            "energyNeededCounter": 15
+          }
+        ],
+        "thel": [
+          {
+            "upgradeCost": 500,
+            "hp": 400,
+            "range": 200,
+            "baseDamagePerFireTick": 1,
+            "energyNeededCounter": 10
+          },
+          {
+            "upgradeCost": 800,
+            "hp": 600,
+            "range": 290,
+            "baseDamagePerFireTick": 5,
+            "energyNeededCounter": 20
+          },
+          {
+            "upgradeCost": 1000,
+            "hp": 960,
+            "range": 390,
+            "baseDamagePerFireTick": 10,
+            "energyNeededCounter": 35
+          }
+        ]
+      },
+      "thelMechanics": {
+        "canInterceptMissiles": false,
+        "damageIncreasesWhileBeamHeld": true,
+        "damagePerTick": "baseDamage + (fireStartCounter - 39) / 4",
+        "energyPerDamage": 0.05,
+        "retargetCounterAfterTargetDies": 20,
+        "fireStartCounterWhenTargetAcquired": 40
+      },
+      "timingNote": "Damage listed by game UI is applied repeatedly during firing phase, not necessarily one complete shot. A flat DPS interpretation loses original behavior."
+    },
+    "missile": {
+      "key": 7,
+      "cost": 400,
+      "size": 14,
+      "mineralCostPerMissile": 5,
+      "energyCostPerMissile": 1,
+      "salvoReloadTicks": 200,
+      "betweenMissilesTicks": 15,
+      "generalBuildingTicksPerSecond": 20,
+      "canInterceptMissiles": false,
+      "levels": [
+        {
+          "hp": 500,
+          "range": 400,
+          "damage": 450,
+          "salvo": 1,
+          "splash": 40,
+          "energyBuffer": 1
+        },
+        {
+          "upgradeCost": 500,
+          "hp": 520,
+          "range": 480,
+          "damage": 500,
+          "salvo": 2,
+          "splash": 44,
+          "energyBuffer": 3
+        },
+        {
+          "upgradeCost": 1000,
+          "hp": 540,
+          "range": 576,
+          "damage": 550,
+          "salvo": 4,
+          "splash": 48.4,
+          "energyBuffer": 5
+        }
+      ],
+      "note": "Four missiles at level3 confirmed in source; some guides incorrectly say five."
+    }
+  },
+  "campaign": {
+    "missionCount": 9,
+    "initialSolarCostDeducted": 200,
+    "cashAfterInitialSolar": [
+      500,
+      600,
+      700,
+      800,
+      900,
+      19800,
+      1100,
+      1200,
+      1300
+    ],
+    "miningMissions": [
+      1,
+      2,
+      4,
+      5,
+      7,
+      8
+    ],
+    "miningGoalFractionOfField": 0.5,
+    "miningWaveTrigger": "percentage of mining goal reached, not time",
+    "survivalSeconds": {
+      "3": 600,
+      "9": 1200
+    },
+    "mission6": {
+      "objective": "destroy mothership waves",
+      "firstWaveSeconds": 180,
+      "waveSeconds": [
+        180,
+        190,
+        200,
+        210,
+        220,
+        300
+      ],
+      "waveCounts": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        10
+      ],
+      "shipType": 6,
+      "hpMultiplier": 2
+    },
+    "note": "Source campaign all seven base structures enabled from start; campaigns gate enemy complexity. A modern unlock campaign should be identified as an added mode.",
+    "waveRecordFields": [
+      "percentOfMiningGoal",
+      "shipType",
+      "count",
+      "angleSpread",
+      "hpMultiplier",
+      "angle"
+    ],
+    "miningWaves": {
+      "1": [
+        [
+          20,
+          1,
+          5,
+          10,
+          0.9,
+          0
+        ],
+        [
+          50,
+          1,
+          10,
+          20,
+          0.9,
+          0
+        ],
+        [
+          80,
+          1,
+          15,
+          30,
+          0.9,
+          0
+        ]
+      ],
+      "2": [
+        [
+          20,
+          2,
+          10,
+          10,
+          0.9,
+          0
+        ],
+        [
+          45,
+          2,
+          15,
+          15,
+          0.9,
+          180
+        ],
+        [
+          70,
+          2,
+          20,
+          20,
+          0.9,
+          0
+        ],
+        [
+          90,
+          2,
+          25,
+          20,
+          0.9,
+          0
+        ]
+      ],
+      "4": [
+        [
+          20,
+          4,
+          6,
+          5,
+          0,
+          38
+        ],
+        [
+          40,
+          1,
+          17,
+          20,
+          1,
+          85
+        ],
+        [
+          55,
+          2,
+          14,
+          60,
+          1,
+          310
+        ],
+        [
+          70,
+          3,
+          13,
+          80,
+          1,
+          203
+        ],
+        [
+          82,
+          4,
+          8,
+          25,
+          1,
+          230
+        ],
+        [
+          90,
+          4,
+          8,
+          25,
+          1,
+          230
+        ]
+      ],
+      "5": [
+        [
+          15,
+          5,
+          6,
+          15,
+          0,
+          207
+        ],
+        [
+          30,
+          5,
+          18,
+          20,
+          1,
+          254
+        ],
+        [
+          55,
+          5,
+          11,
+          60,
+          1,
+          479
+        ],
+        [
+          70,
+          5,
+          14,
+          15,
+          1,
+          372
+        ],
+        [
+          85,
+          5,
+          33,
+          50,
+          1,
+          399
+        ],
+        [
+          95,
+          5,
+          33,
+          50,
+          1,
+          399
+        ]
+      ],
+      "7": [
+        [
+          10,
+          1,
+          15,
+          10,
+          0,
+          249
+        ],
+        [
+          25,
+          2,
+          13,
+          40,
+          1,
+          296
+        ],
+        [
+          40,
+          3,
+          12,
+          60,
+          1,
+          521
+        ],
+        [
+          60,
+          4,
+          15,
+          20,
+          1,
+          414
+        ],
+        [
+          75,
+          5,
+          11,
+          20,
+          1,
+          441
+        ],
+        [
+          90,
+          6,
+          3,
+          90,
+          1,
+          328
+        ]
+      ],
+      "8": [
+        [
+          10,
+          1,
+          16,
+          10,
+          0,
+          154
+        ],
+        [
+          25,
+          2,
+          14,
+          40,
+          1,
+          201
+        ],
+        [
+          40,
+          3,
+          14,
+          60,
+          1,
+          426
+        ],
+        [
+          60,
+          4,
+          17,
+          20,
+          1,
+          319
+        ],
+        [
+          75,
+          5,
+          13,
+          20,
+          1,
+          346
+        ],
+        [
+          90,
+          6,
+          8,
+          90,
+          1,
+          233
+        ]
+      ]
+    },
+    "waveNote": "HP multiplier0 is defaulted to1 by spawnQue. Angles over360 wrap naturally. These arrays are factual level parameters, not copied program implementation.",
+    "mapParameters": [
+      {
+        "mission": 1,
+        "seed": 101,
+        "asteroidCount": 10,
+        "fieldScale": 75,
+        "sizeIndexMin": 1,
+        "sizeIndexMax": 6.5
+      },
+      {
+        "mission": 2,
+        "seed": 102,
+        "asteroidCount": 15,
+        "fieldScale": 125,
+        "sizeIndexMin": 2,
+        "sizeIndexMax": 7.0
+      },
+      {
+        "mission": 3,
+        "seed": 103,
+        "asteroidCount": 20,
+        "fieldScale": 175,
+        "sizeIndexMin": 3,
+        "sizeIndexMax": 7.5
+      },
+      {
+        "mission": 4,
+        "seed": 104,
+        "asteroidCount": 25,
+        "fieldScale": 225,
+        "sizeIndexMin": 4,
+        "sizeIndexMax": 8.0
+      },
+      {
+        "mission": 5,
+        "seed": 105,
+        "asteroidCount": 30,
+        "fieldScale": 275,
+        "sizeIndexMin": 5,
+        "sizeIndexMax": 8.5
+      },
+      {
+        "mission": 7,
+        "seed": 107,
+        "asteroidCount": 40,
+        "fieldScale": 375,
+        "sizeIndexMin": 7,
+        "sizeIndexMax": 9.5
+      },
+      {
+        "mission": 8,
+        "seed": 108,
+        "asteroidCount": 45,
+        "fieldScale": 425,
+        "sizeIndexMin": 8,
+        "sizeIndexMax": 10.0
+      },
+      {
+        "mission": 9,
+        "seed": 109,
+        "asteroidCount": 50,
+        "fieldScale": 475,
+        "sizeIndexMin": 9,
+        "sizeIndexMax": 10.5
+      }
+    ],
+    "mapNote": "Seeded procedurally generated narrow asteroid belt with random rotation. Asteroid resources=(5+sizeIndex)*52, collision size=sizeIndex+5. Mission6 does not generate an asteroid field. Original names shown by source are Mission1 through Mission9; descriptive new names are additions."
+  },
+  "simulation": {
+    "swfFramesPerSecond": 40,
+    "normalGlobalTicksPerSecond": 40,
+    "movingAndGeneralStructureTicksPerSecond": 20,
+    "minerAndRelayTicks": "staggered separately",
+    "speedHalfSupported": true,
+    "canPlaceWhilePaused": true
+  },
+  "uncertainties": [
+    "Exact observed solar and miner wall-clock throughput should be measured in Ruffle; original scheduler has historical irregularities.",
+    "Enemy class obfuscation means exact attack cycle durations/shield factor not verified. Known per-fire-tick damage is not DPS.",
+    "Mission6 source has six scheduled mothership waves totaling35, but victory check after190sec tests active ships without checking future waves; a fast strategy may finish before all scheduled ships arrive."
+  ],
+  "enemies": {
+    "source": "Original v83 spawnQue plus primary classes; per-level multipliers apply",
+    "baseHp": 200,
+    "mothershipHpMultiplier": 8,
+    "defaultDamageParameter": 50,
+    "spawnRadius": 2500,
+    "archetypes": [
+      {
+        "id": 1,
+        "name": "Small red fighters",
+        "range": 70,
+        "attack": "laser",
+        "damagePerFireTick": 2.5
+      },
+      {
+        "id": 2,
+        "name": "Missile launchers",
+        "attack": "interceptable homing missile",
+        "range": 200,
+        "rangeConfidence": "constructor partly obfuscated;200 is legible but should be play-verified"
+      },
+      {
+        "id": 3,
+        "name": "Self Destructors",
+        "attack": "suicide area damage",
+        "splashRange": 100,
+        "damage": 60
+      },
+      {
+        "id": 4,
+        "name": "Yellow Ringers",
+        "attack": "shielded laser ship",
+        "range": 60,
+        "damagePerFireTick": 0.625
+      },
+      {
+        "id": 5,
+        "name": "Swarmers",
+        "attack": "small rapid laser attackers",
+        "range": 70,
+        "damagePerFireTick": 5
+      },
+      {
+        "id": 6,
+        "name": "Mother Ships",
+        "baseHp": 1600,
+        "range": 200,
+        "attack": "sustained laser plus fighter launch",
+        "damagePerFireTick": 1,
+        "childHp": 100
+      },
+      {
+        "id": 7,
+        "name": "Mother Ship Attack Fighter",
+        "baseHp": 100,
+        "range": 70,
+        "attack": "laser",
+        "damagePerFireTick": 0.3333333333333333
+      }
+    ]
+  }
+}

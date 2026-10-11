@@ -1,170 +1,65 @@
-# Space Game Clone - Panda3D Edition
+# The Space Game
 
-## 🎮 About
+A modern browser recreation of David Scott and Casual Collective’s 2009 asteroid-mining strategy game. Connect solar stations, relays, miners, stores and defenses into a living energy network. Three.js provides lit models, procedural asteroid materials, a nebula, bloom, and electrical activity driven by real power transfers.
 
-This is a real-time strategy tower defense game built with **Panda3D**, featuring a unique power network system where buildings must be connected to power sources to operate. Players defend their base against increasingly difficult waves of enemies by strategically placing buildings and managing resources.
+## Play locally
 
-## 🌟 Key Features
+Requires Node.js 20.19+ or 22.12+ and a browser with WebGL 2. Mouse and keyboard recommended.
 
-### 🔌 **Unique Power Network System**
-- Buildings require power connections to operate
-- Strategic network topology affects vulnerability
-- Hub vs. ring vs. grid building patterns create emergent gameplay
-
-### 🏗️ **12 Building Types**
-- **Power Infrastructure**: Solar panels, connectors, batteries
-- **Resource Extraction**: Miners, converters  
-- **Defense Systems**: Turrets, lasers, super lasers, missile launchers
-- **Support Systems**: Repair nodes, hangars, force fields
-
-### 👾 **7 Enemy Types** 
-- From basic fighters to massive motherships
-- Each with unique AI behaviors and special abilities
-- Adaptive targeting and swarm intelligence
-
-### 🌊 **5 Wave Types**
-- Normal, Formation, Elite, Swarm, and Boss waves
-- Exponential difficulty scaling (1.6x growth factor)
-- Dynamic enemy composition based on game phase
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.8+
-- Virtual environment support
-
-### Installation & Setup
-```bash
-# Clone and enter the repository
-git clone <repository-url>
-cd SpaceGame
-
-# Create and activate virtual environment  
-python3 -m venv panda3d_env
-source panda3d_env/bin/activate  # On Windows: panda3d_env\Scripts\activate
-
-# Install dependencies
-pip install -r panda3d_requirements.txt
-
-# Verify installation
-python test_phase1.py
-
-# Run the game
-python main.py
+```sh
+npm ci
+npm start
 ```
 
-## 🎮 Controls
+Open **http://127.0.0.1:5178**. Progress, research, settings and your current operation save in this browser. Settings offers progress export/import; imports restore campaign/research records, not an arbitrary running simulation.
 
-- **ESC** - Quit game
-- **SPACE** - Start/toggle game state
-- **P** - Pause/resume game
-- **WASD** - Camera movement (Phase 2+)
-- **Mouse** - Building placement (Phase 2+)
-
-## 📊 Game Mechanics
-
-### Resources
-- **Minerals** (600 starting): Construction currency
-- **Energy** (50 starting): Operational currency for building actions  
-- **Power**: Real-time generation/consumption for building operation
-
-### Victory Condition
-- **Survival Challenge**: Survive as many waves as possible
-- **Infinite Scaling**: No traditional victory, difficulty scales infinitely
-
-### Strategic Depth
-- **Multi-Resource Economy**: Minerals, energy, and power create meaningful trade-offs
-- **Infrastructure Vulnerability**: Network attacks can disable large areas
-- **Emergent Tactics**: Simple rules create complex decision spaces
-
-## 🏗️ Architecture
-
-```
-Project Structure:
-├── main.py                    # Panda3D application entry point
-├── config/                    # JSON configuration files (all game balance)
-├── docs/                      # Complete technical documentation  
-├── game/
-│   ├── core/                 # Game engine and state management
-│   ├── panda3d/             # Panda3D-specific rendering systems
-│   ├── systems/             # Game logic systems (ready for Phase 3)
-│   └── entities/            # Game objects (ready for Phase 3)
-├── assets/                   # 3D models, textures, shaders (Phase 4)
-└── tests/                    # Test utilities
+```sh
+npm test
+npm run build
+npm run preview
 ```
 
-## 📈 Development Status
+`dist/` is a static build; serve it over HTTP. There is no backend or account requirement. Nothing in this checkout deploys the site automatically.
 
-### ✅ **Phase 1 Complete: Foundation**
-- ✅ Panda3D application with 3D scene
-- ✅ Configuration system with all game balance preserved
-- ✅ Basic input handling and window management
-- ✅ Orthographic top-down camera system
+## Modes and progression
 
-### 🔄 **Upcoming Phases**
-- **Phase 2**: Camera controls and basic entity rendering
-- **Phase 3**: Complete game logic integration  
-- **Phase 4**: Enhanced 3D visuals and models
-- **Phase 5**: Polish and optimization
+- **Expedition:** 12 new missions, mining/rescue/defense/boss objectives, structure unlocks, three medals per mission and cosmetic liveries.
+- **Classic:** nine reconstructed missions with original budgets, structure access, extraction-driven waves and recovered survival schedules. Research bonuses are disabled.
+- **Challenges:** six independent economy, combat, power and rescue scenarios.
+- **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and research rewards for cleared milestones.
+- **Sandbox:** generous resources, all structures and manual wave controls.
+- **Research division:** 20 technologies in Power, Industry, Ballistics and Engineering. Six loadout slots, prerequisite branches, capstone tradeoffs and free refunds. Your equipped research takes effect when starting a modern operation; saved operations retain their original loadout.
 
-## 📚 Documentation
+Research starts with 6 Intel. Each new best Expedition/Challenge star earns 2, and each newly cleared five-wave Endless milestone earns 4. Replaying an unchanged result or simply calling a wave earns nothing. [Research design and sources](docs/RESEARCH_TREE_DESIGN.md).
 
-Comprehensive technical documentation available in [`docs/`](docs/):
+## Original shortcuts
 
-- **[Game Specification](docs/GAME_SPECIFICATION.md)** - High-level overview and core concepts
-- **[Power Network System](docs/POWER_NETWORK_SYSTEM.md)** - The game's unique core mechanic
-- **[Building System](docs/BUILDING_SYSTEM.md)** - Complete building mechanics and types
-- **[Enemy AI System](docs/ENEMY_AI_SYSTEM.md)** - Enemy types, behaviors, and combat
-- **[Wave System](docs/WAVE_SYSTEM.md)** - Wave generation and difficulty progression
-- **[Migration Plan](docs/PANDA3D_MIGRATION_PLAN.md)** - Complete 5-phase migration strategy
+| Key | Action |
+| --- | --- |
+| 1 / 2 / 3 / 4 | Relay / Miner / Solar / Energy Store |
+| 5 / 6 / 7 | Repair / Laser / Missile |
+| U or Space | Upgrade selected structure |
+| P / T | Basic laser → Pulser / THEL |
+| R | Recycle selected structure |
+| Shift + click | Repeat construction |
+| Esc / right-click | Cancel placement/selection |
+| WASD / arrows / drag | Pan |
+| Q / E / wheel | Zoom in/out |
+| Pause button | Freeze time while planning and purchasing |
 
-## ⚙️ Configuration
+P and Space retain their original upgrade meanings. Home centers the camera as a browser convenience.
 
-All game balance and mechanics are externalized in JSON files in [`config/`](config/):
+## Fidelity and provenance
 
-- `game_config.json` - Core settings, display, resources
-- `buildings.json` - All building types and stats  
-- `enemies.json` - Enemy types and AI behaviors
-- `waves.json` - Wave generation and difficulty
-- `research.json` - Technology tree and upgrades
-- `controls.json` - Input mapping and UI settings
+This is an independent recreation, not an official release or bit-exact emulator. Both full original game SWFs were acquired and hashed for private reference. Decompiled code supplied factual controls, costs, buffers, ranges, upgrade branches, wave tables and special combat rules. Original binaries, code, art and audio are not distributed here.
 
-## 🎯 Design Philosophy
+- [Current implementation and remaining fidelity gaps](docs/IMPLEMENTATION_STATUS.md)
+- [Original mechanics extracted from the SWF](docs/ORIGINAL_MECHANICS.md)
+- [Research, reviews, screenshots, downloads and archive hashes](docs/RESEARCH.md)
+- [Power audit](docs/FIDELITY_AUDIT_POWER.md) and [combat audit](docs/FIDELITY_AUDIT_COMBAT.md)
+- [Graphics research](docs/GRAPHICS_RESEARCH.md)
+- [Browser and simulation validation](docs/VALIDATION.md)
 
-### **Emergent Complexity**
-Simple rules create complex strategic situations through the interaction of:
-- Power network dependencies
-- Resource management trade-offs  
-- Exponential difficulty scaling
-- Multiple valid strategies
+Models, textures, shaders and synthesized effects in the browser edition are newly created. Three.js and Vite retain their upstream licenses. The game name and original design are credited to their creators.
 
-### **Strategic Depth**  
-- **Network Topology Strategy**: Hub vs. ring vs. grid patterns
-- **Infrastructure Risk**: Network attacks create cascade failures
-- **Resource Tension**: Meaningful trade-offs between spending options
-- **Escalating Challenge**: Difficulty grows faster than player power
-
-## 🧪 Testing
-
-Run the verification suite:
-```bash
-python test_phase1.py
-```
-
-Expected result: All tests pass with green checkmarks ✅
-
-## 🤝 Contributing
-
-This project preserves a carefully balanced game design through:
-- **Configuration-driven balance**: Easy tweaks through JSON files
-- **Complete documentation**: Technical specs enable faithful reimplementation  
-- **Modular architecture**: Clean separation of systems
-- **Comprehensive testing**: Verification of all mechanics
-
-## 📝 License
-
-[Add your license information here]
-
----
-
-**Built with Panda3D for enhanced 3D graphics while preserving the strategic depth and unique gameplay mechanics that make this tower defense game engaging and challenging.** 
+The earlier Panda3D prototype remains in `game/`, `config/`, and the Python files. Its [previous README](docs/PANDA3D_README.md) and older design documents are historical prototype material, not the browser build’s specification.
