@@ -17,10 +17,16 @@ All modern campaign missions have enemies and require their primary objective, m
 | 11. The last reserve | 10:00 | 10 | Reserve interdiction |
 | 12. Hold the line | 11:00 | 12 | Three capital offensives |
 
-The early sectors provide 55–65 seconds to establish defenses. Inter-wave gaps are 45–64 seconds, with occasional longer recovery intervals. Counts scale with difficulty. Early missions introduce fighters and swarms before ring ships; later missions add bombers, suicide ships, opposite-side flanks and capital escorts. Heavy metal has two separate capital waves, and Hold the line has three, with the last arriving in the final wave. Rare elites retain their every-third-wave rewards.
+The early sectors provide 55–65 seconds to establish defenses. Inter-wave gaps are 45–64 seconds, with occasional longer recovery intervals. Counts scale with difficulty, then triple the previous fleet size. Each new enemy has half the previous hull and attack damage. Early missions introduce fighters and swarms before ring ships; later missions add bombers, suicide ships, opposite-side flanks and capital escorts. Heavy metal has two separate capital waves, and Hold the line has three, with the last arriving in the final wave. Rare elites retain their every-third-wave rewards.
 
 The HUD advertises the next wave number, countdown, formation and incoming compass bearing. Compass north is the top of the sector map. Every distinct approach has a minimap arrow at its actual spawn perimeter; arrows turn red in the last fifteen seconds. Spawn spread is at most about nine degrees around an authored bearing. Countdown time follows simulation speed and pauses with the operation. Sandbox shows ON YOUR SIGNAL and the next manually called wave’s bearing. Endless and Challenges use deterministic advertised approach bearings too. Classic preserves its recovered schedules.
 
 Existing campaign completion records and progression are retained. Saved campaign operations keep their ships, resources and elapsed time, and use the current sector definition for remaining waves. New operation timers and plans are covered by simulation tests.
 
 These are initial balance settings. Automated checks cover viable ore, actual formations, directions, objective gating and all twelve sectors; a full campaign playthrough and long-duration balance testing remain.
+
+## Streamed arrivals and open equipment access
+
+Modern fleets queue three times each authored group, interleave approach groups, and move capitals to the end of the stream. Arrival spacing distributes the fleet over 70% of the wave gap, bounded to 8–40 seconds. The first ship arrives immediately; further ships arrive individually at scheduled simulation times. Repeated manual calls append fleets behind already queued arrivals. HUD hostile counts include a separate inbound count. Final-wave victory and wave-clear accounting wait for the pending queue. Queue entries preserve their originating wave for Endless hull scaling and survive pause/resume. Existing saved enemies retain their current hull.
+
+All modern sectors and challenges now grant the full seven-key build palette plus Pulser and THEL upgrade branches from the start, including old resumed mission definitions. Classic retains its source-backed equipment access. Campaign sector and cosmetic unlocks remain.

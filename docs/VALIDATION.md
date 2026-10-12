@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **175 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **181 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -111,3 +111,9 @@ This is not a complete campaign playthrough, long-duration endless stress benchm
 - Screenshots: [Adaptive grid](screenshots/adaptive-grid.jpg), [Fifty-rank base stats](screenshots/progression-fifty.jpg).
 
 - Asteroid browser QA selected the seed-2 starter deposit and verified 3,300 initial minerals, 3,224 remaining and 76 extracted. This caught and fixed a missing inspector render binding. Multi-target yield and energy limits are covered by simulation integration tests. [Ore inspector](screenshots/asteroid-inspector.jpg).
+
+## Streamed fleets, default towers and hunting missiles
+
+- 181 tests pass. Every authored wave queues exactly triple its prior difficulty-scaled groups at advertised bearings. New integration tests verify staggered release, pending-clear gating, pause/save determinism, halved modern hull with elite modifiers, original Classic hull, complete modern equipment access including resumed legacy definitions, repeated missile reacquisition, empty-gap searching, unchanged ammo spending, save restoration and fuel expiry. Attack, bomber-impact and suicide-splash tests verify half the prior modern damage.
+- Dedicated browser QA on isolated port 5179 verified sector one offers all seven build cards and both Pulser/THEL upgrade actions. Sandbox wave one showed **1 hostile / 11 inbound**, then **5 hostile / 7 inbound**, proving arrivals are staggered. Browser console warnings/errors: none.
+- Screenshots: [Default towers](screenshots/default-towers.jpg), [Streamed wave](screenshots/streamed-waves.jpg).

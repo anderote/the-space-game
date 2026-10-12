@@ -34,7 +34,7 @@ test("all twelve expeditions have longer objectives, varied nonempty waves and v
   }
   assert.equal(fingerprints.size, 12);
 });
-test("every authored wave spawns exactly its groups at the previewed bearings", () => {
+test("every authored wave queues triple its groups at the previewed bearings", () => {
   for (const m of CAMPAIGN) {
     const s = new Simulation(m);
     for (const plan of m.wavePlan) {
@@ -42,20 +42,36 @@ test("every authored wave spawns exactly its groups at the previewed bearings", 
       const preview = s.nextWavePreview();
       assert.equal(preview.name, plan.name);
       s.callWave();
+      const fleet = [...s.enemies, ...s.spawnQueue];
+      assert.equal(s.enemies.length, 1);
       assert.equal(
-        s.enemies.length,
-        plan.groups.reduce((n, g) => n + g.count, 0),
+        fleet.length,
+        plan.groups.reduce((n, g) => n + g.count * 3, 0),
       );
-      let index = 0;
-      for (const g of plan.groups)
-        for (let i = 0; i < g.count; i++) {
-          const e = s.enemies[index++];
-          assert.equal(e.type, g.type);
-          assert.ok(
-            Math.abs(wrap(Math.atan2(e.y, e.x) - plan.angle - g.offset)) <=
-              0.151,
-          );
-        }
+      for (const g of plan.groups) {
+        const matches = fleet.filter(
+          (e) =>
+            e.type === g.type &&
+            Math.abs(
+              wrap(
+                (e.angle !== undefined && e.at !== undefined
+                  ? e.angle
+                  : Math.atan2(e.y, e.x)) -
+                  plan.angle -
+                  g.offset,
+              ),
+            ) <= 0.151,
+        );
+        assert.equal(
+          matches.length,
+          plan.groups
+            .filter(
+              (other) => other.type === g.type && other.offset === g.offset,
+            )
+            .reduce((n, other) => n + other.count * 3, 0),
+        );
+      }
+      s.spawnQueue = [];
       assert.equal(s.nextWave, s.time + plan.gap);
     }
     const wave = s.wave;

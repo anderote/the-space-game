@@ -305,7 +305,7 @@ function selector(which = "campaign", selection = null) {
       )
       .join(
         "",
-      )}</select></label><p style="font-size:10px">${which === "campaign" ? "Complete a sector to open the next. New structures become available as you progress." : which === "classic" ? "Original budgets, objectives, structure access, and mining-triggered waves. Maps and some combat timing are recreated." : "Standalone scenarios. All challenges are available from the start."}</p><button class="primary" data-action="launch" ${!allowed ? "disabled" : ""}>${allowed ? "Enter sector" : "Complete the previous sector"} <span>↗</span></button></aside></div>`;
+      )}</select></label><p style="font-size:10px">${which === "campaign" ? "Complete a sector to open the next. All towers are available from the start." : which === "classic" ? "Original budgets, objectives, structure access, and mining-triggered waves. Maps and some combat timing are recreated." : "Standalone scenarios. All challenges are available from the start."}</p><button class="primary" data-action="launch" ${!allowed ? "disabled" : ""}>${allowed ? "Enter sector" : "Complete the previous sector"} <span>↗</span></button></aside></div>`;
   } else if (which === "freeplay") {
     body = `<div class="sandbox-panel"><div class="mode-card"><div class="eyebrow">SURVIVAL / NO TIME LIMIT</div><h3>Endless frontier</h3><div class="eyebrow">PERSONAL BEST / WAVE ${progress.endless?.wave || 0}</div><p>An open field, every structure, and ever larger fleets. A mothership arrives every fifth wave. Build a network that lasts.</p><label class="field-label">SECTOR SEED<input id="endless-seed" type="number" min="1" max="999999" value="4281" /></label><button class="primary" data-mode="endless">Enter the frontier <span>↗</span></button></div><div class="mode-card"><div class="eyebrow">CREATIVE / NO PRESSURE</div><h3>Sandbox</h3><p>A generous mineral reserve and no automatic attacks. Experiment with layouts and call in fleets when ready. Earn Intel, command XP and mastery XP here too.</p><label class="field-label">SECTOR SEED<input id="sandbox-seed" type="number" min="1" max="999999" value="8107" /></label><button class="primary" data-mode="sandbox">Create an outpost <span>↗</span></button></div></div>`;
   } else {
@@ -410,7 +410,11 @@ function updateInspector() {
       );
     el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : !b.connected ? "DISCONNECTED · NEEDS POWER ROUTE" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><div class="stats-line shield-readout" id="selected-shield">${shieldCapacity(b) ? shieldStatus(b, sim.time) : ""}</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${s.armor || s.shield ? `<div class="stats-line">${Math.round(s.armor * 100)}% ARMOR · ${Math.round(s.shield * 100)}% POWERED SHIELD</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" && !sim.mission.classic ? `<section class="shield-module"><div class="small-label">RECHARGEABLE SHIELD · TIER ${b.shieldLevel || 0}/3</div><p>20 / 35 / 50% hull reserve. Recharges after 5s without hits; 0.2 energy per shield point.</p>${sim.rules.shieldModules ? (Number.isFinite(sim.shieldModuleCost(b)) ? `<button class="secondary" data-action="shield-upgrade">${b.shieldLevel ? "Upgrade" : "Install"} shield · ${sim.shieldModuleCost(b)} M</button>` : "<p>Maximum shield configuration</p>") : `<button class="quiet" data-action="run-research">Unlock: Capacitive armor · Intel research</button>`}</section>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
   } else if (rock) {
-    el.innerHTML = asteroidView(rock, asteroidReadout(rock, sim.buildings, stats), fmt);
+    el.innerHTML = asteroidView(
+      rock,
+      asteroidReadout(rock, sim.buildings, stats),
+      fmt,
+    );
   } else {
     el.innerHTML = `<div class="eyebrow">NETWORK COMMAND</div><h3>Every connection counts.</h3><p>Build near a powered relay or station. Protect the links that keep your outpost alive.</p><p><kbd>1–7</kbd> Build &nbsp; <kbd>Q / E</kbd> Zoom<br><kbd>SPACE</kbd> Upgrade selection</p>${sim.mission.id === "skirmish" ? '<button class="secondary" data-action="wave">Call the next wave →</button>' : ""}<button class="quiet" data-action="center">Center camera</button>`;
   }
@@ -500,16 +504,15 @@ function updateHud() {
       : incoming?.manual
         ? "ON YOUR SIGNAL"
         : noMore
-          ? sim.enemies.length
+          ? sim.enemies.length || sim.spawnQueue?.length
             ? "ENGAGED"
             : "CLEAR"
           : clock(sim.nextWave - sim.time),
   );
+  const queued = sim.spawnQueue?.length || 0;
   set(
     "enemy-count",
-    sim.enemies.length
-      ? `${sim.enemies.length} HOSTILE SIGNAL${sim.enemies.length > 1 ? "S" : ""}`
-      : "NO HOSTILE SIGNALS",
+    `${sim.enemies.length ? `${sim.enemies.length} HOSTILE SIGNAL${sim.enemies.length > 1 ? "S" : ""}` : "NO HOSTILE SIGNALS"}${queued && !sim.mission.classic ? ` · ${queued} INBOUND` : ""}`,
   );
   set("elapsed", `ELAPSED ${clock(sim.time)}`);
   set("zoom-label", `${Math.round(renderer.zoom * 60)}%`);

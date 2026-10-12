@@ -163,6 +163,7 @@ test("rare ships arrive every third wave, reward values persist, and Classic sta
   const s = new Simulation(skirmish(518, "endless"));
   for (let wave = 1; wave <= 6; wave++) {
     s.enemies = [];
+    s.spawnQueue = [];
     s.callWave();
     const elites = s.enemies.filter((e) => e.rare);
     assert.equal(elites.length, wave % 3 === 0 ? 1 : 0);

@@ -43,10 +43,10 @@ npm run preview
 
 ## Modes and progression
 
-- **Expedition:** 12 longer missions with enemies in every sector, 4–12 authored waves, mining/rescue/defense/boss objectives, structure unlocks, three medals per mission and cosmetic liveries.
+- **Expedition:** 12 longer missions with enemies in every sector, 4–12 authored waves, mining/rescue/defense/boss objectives, all towers available immediately, three medals per mission and cosmetic liveries.
 - **Classic:** nine reconstructed missions with original budgets, structure access, extraction-driven waves and recovered survival schedules. Research and XP stat bonuses are disabled. Building upgrades use the browser edition’s expanded tiers.
 - **Challenges:** six independent economy, combat, power and rescue scenarios.
-- **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and rare ships carrying Intel.
+- **Endless frontier:** escalating fleets with three motherships every fifth wave, personal records and rare ships carrying Intel.
 - **Sandbox:** generous resources, all structures and manual wave controls.
 - **Research division:** 41 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
 - **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a base-stat point. Seven base tracks cover Armor, Clock speed, Harvesting, Firepower, Repair efficiency, Power output and Efficient fabrication. Clock speed accelerates construction, mining and solar cycles; Efficient fabrication reaches 50% cheaper buildings and upgrades.
@@ -107,3 +107,9 @@ All seven base-stat tracks and all 52 tower mastery tracks now cap at **50 ranks
 **Adaptive grid:** research Field couplers, then spend **6 Intel** on Adaptive grid to reconnect disconnected buildings automatically. It respects cable obstacles, range, construction state and connection limits, retrying stalled branches every two seconds.
 
 **Multi-asteroid mining:** miner tiers provide **1 / 2 / 3 / 4 simultaneous beams**, with normal energy charged per beam and each target receiving the tier’s configured yield. Click an asteroid to inspect remaining minerals, harvested ore and nearby miners. Saved asteroid deposits are preserved.
+
+**Streamed enemy fleets:** modern Expedition, Challenges and Free play waves contain **3× the previous ships**, including capital ships. Each newly spawned enemy has **half the previous hull and attack damage**, retaining difficulty/elite/Endless scaling. Waves release one ship at a time over 8–40 seconds, interleave fronts, and place capitals after escorts. The HUD counts ships still inbound; queued ships must arrive and be defeated before a wave clears. Saves and pause preserve the stream. Classic retains its original fleet strength and release schedule.
+
+**Every modern tower is unlocked from the start**, including resumed operations: build keys 1–7 cover relays, miners, solar, stores, repair, lasers and missiles. Select a Basic laser and use **U / Space** for Pulser or **T** for THEL, paying the normal upgrade price. Campaign sectors and cosmetic liveries retain their progression.
+
+**Homing missiles** reacquire the nearest living enemy from their current position whenever their target dies. If no enemy is present, they coast and continue searching for later arrivals until their original eight-second fuel lifetime expires. Retargeting costs no extra ammunition or energy.

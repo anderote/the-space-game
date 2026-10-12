@@ -7,7 +7,7 @@ import {
   enemyDamageMultiplier,
 } from "./shield-modules.js";
 import { approachAngle, bearingLabel } from "./expedition.js";
-import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
+import { BUILDINGS, BUILD_ORDER, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
 import { ASTEROID_ORE_MULTIPLIER } from "./structure-upgrades.js";
 import { XP_RATES, MASTERY_RATES, normalizeRanks } from "./experience.js";
@@ -93,6 +93,8 @@ export class Simulation {
     statRanks = {},
     towerRanks = {},
   ) {
+    if (!mission.classic)
+      mission = { ...mission, unlocked: [...BUILD_ORDER], thel: true };
     this.researchIds = mission.classic
       ? []
       : [...(snapshot ? snapshot.researchIds || [] : researchIds)];
@@ -689,21 +691,19 @@ export class Simulation {
       ...extra,
     });
   }
-  spawnEnemy(type, angle = null, rare = false) {
+  spawnEnemy(type, angle = null, rare = false, wave = this.wave) {
     const d = ENEMIES[type];
     const a = angle ?? this.random() * Math.PI * 2,
       r = this.mission.classic ? 2500 : this.mission.world * 0.5;
     const endurance =
-      this.mission.kind === "endless"
-        ? 1 + Math.max(0, this.wave - 5) * 0.1
-        : 1;
+      this.mission.kind === "endless" ? 1 + Math.max(0, wave - 5) * 0.1 : 1;
     const e = {
       id: ++this.uid,
       type,
       x: Math.cos(a) * r,
       y: Math.sin(a) * r,
-      hp: d.hp * this.diff.hp * endurance,
-      maxHp: d.hp * this.diff.hp * endurance,
+      hp: d.hp * this.diff.hp * endurance * (this.mission.classic ? 1 : 0.5),
+      maxHp: d.hp * this.diff.hp * endurance * (this.mission.classic ? 1 : 0.5),
       shield: d.shield || 0,
       cooldown: this.random(),
       spawnCooldown: 8,
@@ -723,6 +723,38 @@ export class Simulation {
     }
     this.enemies.push(e);
     return e;
+  }
+  queueModernWave(entries, gap) {
+    // Interleave approach groups; capital ships follow their escort stream.
+    const regular = entries.filter((e) => e.type !== "mothership");
+    const capitals = entries.filter((e) => e.type === "mothership");
+    const ordered = [...regular, ...capitals];
+    const start = Math.max(
+      this.time,
+      (this.spawnQueue?.at(-1)?.at ?? this.time) +
+        (this.spawnQueue?.length ? 0.5 : 0),
+    );
+    const duration = Math.min(40, Math.max(8, gap * 0.7));
+    const interval = ordered.length > 1 ? duration / (ordered.length - 1) : 0;
+    this.spawnQueue ??= [];
+    ordered.forEach((e, i) =>
+      this.spawnQueue.push({ ...e, at: start + i * interval, wave: this.wave }),
+    );
+    this.releaseWaveEnemy();
+  }
+  releaseWaveEnemy() {
+    const queued = this.spawnQueue?.[0];
+    if (!queued || (queued.at !== undefined && queued.at > this.time + 1e-8))
+      return;
+    this.spawnQueue.shift();
+    const enemy = this.spawnEnemy(
+      queued.type,
+      queued.angle,
+      queued.rare,
+      queued.wave ?? this.wave,
+    );
+    enemy.hp *= queued.hp ?? 1;
+    enemy.maxHp = enemy.hp;
   }
   nextWavePreview() {
     if (this.wave >= this.mission.waves || this.mission.classic) return null;
@@ -809,16 +841,24 @@ export class Simulation {
     if (plan) {
       this.nextWave = this.time + plan.gap;
       let elitePending = this.wave % 3 === 0;
-      for (const g of plan.groups)
-        for (let i = 0; i < Math.ceil(g.count * this.diff.count); i++) {
+      const entries = [];
+      const groups = plan.groups.map((g) => ({
+        ...g,
+        remaining: Math.ceil(g.count * this.diff.count) * 3,
+      }));
+      while (groups.some((g) => g.remaining > 0))
+        for (const g of groups) {
+          if (g.remaining <= 0) continue;
+          g.remaining--;
           const rare = elitePending && g.type !== "mothership";
           if (rare) elitePending = false;
-          this.spawnEnemy(
-            g.type,
-            plan.angle + (g.offset || 0) + (this.random() - 0.5) * 0.3,
+          entries.push({
+            type: g.type,
+            angle: plan.angle + (g.offset || 0) + (this.random() - 0.5) * 0.3,
             rare,
-          );
+          });
         }
+      this.queueModernWave(entries, plan.gap);
       this.emit("wave", { wave: this.wave, name: plan.name });
       return;
     }
@@ -830,7 +870,8 @@ export class Simulation {
       ),
     );
     const a = approachAngle(this.mission, this.wave);
-    for (let i = 0; i < count; i++) {
+    const entries = [];
+    for (let i = 0; i < count * 3; i++) {
       const type = this.mission.swarm
         ? "swarm"
         : tier >= 4 && i % 7 === 0
@@ -842,17 +883,19 @@ export class Simulation {
               : this.wave > 3 && i % 3 === 0
                 ? "swarm"
                 : "fighter";
-      this.spawnEnemy(
+      entries.push({
         type,
-        a + (this.random() - 0.5) * 0.5,
-        i === 0 && this.wave % 3 === 0,
-      );
+        angle: a + (this.random() - 0.5) * 0.5,
+        rare: i === 0 && this.wave % 3 === 0,
+      });
     }
     if (this.mission.boss && this.wave === Math.min(3, this.mission.waves))
-      for (let n = 0; n < (this.mission.bossCount || 1); n++)
-        this.spawnEnemy("mothership", a + n * 0.8);
+      for (let n = 0; n < (this.mission.bossCount || 1) * 3; n++)
+        entries.push({ type: "mothership", angle: a + (n % 3) * 0.8 });
     if (this.mission.kind === "endless" && this.wave % 5 === 0)
-      this.spawnEnemy("mothership", a);
+      for (let n = 0; n < 3; n++)
+        entries.push({ type: "mothership", angle: a });
+    this.queueModernWave(entries, this.nextWave - this.time);
     this.emit("wave", { wave: this.wave });
   }
   requestEnergy(consumer, amount, solarOnly = false) {
@@ -1494,13 +1537,23 @@ export class Simulation {
       const targets = p.friendly ? this.enemies : this.buildings;
       let target = targets.find((t) => t.id === p.targetId && t.hp > 0);
       if (!target && p.friendly) {
-        target = targets
-          .filter((t) => t.hp > 0)
-          .sort((a, b) => distance(p, a) - distance(p, b))[0];
+        let nearest = Infinity;
+        for (const candidate of targets) {
+          if (candidate.hp <= 0) continue;
+          const range = distance(p, candidate);
+          if (range < nearest) {
+            nearest = range;
+            target = candidate;
+          }
+        }
         if (target) p.targetId = target.id;
       }
       if (!target) {
-        p.life = 0;
+        if (p.friendly) {
+          // Keep searching during gaps in a streamed wave, within the original fuel lifetime.
+          p.x += Math.cos(p.angle || 0) * p.speed * dt;
+          p.y += Math.sin(p.angle || 0) * p.speed * dt;
+        } else p.life = 0;
         continue;
       }
       const dist = distance(p, target);
@@ -1607,12 +1660,7 @@ export class Simulation {
           this.callWave();
       } else if (this.time >= this.nextWave) this.callWave();
     }
-    if (this.spawnQueue?.length) {
-      const queued = this.spawnQueue.shift(),
-        enemy = this.spawnEnemy(queued.type, queued.angle);
-      enemy.hp *= queued.hp;
-      enemy.maxHp = enemy.hp;
-    }
+    this.releaseWaveEnemy();
     if (this.wave > 0 && this.enemies.length === 0 && !this.spawnQueue?.length)
       this.clearedWave = this.wave;
     if (!this.buildings.length) this.finish("lost");

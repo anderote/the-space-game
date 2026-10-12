@@ -71,7 +71,7 @@ test("new activity earns doubled command/mastery XP while banked history and cre
   s.damageBuilding(b, 10);
   s.creditRepair(b, 10);
   const reward = bankExperience(p, s);
-  assert.equal(reward.xp, 22);
+  assert.equal(reward.xp, 12);
   assert.equal(reward.mastery, 22);
   assert.equal(bankExperience(p, s).mastery, 0);
 });

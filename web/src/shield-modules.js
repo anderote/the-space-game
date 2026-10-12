@@ -27,4 +27,4 @@ export function shieldStatus(b, time) {
             : "NEEDS POWER";
   return `${Math.floor(current)} / ${Math.round(capacity)} SHIELD · ${status}`;
 }
-export const enemyDamageMultiplier = (mission) => (mission.classic ? 1 : 0.9);
+export const enemyDamageMultiplier = (mission) => (mission.classic ? 1 : 0.45);

@@ -143,9 +143,9 @@ test("all player classes receive capacity; Classic keeps original damage and dis
   near(shieldCapacity(b), 0);
   assert.equal(classic.upgradeShield(b.id).ok, false);
   near(enemyDamageMultiplier(CLASSIC[0]), 1);
-  near(enemyDamageMultiplier(skirmish(1)), 0.9);
+  near(enemyDamageMultiplier(skirmish(1)), 0.45);
 });
-test("modern direct attacks and bomber impacts deal ten percent less actual damage", () => {
+test("modern direct attacks and bomber impacts halve the previous actual damage", () => {
   const s = lab([]),
     b = s.addBuilding("solar", 0, 0, true);
   const e = s.spawnEnemy("fighter", 0);
@@ -154,7 +154,7 @@ test("modern direct attacks and bomber impacts deal ten percent less actual dama
   s.rebuildNetwork();
   const hp = b.hp;
   tick(s, 1);
-  near(hp - b.hp, 45);
+  near(hp - b.hp, 22.5);
   s.enemies = [];
   const before = b.hp;
   s.projectiles = [
@@ -171,7 +171,7 @@ test("modern direct attacks and bomber impacts deal ten percent less actual dama
     },
   ];
   s.update(0.025);
-  near(before - b.hp, 36);
+  near(before - b.hp, 18);
 });
 
 test("connected shield charging consumes supplier energy and produces normal network flows", () => {
