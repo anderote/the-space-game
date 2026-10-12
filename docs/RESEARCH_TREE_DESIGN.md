@@ -97,7 +97,7 @@ Settings offers Start fresh: save a local backup and download the previous profi
 | Field engineering | Precision repair | 4 | Composite hulls | +25% drone repair throughput |
 | Field engineering | Drone endurance | 4 | Composite hulls | +50% carried drone energy |
 | Field engineering | Autoseal plating | 6 | Precision repair + Drone endurance | Powered hull regeneration after 8s |
-| Field engineering | Capacitive armor | 9 | Autoseal plating | Absorb 25% incoming damage with power |
+| Field engineering | Capacitive armor | 9 | Autoseal plating | Unlock rechargeable building shield modules; retain 25% energy-funded hit absorption |
 | Field engineering | Reactive plating | 6 | Capacitive armor | +20% structure hull |
 | Field engineering | Autonomous servicing | 6 | Capacitive armor | +30% repair · +30% drone reserves |
 | Field engineering | Redundant shields | 8 | Reactive plating + Autonomous servicing | 35% powered damage absorption |

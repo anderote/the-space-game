@@ -1,3 +1,10 @@
+import {
+  shieldCapacity,
+  SHIELD_MODULE_COSTS,
+  SHIELD_RECHARGE_DELAY,
+  SHIELD_ENERGY_PER_HP,
+  enemyDamageMultiplier,
+} from "./shield-modules.js";
 import { approachAngle, bearingLabel } from "./expedition.js";
 import { BUILDINGS, ENEMIES, DIFFICULTIES } from "./content.js";
 import { researchRules, applyResearchStats } from "./research.js";
@@ -202,6 +209,7 @@ export class Simulation {
       b.hp = Math.min(1, health) * b.maxHp;
       b.repairXpDebt = Math.min(b.repairXpDebt || 0, b.maxHp - b.hp);
       b.energy = Math.min(b.energy, configured.capacity || 0);
+      b.shieldCharge = Math.min(b.shieldCharge || 0, shieldCapacity(b));
       if (
         previous.link !== configured.link ||
         previous.maxLinks !== configured.maxLinks
@@ -577,6 +585,44 @@ export class Simulation {
     b.buildEnergy = 0;
     b.buildCooldown = 0;
     b.upgrading = true;
+    this.networkDirty = true;
+    this.emit("upgrade", { x: b.x, y: b.y });
+    return { ok: true };
+  }
+  shieldModuleCost(b) {
+    return b && (b.shieldLevel || 0) < 3
+      ? this.discountCost(SHIELD_MODULE_COSTS[b.shieldLevel || 0])
+      : Infinity;
+  }
+  upgradeShield(id) {
+    const b = this.buildings.find((b) => b.id === id);
+    if (!b || b.type === "station")
+      return { ok: false, reason: "Select a player building" };
+    if (!this.rules.shieldModules || this.mission.classic)
+      return {
+        ok: false,
+        reason: "Research Capacitive armor to unlock rechargeable shields",
+      };
+    if (b.construction < 1)
+      return { ok: false, reason: "Wait for construction to finish" };
+    const cost = this.shieldModuleCost(b);
+    if (!Number.isFinite(cost))
+      return { ok: false, reason: "Maximum shield tier reached" };
+    if (this.minerals < cost)
+      return { ok: false, reason: `Need ${cost} minerals` };
+    this.minerals -= cost;
+    this.spent += cost;
+    b.investment += cost;
+    b.upgradeSpent = (b.upgradeSpent || 0) + cost;
+    b.shieldLevel = (b.shieldLevel || 0) + 1;
+    b.shieldCharge = Math.min(b.shieldCharge || 0, shieldCapacity(b));
+    b.constructionUnits = b.constructionTarget || 10;
+    b.constructionTarget = (b.constructionTarget || 10) + 5;
+    b.construction = b.constructionUnits / b.constructionTarget;
+    b.buildEnergy = 0;
+    b.buildCooldown = 0;
+    b.upgrading = true;
+    b.masteryConstructionCost = cost;
     this.networkDirty = true;
     this.emit("upgrade", { x: b.x, y: b.y });
     return { ok: true };
@@ -1009,6 +1055,25 @@ export class Simulation {
         }
         continue;
       }
+      const capacity = shieldCapacity(b);
+      b.shieldCharge = Math.max(0, Math.min(capacity, b.shieldCharge || 0));
+      if (
+        capacity &&
+        b.shieldCharge < capacity &&
+        this.time - (b.lastDamaged ?? -Infinity) >= SHIELD_RECHARGE_DELAY
+      ) {
+        const wanted = Math.min(
+          capacity - b.shieldCharge,
+          Math.min(25, capacity * 0.1) * dt,
+        );
+        const requested = wanted * SHIELD_ENERGY_PER_HP;
+        const local = Math.min(b.energy, requested);
+        b.energy -= local;
+        const energy = local + this.requestEnergy(b, requested - local);
+        this.drawnThisTick += energy;
+        if (energy > 0) b.lastShieldRecharge = this.time;
+        b.shieldCharge += energy / SHIELD_ENERGY_PER_HP;
+      }
       if (!b.powered) continue;
       if (
         this.rules.regeneration &&
@@ -1312,6 +1377,7 @@ export class Simulation {
                 b,
                 d.damage *
                   this.diff.damage *
+                  enemyDamageMultiplier(this.mission) *
                   (b.id === target.id ? 1 : 1 - dd / d.splash),
               );
           }
@@ -1345,7 +1411,10 @@ export class Simulation {
             mothership: 20,
             child: 20 / 3,
           }[e.type] || 15;
-        this.damageBuilding(target, dps * this.diff.damage * dt);
+        this.damageBuilding(
+          target,
+          dps * this.diff.damage * enemyDamageMultiplier(this.mission) * dt,
+        );
         if (
           ["laser", "thel", "missile"].includes(target.type) &&
           stats(target).range >= d.range
@@ -1411,7 +1480,10 @@ export class Simulation {
             color: "#e5b0ed",
           });
         } else {
-          this.damageBuilding(target, p.damage);
+          this.damageBuilding(
+            target,
+            p.damage * enemyDamageMultiplier(this.mission),
+          );
           this.effect("hit", target.x, target.y, { color: "#fa8b77" });
         }
         p.life = 0;
@@ -1545,6 +1617,18 @@ export class Simulation {
   damageBuilding(target, amount) {
     const protection = stats(target);
     if (target.type !== "station") amount *= 1 - protection.armor;
+    if (target.construction >= 1) {
+      const absorbed = Math.min(
+        amount,
+        shieldCapacity(target),
+        Math.max(0, target.shieldCharge || 0),
+      );
+      if (absorbed > 0) {
+        target.shieldCharge -= absorbed;
+        amount -= absorbed;
+        target.shieldPulse = 1;
+      }
+    }
     if (
       protection.shield &&
       target.type !== "station" &&

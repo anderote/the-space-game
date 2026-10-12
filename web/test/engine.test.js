@@ -594,8 +594,8 @@ test("self destructor waits for its fuse and centers splash on its target", () =
   tick(s, 2.9);
   assert.equal(primary.hp, 600);
   tick(s, 0.2);
-  assert.equal(primary.hp, 540);
-  assert.ok(Math.abs(adjacent.hp - 488) < 1e-7);
+  assert.equal(primary.hp, 546);
+  assert.ok(Math.abs(adjacent.hp - 489.2) < 1e-7);
 });
 test("destroyed missiles cannot hit during the projectile update that follows interception", () => {
   const s = empty();

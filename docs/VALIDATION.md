@@ -4,8 +4,8 @@
 
 ## Automated
 
-- `npm test`: **150 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
-- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~701 kB / 193 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
+- `npm test`: **159 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
 
@@ -85,6 +85,13 @@ Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the is
 - First light now requires 600 mined minerals, four cleared waves and 3:30 minimum duration. The final sector has twelve waves, three staggered motherships and an 11:00 minimum. Briefings and HUD show compound objectives.
 - Isolated desktop Chrome QA launched First light, showed a powered initial laser, NEXT WAVE 1/4 countdown, FROM N arrow, formation name and matching northern minimap entry arrow. Countdown decreased from 1:04 to 0:50 and froze when paused. No console warnings/errors. Main player save was preserved.
 - Screenshot: [Expedition countdown and approach](screenshots/expedition-waves.jpg). Production build passes. Campaign balance remains initial tuning; this is not a full playthrough.
+
+## Rechargeable building shields
+
+- `npm test`: 159 passed. New tests cover research/price/construction locks, all three module tiers, full-hit absorption and hull spillover, repair debt, five-second recharge delay, exact energy cost, own-solar reserves, network supplier flows, powerless isolation, saved charge, live research changes, discounts/refunds and actual weaker direct/bomber attacks. Suicide falloff tests now expect the modern 0.9 multiplier.
+- Isolated Chrome QA imported a disposable synthetic research profile through the regular import UI. Installed a solar shield for 100 minerals, saw 0/138 while installing and gradual recharge, then resumed the save with 138/138 charge intact.
+- Tier two cost 160 minerals and retained 138 charge during installation, then recharged to its roughly 241-HP maximum. The inspector showed tier 2/3, the 240-mineral final upgrade and a blue reserve ring. Final console warnings/errors: none. Main player profile was not changed by QA.
+- Screenshot: [Rechargeable shield](screenshots/rechargeable-shields.jpg). Build and diff checks pass. README now documents progression, longer expeditions, incoming bearings, shield unlock/costs and the damage adjustment.
 
 ## Limits
 

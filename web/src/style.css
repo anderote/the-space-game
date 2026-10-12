@@ -2460,3 +2460,12 @@ input {
   font-size: 10px;
   max-width: 220px;
 }
+
+.shield-module {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.shield-readout {
+  color: #8dc6ff;
+}

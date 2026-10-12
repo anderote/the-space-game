@@ -303,9 +303,9 @@ export const TECHNOLOGIES = [
     "Capacitive armor",
     9,
     ["autoseal"],
-    "Absorb 25% incoming damage with power",
-    "Divert a quarter of a hit into the local energy system at 0.1 energy per absorbed damage. No energy, no shield.",
-    { shield: 0.25 },
+    "Unlock rechargeable shield modules · 25% absorption",
+    "Unlock three shield-module tiers on individual buildings: 20/35/50% of hull as shield reserve. Install from the building inspector. Reserves recharge after 5 seconds without hits at 0.2 energy per shield point. Also retain 25% energy-funded hit absorption.",
+    { shield: 0.25, shieldModules: true },
     { tag: "BULWARK" },
   ),
 ];
@@ -395,6 +395,7 @@ export function researchRules(ids = [], ranks = {}, towers = {}) {
     droneCapacity: 1,
     regeneration: false,
     shield: 0,
+    shieldModules: false,
   };
   for (const id of new Set(ids)) {
     const tech = TECH_BY_ID[id];
@@ -403,7 +404,13 @@ export function researchRules(ids = [], ranks = {}, towers = {}) {
       if (["linkBonus", "miningRange", "startingMinerals"].includes(key))
         r[key] += value;
       else if (
-        ["stormOutput", "upgradeRefund", "regeneration", "shield"].includes(key)
+        [
+          "stormOutput",
+          "upgradeRefund",
+          "regeneration",
+          "shield",
+          "shieldModules",
+        ].includes(key)
       )
         r[key] =
           typeof value === "boolean"

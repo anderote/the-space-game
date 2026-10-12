@@ -40,3 +40,7 @@ These are explicit fidelity limits, not claims that every original feature is co
 ## Longer expedition and wave reconnaissance
 
 All twelve modern campaign sectors now have authored formations, longer objective/hold requirements and wave-clear victory gating. The first two mining sectors include raids and a starting defensive laser. Later sectors introduce multi-front attacks, mixed bomber/swarm escorts, suicide wings and separate late mothership assaults. `expedition.js` defines pacing and spawn groups. The next-wave preview shares actual spawn bearings, exposes all fronts, and survives pause/save; the HUD countdown and minimap entry markers are available in modern modes. Classic wave scheduling is unchanged. See [EXPEDITION_WAVES.md](EXPEDITION_WAVES.md) for timing and remaining playtesting limits.
+
+## Rechargeable shields and gentler enemy damage
+
+Modern direct attacks, bomber impacts and suicide splash damage are reduced by 10%; Classic is unchanged. Existing Capacitive armor research now also unlocks individual three-tier shield modules in building inspectors. Modules use paid construction, stored charge, delayed network-energy recharge, real hit absorption, persistent snapshot state, refund accounting and mastery completion rewards. The blue charge ring reuses the canvas overlay; charge and recharge state appear in the inspector. See [RECHARGEABLE_SHIELDS.md](RECHARGEABLE_SHIELDS.md).

@@ -1,3 +1,4 @@
+import { shieldCapacity } from "./shield-modules.js";
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { collectPowerSegments } from "./power-effects.js";
@@ -868,13 +869,30 @@ export class SpaceRenderer {
         );
         c.stroke();
       }
+      const shieldMax = shieldCapacity(b);
+      if (shieldMax && b.shieldCharge > 0 && b.construction >= 1) {
+        c.save();
+        c.strokeStyle = "#79baff";
+        c.globalAlpha = 0.25 + 0.35 * (b.shieldCharge / shieldMax);
+        c.lineWidth = 1;
+        c.beginPath();
+        c.arc(
+          a.x,
+          a.y,
+          r + 5,
+          -Math.PI / 2,
+          -Math.PI / 2 + (TAU * b.shieldCharge) / shieldMax,
+        );
+        c.stroke();
+        c.restore();
+      }
       if (b.shieldPulse > 0) {
         c.save();
         c.globalAlpha = b.shieldPulse * 0.8;
         c.strokeStyle = "#9edbff";
         c.lineWidth = 2;
         c.shadowColor = "#8dc6ff";
-        c.shadowBlur = 14;
+        c.shadowBlur = 0;
         c.beginPath();
         c.arc(a.x, a.y, r + 5, 0, TAU);
         c.stroke();

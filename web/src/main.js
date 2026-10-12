@@ -1,3 +1,4 @@
+import { shieldCapacity, shieldStatus } from "./shield-modules.js";
 import "./style.css";
 import {
   BUILDINGS,
@@ -387,7 +388,7 @@ function updateInspector() {
           b.hp) /
           b.maxHp,
       );
-    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${s.armor || s.shield ? `<div class="stats-line">${Math.round(s.armor * 100)}% ARMOR · ${Math.round(s.shield * 100)}% POWERED SHIELD</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
+    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><div class="stats-line shield-readout" id="selected-shield">${shieldCapacity(b) ? shieldStatus(b, sim.time) : ""}</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${s.armor || s.shield ? `<div class="stats-line">${Math.round(s.armor * 100)}% ARMOR · ${Math.round(s.shield * 100)}% POWERED SHIELD</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" && !sim.mission.classic ? `<section class="shield-module"><div class="small-label">RECHARGEABLE SHIELD · TIER ${b.shieldLevel || 0}/3</div><p>20 / 35 / 50% hull reserve. Recharges after 5s without hits; 0.2 energy per shield point.</p>${sim.rules.shieldModules ? (Number.isFinite(sim.shieldModuleCost(b)) ? `<button class="secondary" data-action="shield-upgrade">${b.shieldLevel ? "Upgrade" : "Install"} shield · ${sim.shieldModuleCost(b)} M</button>` : "<p>Maximum shield configuration</p>") : `<button class="quiet" data-action="run-research">Unlock: Capacitive armor · Intel research</button>`}</section>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
   } else {
     el.innerHTML = `<div class="eyebrow">NETWORK COMMAND</div><h3>Every connection counts.</h3><p>Build near a powered relay or station. Protect the links that keep your outpost alive.</p><p><kbd>1–7</kbd> Build &nbsp; <kbd>Q / E</kbd> Zoom<br><kbd>SPACE</kbd> Upgrade selection</p>${sim.mission.id === "skirmish" ? '<button class="secondary" data-action="wave">Call the next wave →</button>' : ""}<button class="quiet" data-action="center">Center camera</button>`;
   }
@@ -520,6 +521,16 @@ function updateHud() {
     updateInspector();
   }
   if (sel) {
+    set(
+      "selected-shield",
+      shieldCapacity(sel) ? shieldStatus(sel, sim.time) : "",
+    );
+    const shieldButton = document.querySelector(
+      '[data-action="shield-upgrade"]',
+    );
+    if (shieldButton)
+      shieldButton.disabled =
+        sel.construction < 1 || sim.minerals < sim.shieldModuleCost(sel);
     set("selected-health", `${fmt(sel.hp)} / ${fmt(sel.maxHp)} HULL`);
     set(
       "selected-status",
@@ -885,6 +896,17 @@ app.addEventListener("click", (e) => {
   }
   if (action === "upgrade") {
     upgrade();
+    return;
+  }
+  if (action === "shield-upgrade") {
+    const result = sim.upgradeShield(state.selected);
+    if (!result.ok) toast(result.reason);
+    else {
+      sound.play("upgrade");
+      updateInspector();
+      updateHud();
+      saveActive();
+    }
     return;
   }
   if (action === "thel") {
