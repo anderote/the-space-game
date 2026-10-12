@@ -6,12 +6,31 @@ A modern browser recreation of David Scott and Casual Collective’s 2009 astero
 
 Requires Node.js 20.19+ or 22.12+ and a browser with WebGL 2. Mouse and keyboard recommended.
 
+On macOS, install the stable play preview once:
+
 ```sh
 npm ci
-npm start
+npm run play:install
 ```
 
-Open **http://127.0.0.1:5178**. Progress, research, settings and your current operation save in this browser. Settings offers progress export/import; imports restore campaign/research records, not an arbitrary running simulation.
+Play at **http://127.0.0.1:5178**. The macOS user service runs independently of terminals, starts at login and recovers after a crash. It serves a separate build copy outside the repository, so editing code or running another build cannot reload your game. Progress, research, settings and your current operation remain saved on the same browser origin.
+
+```sh
+npm run play:status  # Check the running preview
+npm run play:update  # Build and switch to the latest code without restarting the server
+npm run play:stop    # Stop it for the current login session
+npm run play:start   # Start an already installed preview
+```
+
+After `play:update`, refresh the game when ready. Existing pages stay on their loaded version, and their hashed assets remain available. These commands only manage the local loopback preview; they do not deploy a public site.
+
+For active development:
+
+```sh
+npm run dev
+```
+
+Open **http://127.0.0.1:5179** for live changes. This separate origin has its own browser save storage. `npm start` also starts this development server. On other operating systems, use the development server or serve `dist/` after building. [Local preview setup](docs/LOCAL_PREVIEW.md).
 
 ```sh
 npm test
@@ -20,7 +39,7 @@ npm run benchmark
 npm run preview
 ```
 
-`dist/` is a static build; serve it over HTTP. There is no backend or account requirement. Nothing in this checkout deploys the site automatically.
+`dist/` is a static build; serve it over HTTP. There is no backend or account requirement. Settings offers progress export/import; imports restore campaign/research records, not an arbitrary running simulation. Nothing in this checkout deploys the site automatically.
 
 ## Modes and progression
 

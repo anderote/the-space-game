@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **159 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **160 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -92,6 +92,13 @@ Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the is
 - Isolated Chrome QA imported a disposable synthetic research profile through the regular import UI. Installed a solar shield for 100 minerals, saw 0/138 while installing and gradual recharge, then resumed the save with 138/138 charge intact.
 - Tier two cost 160 minerals and retained 138 charge during installation, then recharged to its roughly 241-HP maximum. The inspector showed tier 2/3, the 240-mineral final upgrade and a blue reserve ring. Final console warnings/errors: none. Main player profile was not changed by QA.
 - Screenshot: [Rechargeable shield](screenshots/rechargeable-shields.jpg). Build and diff checks pass. README now documents progression, longer expeditions, incoming bearings, shield unlock/costs and the damage adjustment.
+
+## Persistent isolated local preview
+
+- `npm test`: 160 passed. Added an HTTP integration test verifying isolated snapshots, live manifest changes without server restart, retained older hashed assets, HEAD requests, unsupported-method rejection, path confinement and malformed URL handling.
+- Installed a per-user macOS launchd service serving a separate build on loopback port 5178. `play:install` completed the production build, validated the property list and returned the correct health identity. launchd reports running with KeepAlive and RunAtLoad.
+- Stable HTML and its JavaScript asset returned HTTP 200. Stable HTML contains no Vite reload client, and `/@vite/client` returns 404. The separate live-development server on 5179 returns 200 for its reload client.
+- The original 5178 origin is retained for player saves; no browser profile/reset operation was performed. README documents installation, update, status, start/stop and the new development port.
 
 ## Limits
 

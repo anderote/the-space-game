@@ -44,3 +44,7 @@ All twelve modern campaign sectors now have authored formations, longer objectiv
 ## Rechargeable shields and gentler enemy damage
 
 Modern direct attacks, bomber impacts and suicide splash damage are reduced by 10%; Classic is unchanged. Existing Capacitive armor research now also unlocks individual three-tier shield modules in building inspectors. Modules use paid construction, stored charge, delayed network-energy recharge, real hit absorption, persistent snapshot state, refund accounting and mastery completion rewards. The blue charge ring reuses the canvas overlay; charge and recharge state appear in the inspector. See [RECHARGEABLE_SHIELDS.md](RECHARGEABLE_SHIELDS.md).
+
+## Stable local play environment
+
+A macOS user service now serves an isolated build at 127.0.0.1:5178. The source-watching development server uses 5179, so live edits have separate save storage and cannot reload the play build. `npm run play:update` atomically publishes a completed build without restarting the service; loaded pages retain their old assets until the player refreshes. [Setup and service details](LOCAL_PREVIEW.md).

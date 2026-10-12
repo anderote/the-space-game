@@ -10,7 +10,12 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test web/test/*.test.js",
-    "benchmark": "node web/bench/performance.js"
+    "benchmark": "node web/bench/performance.js",
+    "play:install": "node scripts/stable-preview.mjs install",
+    "play:update": "node scripts/stable-preview.mjs update",
+    "play:start": "node scripts/stable-preview.mjs start",
+    "play:stop": "node scripts/stable-preview.mjs stop",
+    "play:status": "node scripts/stable-preview.mjs status"
   },
   "dependencies": {
     "three": "^0.180.0"
