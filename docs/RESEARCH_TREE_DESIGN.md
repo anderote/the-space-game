@@ -31,7 +31,7 @@ Research and XP persist across games and campaigns. Expedition, Challenges, Endl
 | Enemy hull damage | 2 per 20 HP | Actual damage, excluding shields, overkill and projectiles |
 | Battle-damage repairs | 2 per 10 HP | Drone/autoseal restoration of recorded incoming damage or initial objective damage; no drone dock servicing |
 
-The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every base-stat track costs one point per rank and caps at fifty. Tower mastery uses an independent mastery point pool, with seven base tracks and 52 tower-specific tracks total. Technology and stat multipliers stack.
+The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every base-stat track costs one point per rank and caps at fifty. Tower mastery uses an independent mastery point pool, with seven base tracks and 58 tower/ordnance tracks total. Technology and stat multipliers stack.
 
 | Base stat | Per rank | Maximum bonus |
 | --- | --- | --- |
@@ -47,7 +47,7 @@ Armor reduces hull damage before powered shielding, while derelict mission objec
 
 ## Tower mastery
 
-A third progression tab specializes nine classes: relay, miner, solar, energy store, repair, Basic laser, Pulser, THEL and missile. Their 52 tracks cover appropriate combat/utility improvements plus health, armor and powered shields on every class. Each rank costs one independent mastery point. Purchases apply to existing and future buildings of that class, stack with technology/base stats, and persist. Classic disables them. Mineral tier upgrades remain separate. The complete effects and conservation rules are in [TOWER_MASTERY.md](TOWER_MASTERY.md).
+A third progression tab specializes nine building classes plus Missile ordnance: relay, miner, solar, energy store, repair, Basic laser, Pulser, THEL and missile. Their 58 tracks cover appropriate combat/utility improvements plus health, armor and powered shields on every class. Each rank costs one independent mastery point. Purchases apply to existing and future buildings of that class, stack with technology/base stats, and persist. Classic disables them. Mineral tier upgrades remain separate. The complete effects and conservation rules are in [TOWER_MASTERY.md](TOWER_MASTERY.md).
 
 ## Saves, migration and reset
 

@@ -1,7 +1,6 @@
 import {
   MODERN_FLEET_MULTIPLIER,
-  MISSILE_HULL,
-  MISSILE_FUEL,
+  interceptMissile,
   POINT_DEFENSE,
   advanceMissile,
   sweptHit,
@@ -1321,7 +1320,7 @@ export class Simulation {
               b.salvoRemaining > 0 &&
               b.salvoCooldown <= 0 &&
               this.minerals >= 5 &&
-              this.useEnergy(b, 1)
+              this.useEnergy(b, s.launchEnergy || 1)
             ) {
               this.minerals -= 5;
               b.salvoRemaining--;
@@ -1339,8 +1338,12 @@ export class Simulation {
                 damage: s.damage,
                 splash: s.splash,
                 speed: 160 * this.rules.missileSpeed,
-                life: MISSILE_FUEL,
-                hp: MISSILE_HULL,
+                life: s.missileFuel,
+                fuelCapacity: s.missileFuel,
+                hp: s.missileHull,
+                maxHp: s.missileHull,
+                shieldCharge: s.missileShield,
+                shieldCapacity: s.missileShield,
                 friendly: true,
                 angle: b.angle,
               });
@@ -1472,13 +1475,13 @@ export class Simulation {
           }
           if (missile) {
             e.pointDefenseCooldown = defense.interval;
-            missile.hp = (missile.hp ?? MISSILE_HULL) - defense.damage;
+            const destroyed = interceptMissile(missile, defense.damage);
             this.effect("beam", e.x, e.y, {
               toX: missile.x,
               toY: missile.y,
               color: "#ffca76",
             });
-            if (missile.hp <= 0) {
+            if (destroyed) {
               missile.life = 0;
               this.effect("hit", missile.x, missile.y, { color: "#ffca76" });
             }

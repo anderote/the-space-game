@@ -1,4 +1,5 @@
 import { MAX_SKILL_RANK, TOWER_ARMOR_STEP } from "./progression-balance.js";
+import { missilePayloadStats } from "./missile-flight.js";
 // XP specializations improve a building class, independently of mineral tiers.
 const skill = (id, name, perRank, effect, extra = {}) => ({
   id,
@@ -158,6 +159,44 @@ export const TOWER_TYPES = [
     color: "#d7b9ef",
     skills: weapons,
   },
+  {
+    id: "missile_round",
+    name: "Missile ordnance",
+    icon: "missile",
+    color: "#8dd4ef",
+    skills: [
+      skill(
+        "damage",
+        "Warhead damage",
+        5,
+        "+5% missile damage; stacks with launcher damage",
+      ),
+      skill(
+        "range",
+        "Engagement range",
+        3,
+        "+3% launcher targeting range; stacks with launcher range",
+      ),
+      skill("splash", "Blast radius", 4, "+4% area-of-effect radius"),
+      skill(
+        "fuel",
+        "Fuel reserves",
+        5,
+        "+5% flight lifetime from the eight-second baseline",
+      ),
+      skill("hull", "Missile hull", 5, "+5% missile hull against interception"),
+      skill(
+        "shields",
+        "Missile shields",
+        2,
+        "Launch with shields equal to 2% of missile hull",
+        {
+          detail:
+            "Shields absorb point-defense hits first, do not recharge, and cost 0.2 launch energy per shield HP.",
+        },
+      ),
+    ],
+  },
 ];
 export const TOWER_BY_ID = Object.fromEntries(
   TOWER_TYPES.map((t) => [t.id, t]),
@@ -199,6 +238,16 @@ export function applyTowerStats(s, type, level, rules) {
   if (type === "thel")
     s.beamDamageMultiplier = rules.thelDamage * (1 + (r.damage || 0) * 0.05);
   else s.damage *= 1 + (r.damage || 0) * 0.05;
+  if (type === "missile") {
+    const payload = missilePayloadStats(rules);
+    s.damage *= payload.damage;
+    s.range *= payload.range;
+    s.splash *= payload.splash;
+    s.missileHull = payload.hull;
+    s.missileShield = payload.shield;
+    s.missileFuel = payload.fuel;
+    s.launchEnergy = payload.launchEnergy;
+  }
   if (type === "miner") {
     const speed = 1 + (r.speed || 0) * 0.05;
     s.rate *= (1 + (r.yield || 0) * 0.05) * speed;

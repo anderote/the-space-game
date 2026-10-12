@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **187 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **192 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -124,3 +124,8 @@ This is not a complete campaign playthrough, long-duration endless stress benchm
 - Existing retargeting, per-launch ammunition/energy and pause/save tests continue passing. Long-duration battle balance remains a playtesting task.
 
 - Isolated browser QA built a missile launcher and upgraded solar supply, then ran a complete twenty-ship stream into combat. A fresh wave was captured showing **1 hostile / 19 inbound**. No console warnings/errors. Point-defense and inertial-flight details are validated by deterministic simulation tests; full campaign balance remains unbenchmarked. [Fivefold wave](screenshots/fivefold-waves.jpg).
+
+## Missile ordnance mastery
+
+- 192 tests pass. New tests cover launcher/payload stacking, all six configured effects, max-rank fuel/hull/shield values, actual larger-radius splash damage, exact ammunition and shield-energy spending, interception absorption, in-flight no-refill behavior, saved projectiles, mastery budget/persistence and Classic exclusions.
+- Isolated browser QA opened Missile ordnance, verified all six rank-50 tracks, bought Fuel reserves and Missile shields for one mastery point each, and observed the available budget fall from two to zero. Intel remained 69 and the separate Command point remained available. No console warnings/errors. [Missile ordnance panel](screenshots/missile-ordnance.jpg).

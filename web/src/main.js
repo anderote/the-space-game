@@ -380,7 +380,7 @@ function structureOutput(b) {
   if (b.type === "battery") return `${fmt(s.capacity)} ENERGY CAPACITY`;
   if (b.type === "repair") return `${Math.round(s.rate)} HULL/S PER DRONE`;
   if (b.type === "missile")
-    return `${s.salvo} MISSILES · ${fmt(s.damage)} DAMAGE EACH · ${s.interval.toFixed(2)}S / SALVO`;
+    return `${s.salvo} MISSILES · ${fmt(s.damage)} DAMAGE EACH · ${s.interval.toFixed(2)}S / SALVO · ${s.missileFuel.toFixed(1)}S FUEL · ${fmt(s.missileHull)} MISSILE HULL · ${fmt(s.missileShield)} SHIELD · ${Math.round(s.splash)} BLAST RADIUS · ${s.launchEnergy.toFixed(1)} E/LAUNCH`;
   if (b.type === "thel")
     return `${fmt(s.damage * 20 * s.beamDamageMultiplier * s.fireRate)} BASE DAMAGE/S + BEAM RAMP`;
   if (b.type === "laser")

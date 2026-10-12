@@ -1,6 +1,27 @@
 export const MODERN_FLEET_MULTIPLIER = 5;
 export const MISSILE_HULL = 20;
 export const MISSILE_FUEL = 8;
+export function missilePayloadStats(rules) {
+  const ranks = rules.towers?.missile_round || {};
+  const hull = MISSILE_HULL * (1 + (ranks.hull || 0) * 0.05);
+  const shield = hull * (ranks.shields || 0) * 0.02;
+  return {
+    hull,
+    shield,
+    fuel: MISSILE_FUEL * (1 + (ranks.fuel || 0) * 0.05),
+    damage: 1 + (ranks.damage || 0) * 0.05,
+    range: 1 + (ranks.range || 0) * 0.03,
+    splash: 1 + (ranks.splash || 0) * 0.04,
+    launchEnergy: 1 + shield * 0.2,
+  };
+}
+export function interceptMissile(p, damage) {
+  const absorbed = Math.min(p.shieldCharge || 0, damage);
+  p.shieldCharge = Math.max(0, (p.shieldCharge || 0) - absorbed);
+  p.hp = (p.hp ?? MISSILE_HULL) - (damage - absorbed);
+  if (p.hp <= 0) p.life = 0;
+  return p.life <= 0;
+}
 export const POINT_DEFENSE = {
   ring: { range: 100, interval: 1.1, damage: 10 },
   mothership: { range: 160, interval: 0.7, damage: 10 },
