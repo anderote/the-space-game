@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **181 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **187 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -117,3 +117,10 @@ This is not a complete campaign playthrough, long-duration endless stress benchm
 - 181 tests pass. Every authored wave queues exactly triple its prior difficulty-scaled groups at advertised bearings. New integration tests verify staggered release, pending-clear gating, pause/save determinism, halved modern hull with elite modifiers, original Classic hull, complete modern equipment access including resumed legacy definitions, repeated missile reacquisition, empty-gap searching, unchanged ammo spending, save restoration and fuel expiry. Attack, bomber-impact and suicide-splash tests verify half the prior modern damage.
 - Dedicated browser QA on isolated port 5179 verified sector one offers all seven build cards and both Pulser/THEL upgrade actions. Sandbox wave one showed **1 hostile / 11 inbound**, then **5 hostile / 7 inbound**, proving arrivals are staggered. Browser console warnings/errors: none.
 - Screenshots: [Default towers](screenshots/default-towers.jpg), [Streamed wave](screenshots/streamed-waves.jpg).
+
+## Fivefold fleets, point defense and inertial missile flight
+
+- 187 tests pass. Every authored fleet now queues five times its original difficulty-scaled count. Added tests verify acceleration, bounded turns, retained velocity, speed cap, bounded trails, swept crossings vs near misses, rear-target overshoot, fuel expiry without late damage, both point-defense classes, range/cooldown limits, no player rewards for intercepted missiles, Classic exclusions and exact saved flight state.
+- Existing retargeting, per-launch ammunition/energy and pause/save tests continue passing. Long-duration battle balance remains a playtesting task.
+
+- Isolated browser QA built a missile launcher and upgraded solar supply, then ran a complete twenty-ship stream into combat. A fresh wave was captured showing **1 hostile / 19 inbound**. No console warnings/errors. Point-defense and inertial-flight details are validated by deterministic simulation tests; full campaign balance remains unbenchmarked. [Fivefold wave](screenshots/fivefold-waves.jpg).

@@ -46,7 +46,7 @@ npm run preview
 - **Expedition:** 12 longer missions with enemies in every sector, 4–12 authored waves, mining/rescue/defense/boss objectives, all towers available immediately, three medals per mission and cosmetic liveries.
 - **Classic:** nine reconstructed missions with original budgets, structure access, extraction-driven waves and recovered survival schedules. Research and XP stat bonuses are disabled. Building upgrades use the browser edition’s expanded tiers.
 - **Challenges:** six independent economy, combat, power and rescue scenarios.
-- **Endless frontier:** escalating fleets with three motherships every fifth wave, personal records and rare ships carrying Intel.
+- **Endless frontier:** escalating fleets with five motherships every fifth wave, personal records and rare ships carrying Intel.
 - **Sandbox:** generous resources, all structures and manual wave controls.
 - **Research division:** 41 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
 - **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a base-stat point. Seven base tracks cover Armor, Clock speed, Harvesting, Firepower, Repair efficiency, Power output and Efficient fabrication. Clock speed accelerates construction, mining and solar cycles; Efficient fabrication reaches 50% cheaper buildings and upgrades.
@@ -108,8 +108,12 @@ All seven base-stat tracks and all 52 tower mastery tracks now cap at **50 ranks
 
 **Multi-asteroid mining:** miner tiers provide **1 / 2 / 3 / 4 simultaneous beams**, with normal energy charged per beam and each target receiving the tier’s configured yield. Click an asteroid to inspect remaining minerals, harvested ore and nearby miners. Saved asteroid deposits are preserved.
 
-**Streamed enemy fleets:** modern Expedition, Challenges and Free play waves contain **3× the previous ships**, including capital ships. Each newly spawned enemy has **half the previous hull and attack damage**, retaining difficulty/elite/Endless scaling. Waves release one ship at a time over 8–40 seconds, interleave fronts, and place capitals after escorts. The HUD counts ships still inbound; queued ships must arrive and be defeated before a wave clears. Saves and pause preserve the stream. Classic retains its original fleet strength and release schedule.
+**Streamed enemy fleets:** modern Expedition, Challenges and Free play waves contain **5× the original modern fleet size**, including capital ships. Each newly spawned enemy has **half the previous hull and attack damage**, retaining difficulty/elite/Endless scaling. Waves release one ship at a time over 8–40 seconds, interleave fronts, and place capitals after escorts. The HUD counts ships still inbound; queued ships must arrive and be defeated before a wave clears. Saves and pause preserve the stream. Classic retains its original fleet strength and release schedule.
 
 **Every modern tower is unlocked from the start**, including resumed operations: build keys 1–7 cover relays, miners, solar, stores, repair, lasers and missiles. Select a Basic laser and use **U / Space** for Pulser or **T** for THEL, paying the normal upgrade price. Campaign sectors and cosmetic liveries retain their progression.
 
 **Homing missiles** reacquire the nearest living enemy from their current position whenever their target dies. If no enemy is present, they coast and continue searching for later arrivals until their original eight-second fuel lifetime expires. Retargeting costs no extra ammunition or energy.
+
+**Missile flight and countermeasures:** modern missiles launch at 60 units/s, accelerate at 100 units/s² toward their configured cruise speed (160 units/s before guidance research), and turn at up to 1.6 radians/s. Velocity follows heading gradually, producing visible curved trails and overshoot. Hits require swept contact with the target hull, rather than proximity to the distance a missile could travel. Eight seconds of fuel limits reacquisition and missed approaches.
+
+Ring ships defend a 100-unit radius with a 10-damage shot every 1.1 seconds; motherships defend 160 units with the same shot every 0.7 seconds. Friendly missiles have 20 hull. Orange point-defense beams show interception; two shots destroy a missile without awarding player XP. These countermeasures and inertial flight apply to modern modes; Classic preserves its existing flight/combat behavior.

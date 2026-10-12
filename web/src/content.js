@@ -119,7 +119,7 @@ export const BUILDINGS = {
     splash: 45,
     color: "#dcafeb",
     description:
-      "Long-range splash damage. Every missile consumes energy and minerals.",
+      "Fuel-limited homing missiles with momentum and limited turning. Ring ships and motherships can intercept them. Each launch uses energy and minerals.",
   },
   thel: {
     name: "THEL",

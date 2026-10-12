@@ -34,7 +34,7 @@ test("all twelve expeditions have longer objectives, varied nonempty waves and v
   }
   assert.equal(fingerprints.size, 12);
 });
-test("every authored wave queues triple its groups at the previewed bearings", () => {
+test("every authored wave queues quintuple its groups at the previewed bearings", () => {
   for (const m of CAMPAIGN) {
     const s = new Simulation(m);
     for (const plan of m.wavePlan) {
@@ -46,7 +46,7 @@ test("every authored wave queues triple its groups at the previewed bearings", (
       assert.equal(s.enemies.length, 1);
       assert.equal(
         fleet.length,
-        plan.groups.reduce((n, g) => n + g.count * 3, 0),
+        plan.groups.reduce((n, g) => n + g.count * 5, 0),
       );
       for (const g of plan.groups) {
         const matches = fleet.filter(
@@ -68,7 +68,7 @@ test("every authored wave queues triple its groups at the previewed bearings", (
             .filter(
               (other) => other.type === g.type && other.offset === g.offset,
             )
-            .reduce((n, other) => n + other.count * 3, 0),
+            .reduce((n, other) => n + other.count * 5, 0),
         );
       }
       s.spawnQueue = [];

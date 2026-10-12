@@ -330,7 +330,11 @@ test("endless keeps progressing and spawns fifth-wave boss", () => {
     s.callWave();
     assert.equal(s.status, "playing");
   }
-  assert.equal([...s.enemies, ...s.spawnQueue].filter((e) => e.type === "mothership").length, 6);
+  assert.equal(
+    [...s.enemies, ...s.spawnQueue].filter((e) => e.type === "mothership")
+      .length,
+    10,
+  );
   assert.equal(s.wave, 10);
   const capital = s.spawnEnemy("mothership", 0);
   assert.ok(capital.hp > 800);

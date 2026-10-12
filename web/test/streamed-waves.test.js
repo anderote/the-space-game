@@ -21,13 +21,13 @@ const lab = () => {
   s.networkDirty = true;
   return s;
 };
-test("modern streams triple fleets, preserve rare rewards and wait to clear pending arrivals", () => {
+test("modern streams quintuple fleets, preserve rare rewards and wait to clear pending arrivals", () => {
   const s = new Simulation(CAMPAIGN[0]);
   s.wave = 2;
   s.callWave();
   s.nextWave = Infinity;
   const expected = s.mission.wavePlan[2].groups.reduce(
-    (n, g) => n + g.count * 3,
+    (n, g) => n + g.count * 5,
     0,
   );
   assert.equal(s.enemies.length, 1);

@@ -1084,6 +1084,22 @@ export class SpaceRenderer {
       const a = p(o.x, o.y),
         b = p(o.x - Math.cos(o.angle) * 12, o.y - Math.sin(o.angle) * 12);
       c.shadowColor = o.friendly ? "#e2b9ff" : "#ff7e73";
+      if (o.trail?.length > 1) {
+        c.globalAlpha = 0.35;
+        c.beginPath();
+        const first = p(o.trail[0].x, o.trail[0].y);
+        c.moveTo(first.x, first.y);
+        for (let i = 1; i < o.trail.length; i++) {
+          const point = o.trail[i];
+          const trailPoint = p(point.x, point.y);
+          c.lineTo(trailPoint.x, trailPoint.y);
+        }
+        c.lineTo(a.x, a.y);
+        c.strokeStyle = c.shadowColor;
+        c.lineWidth = 1;
+        c.stroke();
+        c.globalAlpha = 1;
+      }
       c.shadowBlur = 5;
       line(a, b, c.shadowColor, o.friendly ? 2 : 1.5);
       c.shadowBlur = 0;

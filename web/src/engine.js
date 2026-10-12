@@ -1,3 +1,11 @@
+import {
+  MODERN_FLEET_MULTIPLIER,
+  MISSILE_HULL,
+  MISSILE_FUEL,
+  POINT_DEFENSE,
+  advanceMissile,
+  sweptHit,
+} from "./missile-flight.js";
 import { reconnectNetwork } from "./reconnect.js";
 import {
   shieldCapacity,
@@ -844,7 +852,8 @@ export class Simulation {
       const entries = [];
       const groups = plan.groups.map((g) => ({
         ...g,
-        remaining: Math.ceil(g.count * this.diff.count) * 3,
+        remaining:
+          Math.ceil(g.count * this.diff.count) * MODERN_FLEET_MULTIPLIER,
       }));
       while (groups.some((g) => g.remaining > 0))
         for (const g of groups) {
@@ -871,7 +880,7 @@ export class Simulation {
     );
     const a = approachAngle(this.mission, this.wave);
     const entries = [];
-    for (let i = 0; i < count * 3; i++) {
+    for (let i = 0; i < count * MODERN_FLEET_MULTIPLIER; i++) {
       const type = this.mission.swarm
         ? "swarm"
         : tier >= 4 && i % 7 === 0
@@ -890,10 +899,14 @@ export class Simulation {
       });
     }
     if (this.mission.boss && this.wave === Math.min(3, this.mission.waves))
-      for (let n = 0; n < (this.mission.bossCount || 1) * 3; n++)
+      for (
+        let n = 0;
+        n < (this.mission.bossCount || 1) * MODERN_FLEET_MULTIPLIER;
+        n++
+      )
         entries.push({ type: "mothership", angle: a + (n % 3) * 0.8 });
     if (this.mission.kind === "endless" && this.wave % 5 === 0)
-      for (let n = 0; n < 3; n++)
+      for (let n = 0; n < MODERN_FLEET_MULTIPLIER; n++)
         entries.push({ type: "mothership", angle: a });
     this.queueModernWave(entries, this.nextWave - this.time);
     this.emit("wave", { wave: this.wave });
@@ -1326,7 +1339,8 @@ export class Simulation {
                 damage: s.damage,
                 splash: s.splash,
                 speed: 160 * this.rules.missileSpeed,
-                life: 8,
+                life: MISSILE_FUEL,
+                hp: MISSILE_HULL,
                 friendly: true,
                 angle: b.angle,
               });
@@ -1433,17 +1447,59 @@ export class Simulation {
     this.drones = this.drones.filter((d) => d.hp > 0);
     this.income +=
       (minedTick / Math.max(dt, 0.001) - this.income) * Math.min(1, dt * 0.35);
+    const incomingMissiles = this.projectiles.filter(
+      (p) => p.friendly && p.life > 0,
+    );
     for (const e of this.enemies) {
       if (e.hp <= 0) continue;
       const d = ENEMIES[e.type];
+      const defense = !this.mission.classic && POINT_DEFENSE[e.type];
+      if (defense) {
+        e.pointDefenseCooldown = Math.max(
+          0,
+          (e.pointDefenseCooldown || 0) - dt,
+        );
+        if (e.pointDefenseCooldown <= 0) {
+          let missile,
+            nearest = defense.range;
+          for (const p of incomingMissiles) {
+            if (p.life <= 0 || p.hp <= 0 || p.delay > 0) continue;
+            const range = distance(e, p);
+            if (range <= nearest) {
+              missile = p;
+              nearest = range;
+            }
+          }
+          if (missile) {
+            e.pointDefenseCooldown = defense.interval;
+            missile.hp = (missile.hp ?? MISSILE_HULL) - defense.damage;
+            this.effect("beam", e.x, e.y, {
+              toX: missile.x,
+              toY: missile.y,
+              color: "#ffca76",
+            });
+            if (missile.hp <= 0) {
+              missile.life = 0;
+              this.effect("hit", missile.x, missile.y, { color: "#ffca76" });
+            }
+          } else e.pointDefenseCooldown = 0.12;
+        }
+      }
       e.cooldown -= dt;
       e.spawnCooldown -= dt;
-      const targets = this.buildings.filter((b) => b.hp > 0);
-      targets.sort((a, b) => distance(e, a) - distance(e, b));
-      let target = targets[0];
-      if (e.parentId) {
-        const ordered = targets.find((b) => b.id === e.orderTarget);
-        if (ordered) target = ordered;
+      let target =
+        e.parentId &&
+        this.buildings.find((b) => b.hp > 0 && b.id === e.orderTarget);
+      if (!target) {
+        let nearest = Infinity;
+        for (const b of this.buildings) {
+          if (b.hp <= 0) continue;
+          const range = distance(e, b);
+          if (range < nearest) {
+            target = b;
+            nearest = range;
+          }
+        }
       }
       if (!target) continue;
       const dist = distance(e, target);
@@ -1534,6 +1590,10 @@ export class Simulation {
         continue;
       }
       p.life -= dt;
+      if (p.life <= 0) {
+        if (p.friendly) this.effect("hit", p.x, p.y, { color: "#8c8a9b" });
+        continue;
+      }
       const targets = p.friendly ? this.enemies : this.buildings;
       let target = targets.find((t) => t.id === p.targetId && t.hp > 0);
       if (!target && p.friendly) {
@@ -1551,14 +1611,22 @@ export class Simulation {
       if (!target) {
         if (p.friendly) {
           // Keep searching during gaps in a streamed wave, within the original fuel lifetime.
-          p.x += Math.cos(p.angle || 0) * p.speed * dt;
-          p.y += Math.sin(p.angle || 0) * p.speed * dt;
+          if (!this.mission.classic) advanceMissile(p, null, dt);
+          else {
+            p.x += Math.cos(p.angle || 0) * p.speed * dt;
+            p.y += Math.sin(p.angle || 0) * p.speed * dt;
+          }
         } else p.life = 0;
         continue;
       }
+      const inertial = p.friendly && !this.mission.classic;
+      const from = inertial ? advanceMissile(p, target, dt) : null;
       const dist = distance(p, target);
-      p.angle = Math.atan2(target.y - p.y, target.x - p.x);
-      if (dist < p.speed * dt + 5) {
+      if (!inertial) p.angle = Math.atan2(target.y - p.y, target.x - p.x);
+      const hit = inertial
+        ? sweptHit(from, p, target, 5 + ENEMIES[target.type].radius * 0.3)
+        : dist < p.speed * dt + 5;
+      if (hit) {
         if (p.splash) {
           for (const t of targets) {
             const falloff = 1 - distance(t, target) / p.splash;
@@ -1581,7 +1649,7 @@ export class Simulation {
           this.effect("hit", target.x, target.y, { color: "#fa8b77" });
         }
         p.life = 0;
-      } else {
+      } else if (!inertial) {
         p.x += Math.cos(p.angle) * p.speed * dt;
         p.y += Math.sin(p.angle) * p.speed * dt;
       }
