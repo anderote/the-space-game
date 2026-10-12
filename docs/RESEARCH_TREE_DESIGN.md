@@ -15,7 +15,7 @@ These sources establish facts about those games. The following rules, numbers, c
 
 ## Implemented progression
 
-Four branches contain ten technologies each, spanning eight tiers. Each branch starts with a diamond prerequisite sequence, then expands into a second fork, a merge and two deeper upgrades. Original twenty research IDs and purchases are preserved. A whole branch costs 69 Intel; all forty cost 276.
+Four branches retain ten main technologies each, with an additional Adaptive grid side branch in Power systems, spanning eight tiers. Each branch starts with a diamond prerequisite sequence, then expands into a second fork, a merge and two deeper upgrades. Original twenty research IDs and purchases are preserved. Each main branch costs 69 Intel; Power including Adaptive grid costs 75. All forty-one cost 282.
 
 Every profile begins with 6 Intel. A gold-marked elite appears as the first ordinary ship of every third modern wave, with 60% additional hull and 2 Intel on player defeat. Motherships carry 3 Intel. Deaths from self-destruction, inherited escort cleanup or intercepted missiles cannot award Intel. Intel is awarded directly at defeat, with a gold marker before the kill and a floating reward afterward. Ordinary ships and mining award XP instead. New medals and wave records do not mint Intel.
 
@@ -27,21 +27,21 @@ Research and XP persist across games and campaigns. Expedition, Challenges, Endl
 
 | Activity | XP | Accounting |
 | --- | ---: | --- |
-| Actual extraction | 1 per 5 minerals | Finite ore removed by miners; no cargo or recycle refunds |
-| Enemy hull damage | 1 per 20 HP | Actual damage, excluding shields, overkill and projectiles |
-| Battle-damage repairs | 1 per 10 HP | Drone/autoseal restoration of recorded incoming damage or initial objective damage; no drone dock servicing |
+| Actual extraction | 2 per 5 minerals | Finite ore removed by miners; no cargo or recycle refunds |
+| Enemy hull damage | 2 per 20 HP | Actual damage, excluding shields, overkill and projectiles |
+| Battle-damage repairs | 2 per 10 HP | Drone/autoseal restoration of recorded incoming damage or initial objective damage; no drone dock servicing |
 
-The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every base-stat track costs one point per rank and caps at twenty. Tower mastery uses the same point pool, with seven base tracks and 52 tower-specific tracks total. Technology and stat multipliers stack.
+The first level takes 100 XP, then 150, 200, 250 and so on. Each level grants one stat point. Every base-stat track costs one point per rank and caps at fifty. Tower mastery uses an independent mastery point pool, with seven base tracks and 52 tower-specific tracks total. Technology and stat multipliers stack.
 
 | Base stat | Per rank | Maximum bonus |
 | --- | --- | --- |
-| Armor | 2 percentage points incoming hull damage reduction | 40% reduction |
-| Clock speed | +5% construction, mining and solar cycle speed | +100% |
-| Harvesting | +5% minerals per cycle | +100% |
-| Firepower | +3% laser/Pulser/THEL/missile damage | +60% |
-| Repair efficiency | +5% drone throughput | +100% |
-| Power output | +5% energy per solar pulse | +100% |
-| Efficient fabrication | 1% cheaper buildings/upgrades | 20% discount |
+| Armor | 3% less remaining hull damage | Approximately 78.2% reduction |
+| Clock speed | +5% construction, mining and solar cycle speed | +250% |
+| Harvesting | +5% minerals per cycle | +250% |
+| Firepower | +3% laser/Pulser/THEL/missile damage | +150% |
+| Repair efficiency | +5% drone throughput | +250% |
+| Power output | +5% energy per solar pulse | +250% |
+| Efficient fabrication | 1% cheaper buildings/upgrades | 50% discount |
 
 Armor reduces hull damage before powered shielding, while derelict mission objectives retain baseline behavior. Clock speed preserves cost per construction/mining increment and energy per solar pulse; output/yield ranks separately improve each pulse. Existing Build speed ranks retain their fabrication ID and become Clock speed. Efficient fabrication discounts the actual charged price, with refunds based on historical amounts paid. Harvesting consumes finite ore faster. Repairs continue spending one drone energy per healed hull. Firepower raises THEL’s energy demand as well as damage. Rank increases apply immediately when purchased in an active operation.
 
@@ -107,3 +107,7 @@ Settings offers Start fresh: save a local backup and download the previous profi
 ## Validation and tuning
 
 Tests cover the complete dependency graph, all-active purchasing, migration, persistence, rare drops, XP thresholds, actual stat effects, repair/combat attribution, energy conservation, save idempotency and recoverable reset. Browser checks cover the expanded tree, base-stat purchases, import, live pause/return and new-launch modifiers. Balance is initial tuning; full campaign and long-duration Endless playtesting remain. No research wait timers, payments or backend services are introduced.
+
+## Adaptive grid
+
+The 41st technology costs 6 Intel after Field couplers. Powered completed solar stations, charged completed batteries and reachable completed relays can reconnect orphan branches and stalled construction. Existing working links remain intact; geometry, range and port limits still apply. A cheap two-second disconnected-group check triggers retries without scanning healthy grids every frame. Classic disables this persistent technology.

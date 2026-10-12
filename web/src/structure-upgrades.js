@@ -4,7 +4,7 @@ export const MINER_SCALE = 0.75;
 export const REPAIR_SCALE = 0.65;
 export const STRUCTURE_SCALE = 0.85;
 export const ENEMY_SCALE = 0.6;
-export const ASTEROID_ORE_MULTIPLIER = 1.5;
+export const ASTEROID_ORE_MULTIPLIER = 3;
 export const solarPetals = (level) => Math.max(2, Math.min(6, level + 1));
 
 export function extendStructureUpgrades(buildings) {
@@ -65,6 +65,9 @@ export function extendStructureUpgrades(buildings) {
   append("thel", [
     { cost: 1400, hp: 1300, range: 450, damage: 15, capacity: 25 },
   ]);
+  buildings.miner.stats.forEach((s, i) => {
+    s.miningTargets = i + 1;
+  });
   for (const [type, b] of Object.entries(buildings)) {
     b.visualScale =
       type === "solar"
@@ -79,7 +82,7 @@ export function extendStructureUpgrades(buildings) {
   buildings.relay.description =
     "Extend the energy network. Upgrade from six to twelve connections and reinforce the backbone.";
   buildings.miner.description =
-    "Compact mineral extractor. Four levels yield 80 / 200 / 320 / 480 minerals per minute before research.";
+    "Compact extractor. Levels 1–4 mine 1 / 2 / 3 / 4 asteroids at once, yielding 80 / 200 / 320 / 480 minerals per minute per beam before research.";
   buildings.solar.description =
     "Unfold two to six solar petals across five levels. Each upgrade increases generation and its local energy buffer.";
   buildings.solar.pickRadius = 29;

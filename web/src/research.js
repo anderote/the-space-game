@@ -310,6 +310,20 @@ export const TECHNOLOGIES = [
   ),
 ];
 TECHNOLOGIES.push(...expandedTechnologies(node));
+TECHNOLOGIES.push(
+  node(
+    "adaptive_grid",
+    "power",
+    2,
+    "Adaptive grid",
+    6,
+    ["long_links"],
+    "Automatically reconnect disconnected buildings",
+    "Reconnect disconnected buildings, stalled blueprints and powerless branches to reachable power distributors. Checks every two seconds and after topology changes. Respects range, obstacles, relay ports and construction; healthy powered cables stay intact. Empty batteries alone are not a power source.",
+    { autoReconnect: true },
+    { tag: "AUTOMATION", sideBranch: true },
+  ),
+);
 export const TECH_BY_ID = Object.fromEntries(
   TECHNOLOGIES.map((t) => [t.id, t]),
 );
@@ -396,6 +410,7 @@ export function researchRules(ids = [], ranks = {}, towers = {}) {
     regeneration: false,
     shield: 0,
     shieldModules: false,
+    autoReconnect: false,
   };
   for (const id of new Set(ids)) {
     const tech = TECH_BY_ID[id];
@@ -410,6 +425,7 @@ export function researchRules(ids = [], ranks = {}, towers = {}) {
           "regeneration",
           "shield",
           "shieldModules",
+          "autoReconnect",
         ].includes(key)
       )
         r[key] =

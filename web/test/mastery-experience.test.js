@@ -26,9 +26,9 @@ test("mastery rewards kills once, excludes interception and self-destruction", (
   assert.equal(s.masteryEarned, 0);
   s.damageEnemy(e, 1e9);
   s.damageEnemy(e, 1e9);
-  assert.equal(s.masteryEarned, 10);
+  assert.equal(s.masteryEarned, 20);
   s.damageEnemy({ hp: 10, interceptable: true }, 100);
-  assert.equal(s.masteryEarned, 10);
+  assert.equal(s.masteryEarned, 20);
 });
 test("completed construction and upgrades earn paid-cost mastery; free and canceled builds do not", () => {
   const s = run();
@@ -45,20 +45,20 @@ test("completed construction and upgrades earn paid-cost mastery; free and cance
   assert.equal(s.masteryEarned, 0);
   tick(s, 8);
   assert.equal(b.construction, 1);
-  assert.equal(s.masteryEarned, b.baseCost * 0.1);
+  assert.equal(s.masteryEarned, b.baseCost * 0.2);
   const before = s.masteryEarned,
     cost = s.upgradeCost(b);
   s.upgrade(b.id);
   assert.equal(s.masteryEarned, before);
   tick(s, 8);
   assert.equal(b.construction, 1);
-  assert.equal(s.masteryEarned, before + cost * 0.1);
+  assert.equal(s.masteryEarned, before + cost * 0.2);
   tick(s, 8);
-  assert.equal(s.masteryEarned, before + cost * 0.1);
+  assert.equal(s.masteryEarned, before + cost * 0.2);
   const canceled = s.build("relay", -60, 0).building;
   s.recycle(canceled.id);
   tick(s, 2);
-  assert.equal(s.masteryEarned, before + cost * 0.1);
+  assert.equal(s.masteryEarned, before + cost * 0.2);
 });
 test("mastery repair credit consumes real damage debt exactly once", () => {
   const s = run(),
@@ -67,8 +67,8 @@ test("mastery repair credit consumes real damage debt exactly once", () => {
   s.creditRepair(b, 15);
   s.creditRepair(b, 20);
   s.creditRepair(b, 20);
-  assert.equal(s.masteryEarned, 2);
-  assert.equal(s.xpEarned, 2);
+  assert.equal(s.masteryEarned, 4);
+  assert.equal(s.xpEarned, 4);
 });
 test("both pools bank independently, persist, and do not duplicate on resume", () => {
   const p = freshProgress(),

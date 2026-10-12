@@ -294,16 +294,16 @@ test("tower armor and powered shields stack safely and fail when power is unavai
   const source = add(s, "solar", 0, 0, 5),
     laser = add(s, "laser", 60, 0);
   s.rebuildNetwork();
-  near(stats(laser).armor, 0.52);
+  near(stats(laser).armor, 1 - 0.97 ** 20 * 0.98 ** 20);
   near(stats(laser).shield, 0.4);
   const hp = laser.hp;
   s.damageBuilding(laser, 100);
-  near(hp - laser.hp, 100 * 0.48 * 0.6);
+  near(hp - laser.hp, 100 * 0.97 ** 20 * 0.98 ** 20 * 0.6);
   source.energy = 0;
   laser.energy = 0;
   const emptyHp = laser.hp;
   s.damageBuilding(laser, 100);
-  near(emptyHp - laser.hp, 48);
+  near(emptyHp - laser.hp, 100 * 0.97 ** 20 * 0.98 ** 20);
 });
 
 test("utility mastery improves relay reach/ports, miner yield, storage and repair reserves", () => {

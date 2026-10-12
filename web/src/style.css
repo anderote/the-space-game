@@ -2469,3 +2469,25 @@ input {
 .shield-readout {
   color: #8dc6ff;
 }
+
+.tech-side-research {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.tech-side-research > .small-label {
+  margin-bottom: 10px;
+  color: var(--branch);
+  font-size: 8px;
+}
+.tech-side-research .tech-node {
+  width: 100%;
+  min-height: 110px;
+}
+
+.ore-count {
+  color: var(--gold);
+  font: 15px monospace;
+  line-height: 1.5;
+  margin: 16px 0 10px;
+}

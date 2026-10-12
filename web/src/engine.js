@@ -1,3 +1,4 @@
+import { reconnectNetwork } from "./reconnect.js";
 import {
   shieldCapacity,
   SHIELD_MODULE_COSTS,
@@ -146,6 +147,7 @@ export class Simulation {
     this.minersOn = true;
     this.missilesOn = true;
     this.networkDirty = true;
+    this.reconnectCooldown = 0;
     this.lowPowerTime = 0;
     this.income = 0;
     this.generation = 0;
@@ -473,6 +475,13 @@ export class Simulation {
       }
     pairs.sort((a, b) => a.d - b.d);
     for (const { a, b } of pairs) insert(a, b);
+    if (this.rules.autoReconnect) {
+      const repaired = reconnectNetwork(this.buildings, links, {
+        canLink: (a, b) => this.canLink(a, b),
+        maxLinks: (b) => stats(b).maxLinks,
+      });
+      links.splice(0, links.length, ...repaired);
+    }
     this.links = links;
     this.adjacency = new Map(this.buildings.map((b) => [b.id, []]));
     for (const l of links) {
@@ -953,6 +962,26 @@ export class Simulation {
   step(dt) {
     this.time += dt;
     this.waveAnnounce = Math.max(0, this.waveAnnounce - dt);
+    if (this.rules.autoReconnect) {
+      this.reconnectCooldown -= dt;
+      if (this.reconnectCooldown <= 0) {
+        this.reconnectCooldown = 2;
+        if (
+          this.groups.some(
+            (g) =>
+              g.members.some((b) => b.hp > 0) &&
+              !g.members.some(
+                (b) =>
+                  b.hp > 0 &&
+                  b.construction >= 1 &&
+                  (b.type === "solar" ||
+                    (b.type === "battery" && b.energy > 0)),
+              ),
+          )
+        )
+          this.networkDirty = true;
+      }
+    }
     if (this.networkDirty) this.rebuildNetwork();
     this.effects = this.effects.filter((e) => (e.life -= dt) > 0);
     const storm = this.mission.storm && this.time % 45 > 30;
@@ -1091,26 +1120,38 @@ export class Simulation {
         const targets = this.asteroids.filter(
           (a) => a.ore > 0 && distance(b, a) - a.radius <= s.range,
         );
-        if (
-          targets.length &&
-          b.mineCooldown <= 0 &&
-          this.useEnergy(b, s.miningEnergy || 1)
-        ) {
-          const target = targets[Math.floor(this.random() * targets.length)],
-            mined = Math.min(target.ore, s.rate * s.miningInterval);
-          target.ore -= mined;
-          this.minerals += mined;
-          this.mined += mined;
-          this.xpEarned += mined * XP_RATES.mining;
-          minedTick += mined;
-          b.mineCooldown =
-            s.miningInterval +
-            (s.miningInterval < 3 ? Math.max(-dt, b.mineCooldown) : 0);
-          b.targetId = target.id;
-          b.miningTarget = target.id;
-          b.activity = 1;
-          b.angle = Math.atan2(target.y - b.y, target.x - b.x);
-          if (target.ore <= 0) this.networkDirty = true;
+        if (targets.length && b.mineCooldown <= 0) {
+          const pool = [...targets],
+            minedIds = [];
+          for (
+            let beam = 0;
+            beam < (s.miningTargets || 1) && pool.length;
+            beam++
+          ) {
+            if (!this.useEnergy(b, s.miningEnergy || 1)) break;
+            const target = pool.splice(
+              Math.floor(this.random() * pool.length),
+              1,
+            )[0];
+            const mined = Math.min(target.ore, s.rate * s.miningInterval);
+            target.ore -= mined;
+            this.minerals += mined;
+            this.mined += mined;
+            this.xpEarned += mined * XP_RATES.mining;
+            minedTick += mined;
+            minedIds.push(target.id);
+            if (target.ore <= 0) this.networkDirty = true;
+          }
+          if (minedIds.length) {
+            b.mineCooldown =
+              s.miningInterval +
+              (s.miningInterval < 3 ? Math.max(-dt, b.mineCooldown) : 0);
+            b.miningTargetIds = minedIds;
+            b.miningTarget = minedIds[0];
+            b.activity = 1;
+            const target = this.asteroids.find((a) => a.id === minedIds[0]);
+            b.angle = Math.atan2(target.y - b.y, target.x - b.x);
+          }
         }
         if (b.activity > 0) b.targetId = b.miningTarget;
       }
@@ -1709,6 +1750,7 @@ export class Simulation {
         combatKills: this.combatKills,
         intelCredit: this.intelCredit,
         clearedWave: this.clearedWave || 0,
+        reconnectCooldown: this.reconnectCooldown,
         mission:
           this.mission.id === "skirmish"
             ? { ...this.mission, waves: null }
@@ -1743,6 +1785,7 @@ export class Simulation {
   restore(s) {
     for (const key of [
       "clearedWave",
+      "reconnectCooldown",
       "combatKills",
       "intelCredit",
       "intelCollected",

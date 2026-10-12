@@ -1,3 +1,4 @@
+import { asteroidReadout, asteroidView } from "./asteroid-view.js";
 import { shieldCapacity, shieldStatus } from "./shield-modules.js";
 import "./style.css";
 import {
@@ -10,7 +11,7 @@ import {
   UPGRADES,
   skirmish,
 } from "./content.js";
-import { Simulation, stats, distance } from "./engine.js";
+import { Simulation, stats, distance, asteroidRadius } from "./engine.js";
 import { solarPetals } from "./structure-upgrades.js";
 import { SpaceRenderer } from "./renderer.js";
 import {
@@ -89,7 +90,13 @@ let progress = loadProgress(),
   sim = null,
   demo = null,
   renderer;
-let state = { selected: null, buildType: null, mouse: null, grid: false };
+let state = {
+  selected: null,
+  selectedAsteroid: null,
+  buildType: null,
+  mouse: null,
+  grid: false,
+};
 let uiTick = 0,
   saveTick = 0,
   last = performance.now(),
@@ -162,7 +169,13 @@ function demoScene() {
 function home() {
   screen = "home";
   modalOpen = false;
-  state = { selected: null, buildType: null, mouse: null, grid: false };
+  state = {
+    selected: null,
+    selectedAsteroid: null,
+    buildType: null,
+    mouse: null,
+    grid: false,
+  };
   if (sim?.status === "playing") {
     saveActive();
     sim.paused = true;
@@ -332,7 +345,13 @@ function launch(m, snapshot = null) {
   resultHandled = false;
   screen = "game";
   modalOpen = false;
-  state = { selected: null, buildType: null, mouse: null, grid: false };
+  state = {
+    selected: null,
+    selectedAsteroid: null,
+    buildType: null,
+    mouse: null,
+    grid: false,
+  };
   renderer.center();
   renderHud();
   saveActive();
@@ -355,7 +374,7 @@ function structureOutput(b) {
   if (b.type === "solar")
     return `${s.generation.toFixed(1)} E/S · ${solarPetals(b.level)} / 6 PETALS · ${s.generationInterval.toFixed(2)}S / CYCLE`;
   if (b.type === "miner")
-    return `${Math.round(s.rate * 60)} MINERALS/MIN · ${s.miningInterval.toFixed(2)}S / CYCLE`;
+    return `${s.miningTargets} BEAM${s.miningTargets > 1 ? "S" : ""} · ${Math.round(s.rate * 60)} M/MIN/BEAM · ${s.miningInterval.toFixed(2)}S / CYCLE`;
   if (b.type === "relay")
     return `${s.maxLinks} CONNECTIONS · ${s.link} LINK RANGE`;
   if (b.type === "battery") return `${fmt(s.capacity)} ENERGY CAPACITY`;
@@ -372,6 +391,7 @@ function updateInspector() {
   const el = document.querySelector("#inspector");
   if (!el) return;
   const b = sim.buildings.find((o) => o.id === state.selected);
+  const rock = sim.asteroids.find((a) => a.id === state.selectedAsteroid);
   const t = state.buildType;
   if (t) {
     const d = BUILDINGS[t];
@@ -388,7 +408,9 @@ function updateInspector() {
           b.hp) /
           b.maxHp,
       );
-    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><div class="stats-line shield-readout" id="selected-shield">${shieldCapacity(b) ? shieldStatus(b, sim.time) : ""}</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${s.armor || s.shield ? `<div class="stats-line">${Math.round(s.armor * 100)}% ARMOR · ${Math.round(s.shield * 100)}% POWERED SHIELD</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" && !sim.mission.classic ? `<section class="shield-module"><div class="small-label">RECHARGEABLE SHIELD · TIER ${b.shieldLevel || 0}/3</div><p>20 / 35 / 50% hull reserve. Recharges after 5s without hits; 0.2 energy per shield point.</p>${sim.rules.shieldModules ? (Number.isFinite(sim.shieldModuleCost(b)) ? `<button class="secondary" data-action="shield-upgrade">${b.shieldLevel ? "Upgrade" : "Install"} shield · ${sim.shieldModuleCost(b)} M</button>` : "<p>Maximum shield configuration</p>") : `<button class="quiet" data-action="run-research">Unlock: Capacitive armor · Intel research</button>`}</section>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
+    el.innerHTML = `<div class="eyebrow" id="selected-status">${b.type === "station" ? "MISSION CRITICAL" : b.construction < 1 ? "CONSTRUCTION / " + Math.floor(b.construction * 100) + "%" : !b.connected ? "DISCONNECTED · NEEDS POWER ROUTE" : b.powered ? "SYSTEM ONLINE" : "NO ENERGY"}</div><h3>${d.name}${b.type === "laser" && b.level > 1 ? " / Pulser" : ""} <span style="color:var(--mint)">${"·".repeat(b.level)}</span></h3>${b.type !== "station" ? `<div class="small-label">LEVEL ${b.level} / ${d.levels}</div><div class="stats-line">${structureOutput(b)}</div>` : ""}<div class="stats-line" id="selected-health">${fmt(b.hp)} / ${fmt(b.maxHp)} HULL</div><div class="stats-line shield-readout" id="selected-shield">${shieldCapacity(b) ? shieldStatus(b, sim.time) : ""}</div><p>${d.description}</p>${s.range ? `<div class="stats-line">${Math.round(s.range)} RANGE</div>` : ""}${s.armor || s.shield ? `<div class="stats-line">${Math.round(s.armor * 100)}% ARMOR · ${Math.round(s.shield * 100)}% POWERED SHIELD</div>` : ""}${Number.isFinite(cost) ? `<p class="upgrade-preview">NEXT: ${structureOutput({ ...b, level: b.level + 1 })}</p><button class="primary" data-action="upgrade"><kbd>U / SPACE</kbd> Upgrade · ${cost}</button>` : "<p>Maximum configuration</p>"}${b.type === "laser" && b.level === 1 && sim.mission.thel ? `<button class="secondary" data-action="thel"><kbd>T</kbd> THEL · ${sim.upgradeCost(b, "thel")}</button>` : ""}${b.type !== "station" && !sim.mission.classic ? `<section class="shield-module"><div class="small-label">RECHARGEABLE SHIELD · TIER ${b.shieldLevel || 0}/3</div><p>20 / 35 / 50% hull reserve. Recharges after 5s without hits; 0.2 energy per shield point.</p>${sim.rules.shieldModules ? (Number.isFinite(sim.shieldModuleCost(b)) ? `<button class="secondary" data-action="shield-upgrade">${b.shieldLevel ? "Upgrade" : "Install"} shield · ${sim.shieldModuleCost(b)} M</button>` : "<p>Maximum shield configuration</p>") : `<button class="quiet" data-action="run-research">Unlock: Capacitive armor · Intel research</button>`}</section>` : ""}${b.type !== "station" ? `<button class="quiet" data-action="recycle"><kbd>R</kbd> Recycle · +${refund} M</button>` : ""}`;
+  } else if (rock) {
+    el.innerHTML = asteroidView(rock, asteroidReadout(rock, sim.buildings, stats), fmt);
   } else {
     el.innerHTML = `<div class="eyebrow">NETWORK COMMAND</div><h3>Every connection counts.</h3><p>Build near a powered relay or station. Protect the links that keep your outpost alive.</p><p><kbd>1–7</kbd> Build &nbsp; <kbd>Q / E</kbd> Zoom<br><kbd>SPACE</kbd> Upgrade selection</p>${sim.mission.id === "skirmish" ? '<button class="secondary" data-action="wave">Call the next wave →</button>' : ""}<button class="quiet" data-action="center">Center camera</button>`;
   }
@@ -504,7 +526,7 @@ function updateHud() {
   for (const b of document.querySelectorAll("[data-build]")) {
     b.disabled =
       !sim.mission.unlocked.includes(b.dataset.build) ||
-      sim.minerals < BUILDINGS[b.dataset.build].cost;
+      sim.minerals < sim.buildingCost(b.dataset.build);
     b.classList.toggle("selected", b.dataset.build === state.buildType);
   }
   for (const b of document.querySelectorAll("[data-speed]"))
@@ -515,9 +537,25 @@ function updateHud() {
     pause.textContent = sim.paused ? "▶" : "Ⅱ";
     pause.setAttribute("aria-label", sim.paused ? "Resume" : "Pause");
   }
+  const rock = sim.asteroids.find((a) => a.id === state.selectedAsteroid);
+  if (rock) {
+    const ore = asteroidReadout(rock, sim.buildings, stats);
+    set("asteroid-remaining", `${fmt(ore.remaining)} MINERALS REMAINING`);
+    set(
+      "asteroid-harvested",
+      `${fmt(ore.harvested)} / ${fmt(ore.initial)} MINERALS EXTRACTED`,
+    );
+    set(
+      "asteroid-miners",
+      `${ore.miners} MINERS IN REACH · ${ore.active} ACTIVE BEAMS`,
+    );
+    const bar = document.getElementById("asteroid-fill");
+    if (bar) bar.style.width = ore.percent + "%";
+  }
   const sel = sim.buildings.find((o) => o.id === state.selected);
   if (state.selected && !sel) {
     state.selected = null;
+    state.selectedAsteroid = null;
     updateInspector();
   }
   if (sel) {
@@ -538,9 +576,11 @@ function updateHud() {
         ? "MISSION CRITICAL"
         : sel.construction < 1
           ? "CONSTRUCTION / " + Math.floor(sel.construction * 100) + "%"
-          : sel.powered
-            ? "SYSTEM ONLINE"
-            : "NO ENERGY",
+          : !sel.connected
+            ? "DISCONNECTED · NEEDS POWER ROUTE"
+            : sel.powered
+              ? "SYSTEM ONLINE"
+              : "NO ENERGY",
     );
     for (const button of document.querySelectorAll(
       '[data-action="upgrade"], [data-action="thel"]',
@@ -674,6 +714,7 @@ function pickBuild(type) {
     return;
   }
   state.selected = null;
+  state.selectedAsteroid = null;
   state.buildType = state.buildType === type ? null : type;
   updateInspector();
   updateHud();
@@ -694,6 +735,7 @@ function recycle() {
   if (!result.ok) toast(result.reason);
   else {
     state.selected = null;
+    state.selectedAsteroid = null;
     toast(`Structure recycled · +${result.refund} minerals`);
     updateInspector();
     saveActive();
@@ -983,7 +1025,13 @@ app.addEventListener("click", (e) => {
       exportSave("the-space-game-before-fresh-start.json");
       progress = reset.progress;
       sim = null;
-      state = { selected: null, buildType: null, mouse: null, grid: false };
+      state = {
+        selected: null,
+        selectedAsteroid: null,
+        buildType: null,
+        mouse: null,
+        grid: false,
+      };
       selectedTech = "solar_cells";
       progressionPage = "tech";
       applySettings();
@@ -1121,6 +1169,16 @@ canvas.addEventListener("pointerup", (e) => {
       )
       .sort((a, b) => distance(world, a) - distance(world, b))[0];
     state.selected = hit?.id || null;
+    const rock = hit
+      ? null
+      : sim.asteroids
+          .filter(
+            (a) =>
+              a.ore > 0 &&
+              distance(world, a) < asteroidRadius(a) + 7 / renderer.zoom,
+          )
+          .sort((a, b) => distance(world, a) - distance(world, b))[0];
+    state.selectedAsteroid = rock?.id || null;
     updateInspector();
   }
   updateHud();
@@ -1132,6 +1190,7 @@ canvas.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   state.buildType = null;
   state.selected = null;
+  state.selectedAsteroid = null;
   if (screen === "game") {
     updateInspector();
     updateHud();
@@ -1178,6 +1237,7 @@ window.addEventListener("keydown", (e) => {
     } else if (screen === "game") {
       state.buildType = null;
       state.selected = null;
+      state.selectedAsteroid = null;
       updateInspector();
       updateHud();
     } else if (screen === "research") leaveResearch();
@@ -1287,7 +1347,11 @@ function frame(now) {
   } else {
     demo.update(dt * 0.4);
     demo.events = [];
-    renderer.render(demo, { selected: null, buildType: null }, now);
+    renderer.render(
+      demo,
+      { selected: null, selectedAsteroid: null, buildType: null },
+      now,
+    );
   }
   requestAnimationFrame(frame);
 }

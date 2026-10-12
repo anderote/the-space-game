@@ -1,3 +1,4 @@
+import { skillBonus } from "./progression-balance.js";
 import { TOWER_TYPES, TOWER_BY_ID, towerPoints } from "./tower-skills.js";
 export function towerMasteryView(xp, selectedId, icon) {
   const tower = TOWER_BY_ID[selectedId] || TOWER_BY_ID.laser;
@@ -8,7 +9,7 @@ export function towerMasteryView(xp, selectedId, icon) {
     <section class="tower-specialization" style="--branch:${tower.color}"><header><div>${icon(tower.icon, 36)}<h3>${tower.name}</h3></div><span>CLASS SPECIALIZATION</span></header><div class="base-stat-grid">${tower.skills
       .map((s) => {
         const rank = ranks[s.id] || 0;
-        return `<article class="base-stat-card"><header><div><h3>${s.name}</h3><span>RANK ${rank} / ${s.max}</span></div></header><strong>${rank * s.perRank}${s.unit === "%" ? "%" : ""}<small> ${s.unit === "%" ? "BONUS" : s.unit}</small></strong><p>${s.effect} per rank. ${s.detail || ""}</p><div class="stat-ranks" style="grid-template-columns:repeat(${s.max},1fr)" aria-label="${tower.name} ${s.name}: rank ${rank} of ${s.max}">${Array.from({ length: s.max }, (_, i) => `<i class="${i < rank ? "filled" : ""}"></i>`).join("")}</div><button class="secondary" data-action="tower-stat-buy" data-tower="${tower.id}" data-id="${s.id}" ${rank >= s.max || !xp.available ? "disabled" : ""}>${rank >= s.max ? "Maximum rank" : `Improve ${s.name} · 1 point`}</button></article>`;
+        return `<article class="base-stat-card"><header><div><h3>${s.name}</h3><span>RANK ${rank} / ${s.max}</span></div></header><strong>${skillBonus(s, rank)}${s.unit === "%" ? "%" : ""}<small> ${s.unit === "%" ? "BONUS" : s.unit}</small></strong><p>${s.effect} per rank. ${s.detail || ""}</p><div class="stat-ranks" style="grid-template-columns:repeat(${s.max},1fr)" aria-label="${tower.name} ${s.name}: rank ${rank} of ${s.max}">${Array.from({ length: s.max }, (_, i) => `<i class="${i < rank ? "filled" : ""}"></i>`).join("")}</div><button class="secondary" data-action="tower-stat-buy" data-tower="${tower.id}" data-id="${s.id}" ${rank >= s.max || !xp.available ? "disabled" : ""}>${rank >= s.max ? "Maximum rank" : `Improve ${s.name} · 1 point`}</button></article>`;
       })
       .join("")}</div></section></div>
     <p class="stat-note">Tower specializations use their own mastery points, separate from base stats. Armor reduces hull damage; shields draw power for absorbed hits. Faster weapons and miners keep their normal cost per cycle. Bigger stores and drone reserves charge normally.</p>

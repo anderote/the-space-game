@@ -46,7 +46,7 @@ function lab(ids = []) {
   return s;
 }
 const add = (s, type, x = 0, y = 0) => s.addBuilding(type, x, y, true);
-test("research graph is a complete acyclic set of four ten-node branches", () => {
+test("research graph has four branches and an acyclic automation side research", () => {
   const seen = new Set();
   for (const t of TECHNOLOGIES) {
     assert.ok(
@@ -56,9 +56,12 @@ test("research graph is a complete acyclic set of four ten-node branches", () =>
     assert.ok(t.cost > 0);
     seen.add(t.id);
   }
-  assert.equal(seen.size, 40);
+  assert.equal(seen.size, 41);
   for (const branch of ["power", "industry", "weapons", "support"])
-    assert.equal(TECHNOLOGIES.filter((t) => t.branch === branch).length, 10);
+    assert.equal(
+      TECHNOLOGIES.filter((t) => t.branch === branch).length,
+      branch === "power" ? 11 : 10,
+    );
 });
 test("starter Intel buys and equips a root exactly once", () => {
   const p = freshProgress();
@@ -95,12 +98,12 @@ test("every owned technology stays active with no equipment limit", () => {
   const p = rich();
   for (const t of TECHNOLOGIES)
     assert.equal(buyResearch(p, t.id).ok, true, t.id);
-  assert.equal(p.research.owned.length, 40);
+  assert.equal(p.research.owned.length, 41);
   assert.deepEqual(p.research.active, p.research.owned);
   p.research.active = [];
-  assert.equal(researchLoadout(p, CAMPAIGN[1]).length, 40);
+  assert.equal(researchLoadout(p, CAMPAIGN[1]).length, 41);
   const loaded = loadProgress({ getItem: () => JSON.stringify(p) });
-  assert.equal(loaded.research.active.length, 40);
+  assert.equal(loaded.research.active.length, 41);
 });
 
 test("free respec refunds exactly invested Intel", () => {

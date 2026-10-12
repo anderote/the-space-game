@@ -826,22 +826,37 @@ export class SpaceRenderer {
       }
       c.restore();
     }
+    const selectedRock = sim.asteroids.find(
+      (a) => a.id === state.selectedAsteroid,
+    );
+    if (selectedRock && selectedRock.ore > 0) {
+      const at = p(selectedRock.x, selectedRock.y);
+      c.strokeStyle = "#edc980";
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.arc(at.x, at.y, asteroidRadius(selectedRock) * this.zoom + 5, 0, TAU);
+      c.stroke();
+    }
     for (const b of sim.buildings) {
       const a = p(b.x, b.y),
         r = BUILDINGS[b.type].radius * this.zoom;
-      if (b.targetId && b.activity > 0) {
-        const target =
-          sim.asteroids.find((t) => t.id === b.targetId) ||
-          sim.buildings.find((t) => t.id === b.targetId);
-        if (target && (b.type === "miner" || b.type === "repair")) {
-          c.globalAlpha = 0.5 + Math.sin(wallTime * 0.03) * 0.15;
-          line(
-            a,
-            p(target.x, target.y),
-            b.type === "miner" ? "#d6cc88" : "#8df1c7",
-            1.1,
-          );
-          c.globalAlpha = 1;
+      if (b.activity > 0 && (b.type === "miner" || b.type === "repair")) {
+        const ids =
+          b.type === "miner" ? b.miningTargetIds || [b.targetId] : [b.targetId];
+        for (const id of ids) {
+          const target =
+            sim.asteroids.find((t) => t.id === id) ||
+            sim.buildings.find((t) => t.id === id);
+          if (target) {
+            c.globalAlpha = 0.5 + Math.sin(wallTime * 0.03) * 0.15;
+            line(
+              a,
+              p(target.x, target.y),
+              b.type === "miner" ? "#d6cc88" : "#8df1c7",
+              1.1,
+            );
+            c.globalAlpha = 1;
+          }
         }
       }
       if (b.powerPulse > 0) {

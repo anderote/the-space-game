@@ -48,11 +48,11 @@ npm run preview
 - **Challenges:** six independent economy, combat, power and rescue scenarios.
 - **Endless frontier:** escalating fleets with a mothership every fifth wave, personal records and rare ships carrying Intel.
 - **Sandbox:** generous resources, all structures and manual wave controls.
-- **Research division:** 40 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
-- **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a base-stat point. Seven base tracks cover Armor, Clock speed, Harvesting, Firepower, Repair efficiency, Power output and Efficient fabrication. Clock speed accelerates construction, mining and solar cycles; Efficient fabrication reaches 20% cheaper buildings and upgrades.
-- **Tower mastery:** nine building/weapon specializations with 52 skill tracks for combat, utility output, health, armor and powered shields. Earn mastery XP from ship kills (10 each), completed buildings/upgrades (1 per 10 paid minerals), and damage repairs (1 per 10 hull). Spend its independent points on a specific class, including separate Basic laser, Pulser and THEL tracks. [Skill effects](docs/TOWER_MASTERY.md).
+- **Research division:** 41 technologies in four branches. Every purchased technology stays active together, with no equipment limit. Open with **I** during a modern operation; time pauses and upgrades apply immediately.
+- **Command XP:** mining, combat damage and damage repairs award experience. Each level grants a base-stat point. Seven base tracks cover Armor, Clock speed, Harvesting, Firepower, Repair efficiency, Power output and Efficient fabrication. Clock speed accelerates construction, mining and solar cycles; Efficient fabrication reaches 50% cheaper buildings and upgrades.
+- **Tower mastery:** nine building/weapon specializations with 52 skill tracks for combat, utility output, health, armor and powered shields. Earn mastery XP from ship kills (20 each), completed buildings/upgrades (2 per 10 paid minerals), and damage repairs (2 per 10 hull). Spend its independent points on a specific class, including separate Basic laser, Pulser and THEL tracks. [Skill effects](docs/TOWER_MASTERY.md).
 
-Research, Intel, XP and base stats persist across modern games and campaigns, including losses. Begin with **6 Intel**; defeat a gold-marked elite for **2 Intel** or a mothership for **3**. One elite appears every third wave. Mining and ordinary combat earn XP: **5 minerals**, **20 enemy hull damage** or **10 damage repairs** each grant 1 XP. The first point costs 100 XP, then each subsequent level requires 50 more XP than the last. All modern modes earn progression, including Endless, Sandbox and Challenges. Classic awards no progression. Freight research applies only when launching a new operation. [Progression design](docs/RESEARCH_TREE_DESIGN.md).
+Research, Intel, XP and base stats persist across modern games and campaigns, including losses. Begin with **6 Intel**; defeat a gold-marked elite for **2 Intel** or a mothership for **3**. One elite appears every third wave. Mining and ordinary combat earn XP: **5 minerals**, **20 enemy hull damage** or **10 damage repairs** each grant 2 XP. The first point costs 100 XP, then each subsequent level requires 50 more XP than the last. All modern modes earn progression, including Endless, Sandbox and Challenges. Classic awards no progression. Freight research applies only when launching a new operation. [Progression design](docs/RESEARCH_TREE_DESIGN.md).
 
 Expedition missions now have 4–12 authored waves and minimum operation times from 3:30 to 11:00. Every sector has enemies, with distinct swarm, bomber, flanking and capital-ship formations. Complete the sector objective, hold through the operation and clear every wave to win. The HUD shows the next-wave countdown and incoming compass bearings; matching arrows mark approaches on the sector map. [Expedition pacing](docs/EXPEDITION_WAVES.md).
 
@@ -60,7 +60,7 @@ Settings includes **Start fresh · back up progress**. It saves a local backup a
 
 ## Building and graphics updates
 
-Every buildable structure has at least four levels; solar stations have five, unfolding **2 → 3 → 4 → 5 → 6 petals**. Miners are 25% smaller, repair stations are 35% smaller with a minimalist four-port hub, other structures are 15% smaller, and enemy models are 40% smaller. Solar arrays retain full scale. Placement allows decorative overlap while protecting central hulls and cable cores. Newly generated asteroid fields contain **50% more minerals**; restored saves retain their remaining deposits.
+Every buildable structure has at least four levels; solar stations have five, unfolding **2 → 3 → 4 → 5 → 6 petals**. Miners are 25% smaller, repair stations are 35% smaller with a minimalist four-port hub, other structures are 15% smaller, and enemy models are 40% smaller. Solar arrays retain full scale. Placement allows decorative overlap while protecting central hulls and cable cores. Newly generated asteroid fields contain **twice the previous minerals (3× the initial browser baseline)**; restored saves retain their remaining deposits.
 
 Modern enemy attacks deal **10% less damage** across direct fire, bomber impacts and suicide explosions. Classic retains its recovered damage rules.
 
@@ -101,3 +101,9 @@ This is an independent recreation, not an official release or bit-exact emulator
 Models, textures, shaders and synthesized effects in the browser edition are newly created. Three.js and Vite retain their upstream licenses. The game name and original design are credited to their creators.
 
 The earlier Panda3D prototype remains in `game/`, `config/`, and the Python files. Its [previous README](docs/PANDA3D_README.md) and older design documents are historical prototype material, not the browser build’s specification.
+
+All seven base-stat tracks and all 52 tower mastery tracks now cap at **50 ranks**. Global Armor removes 3% of remaining hull damage per rank; tower Armor removes a further 2%, combining multiplicatively. Existing XP and ranks are preserved.
+
+**Adaptive grid:** research Field couplers, then spend **6 Intel** on Adaptive grid to reconnect disconnected buildings automatically. It respects cable obstacles, range, construction state and connection limits, retrying stalled branches every two seconds.
+
+**Multi-asteroid mining:** miner tiers provide **1 / 2 / 3 / 4 simultaneous beams**, with normal energy charged per beam and each target receiving the tier’s configured yield. Click an asteroid to inspect remaining minerals, harvested ore and nearby miners. Saved asteroid deposits are preserved.

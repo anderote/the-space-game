@@ -139,7 +139,7 @@ test("real extraction earns XP; recycling and normal mining do not award Intel",
   tick(s, 170);
   assert.equal(s.mined, 210);
   assert.equal(bankIntel(p, s), 0);
-  assert.ok(Math.abs(bankExperience(p, s).xp - 42) < 1e-8);
+  assert.ok(Math.abs(bankExperience(p, s).xp - 84) < 1e-8);
   s.recycle(s.buildings.find((b) => b.type === "miner").id);
   assert.equal(bankExperience(p, s).xp, 0);
 });
@@ -225,7 +225,7 @@ test("research UI shows live operation context, earning progress, and the freigh
   assert.match(view, /OPERATION PAUSED \/ LIVE RESEARCH/);
   assert.match(view, /Return to operation/);
   assert.match(view, /Elite ships \+2 · Motherships \+3/);
-  assert.match(view, /40 TECHNOLOGIES ACTIVE/);
+  assert.match(view, /41 TECHNOLOGIES ACTIVE/);
   assert.doesNotMatch(view, /LOADOUT WEIGHT|SLOTS|Unequip technology/);
   assert.match(view, /LAUNCH ONLY/);
 });

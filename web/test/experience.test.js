@@ -82,7 +82,7 @@ test("XP stats affect real defenses, building, harvesting, weapons, repairs and 
   assert.ok(Math.abs(stats(repair).rate - 20 * 1.25 * 1.1) < 1e-8);
   assert.equal(s.rules.buildSpeed, 1.1);
   s.damageBuilding(solar, 100);
-  assert.equal(solar.maxHp - solar.hp, 96);
+  assert.ok(Math.abs(solar.maxHp - solar.hp - 94.09) < 1e-8);
   const before = solar.hp,
     energy = solar.energy,
     minerals = s.minerals;
@@ -119,11 +119,11 @@ test("only actual enemy hull damage earns combat XP; shields, overkill and missi
   s.damageEnemy(enemy, 10);
   assert.equal(s.xpEarned, 0);
   s.damageEnemy(enemy, 100000);
-  assert.ok(Math.abs(s.xpEarned - hp * 0.05) < 1e-8);
+  assert.ok(Math.abs(s.xpEarned - hp * 0.1) < 1e-8);
   s.damageEnemy(enemy, 100000);
   const projectile = { hp: 20, interceptable: true, life: 1 };
   s.damageEnemy(projectile, 100000);
-  assert.ok(Math.abs(s.xpEarned - hp * 0.05) < 1e-8);
+  assert.ok(Math.abs(s.xpEarned - hp * 0.1) < 1e-8);
 });
 
 test("drone repairs grant XP only for battle damage and preserve energy conservation", () => {
@@ -151,12 +151,12 @@ test("drone repairs grant XP only for battle damage and preserve energy conserva
   const xpBefore = s.xpEarned,
     energy = s.drones[0].energy;
   tick(s, 1);
-  assert.ok(Math.abs(s.xpEarned - xpBefore - 2) < 1e-8);
+  assert.ok(Math.abs(s.xpEarned - xpBefore - 4) < 1e-8);
   assert.ok(Math.abs(energy - s.drones[0].energy - 20) < 1e-8);
   assert.ok((target.repairXpDebt || 0) < 1e-8);
   // More healing of untracked fixture damage earns no additional XP.
   tick(s, 0.25);
-  assert.ok(Math.abs(s.xpEarned - xpBefore - 2) < 1e-8);
+  assert.ok(Math.abs(s.xpEarned - xpBefore - 4) < 1e-8);
 });
 
 test("rare ships arrive every third wave, reward values persist, and Classic stays unmodified", () => {
@@ -288,7 +288,7 @@ test("restoring a damaged mission objective earns repair XP and cannot repeat on
   assert.equal(station.repairXpDebt, missing);
   tick(s, 1);
   const p = freshProgress();
-  assert.ok(Math.abs(bankExperience(p, s).xp - 2) < 1e-8);
+  assert.ok(Math.abs(bankExperience(p, s).xp - 4) < 1e-8);
   const restored = new Simulation(mission, "normal", s.snapshot());
   assert.equal(bankExperience(p, restored).xp, 0);
   assert.ok(

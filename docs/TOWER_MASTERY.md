@@ -4,19 +4,19 @@ Modern XP skill upgrades added 2026-10-11. Press **I** during play, then choose 
 
 ## Global skills
 
-**Clock speed** replaces Build speed while preserving its saved `fabrication` ID and ranks. Every rank adds 5% to construction/upgrade speed, mining-cycle frequency and solar-cycle frequency, up to 100%. Energy/material cost per cycle stays intact. Harvesting and Power output improve quantity per cycle separately, so both stack with the clock.
+**Clock speed** replaces Build speed while preserving its saved `fabrication` ID and ranks. Every rank adds 5% to construction/upgrade speed, mining-cycle frequency and solar-cycle frequency, up to 250%. Energy/material cost per cycle stays intact. Harvesting and Power output improve quantity per cycle separately, so both stack with the clock.
 
-**Efficient fabrication** reduces building and mineral-upgrade prices by 1% per rank, up to 20%. Costs round to the nearest whole mineral. At maximum, a solar costs 160 instead of 200, a laser costs 80 instead of 100, and a THEL conversion costs 400 instead of 500. Placement affordability, build cards, ghosts, inspectors and actual purchases use the same configured price. Missile ammunition remains five minerals per shot.
+**Efficient fabrication** reduces building and mineral-upgrade prices by 1% per rank, up to 50%. Costs round to the nearest whole mineral. At maximum, a solar costs 100 instead of 200, a laser costs 50 instead of 100, and a THEL conversion costs 250 instead of 500. Placement affordability, build cards, ghosts, inspectors and actual purchases use the same configured price. Missile ammunition remains five minerals per shot.
 
 Buildings retain the original amounts paid in their `baseCost` and `upgradeSpent`. Buying a discount cannot change an existing building’s refund or allow a discounted build/recycle loop to create minerals.
 
 ## Class specializations
 
-Every class has Health (+5% hull per rank), Armor (1% reduction of remaining hull damage per rank) and Powered shields (absorb 1% of otherwise unshielded damage per rank). Additional skills suit its function:
+Every class has Health (+5% hull per rank), Armor (2% reduction of remaining hull damage per rank) and Powered shields (absorb 1% of otherwise unshielded damage per rank). Additional skills suit its function:
 
 | Class | Additional mastery tracks | Per rank |
 | --- | --- | --- |
-| Energy relay | Link reach; Connection ports | +3% link range; +1 connection, six ranks maximum |
+| Energy relay | Link reach; Connection ports | +3% link range; +1 connection |
 | Mineral miner | Extraction yield; Drill speed; Mining reach | +5% quantity per cycle; +5% cycle frequency; +3% mining range |
 | Solar station | Collector output; Collector clock; Link reach | +5% energy per cycle; +5% generation frequency; +3% link range |
 | Energy store | Storage density; Link reach | +5% capacity; +3% link range |
@@ -26,11 +26,11 @@ Every class has Health (+5% hull per rank), Armor (1% reduction of remaining hul
 | THEL beam | Damage; Beam cycling; Targeting range | +5% full beam damage; +3% beam throughput; +3% range |
 | Missile launcher | Damage; Fire rate; Targeting range | +5% damage; +3% salvo/launch-cycle speed; +3% range |
 
-There are nine independent class specializations and 52 skill tracks. Every track has twenty ranks except Connection ports, which has six. Basic laser points affect level-one lasers; Pulser points affect their upgraded branch. THEL has its own specialization. Converting a laser changes which specialization applies; the tree explains this distinction.
+There are nine independent class specializations and 52 skill tracks. Every track has fifty ranks, including Connection ports. Basic laser points affect level-one lasers; Pulser points affect their upgraded branch. THEL has its own specialization. Converting a laser changes which specialization applies; the tree explains this distinction.
 
 ## Actual simulation effects
 
-- Faster mining/solar cycles do not multiply their per-cycle yield twice. For example, maximum Clock speed halves the basic mining interval from 3 to 1.5 seconds and the solar interval from 0.55 to 0.275 seconds. Tower cadence multiplies the same way; local output skills separately increase pulse size.
+- Faster mining/solar cycles do not multiply their per-cycle yield twice. For example, maximum Clock speed divides the basic mining interval by 3.5, from 3 to approximately 0.857 seconds, and the solar interval from 0.55 to approximately 0.157 seconds. Tower cadence multiplies the same way; local output skills separately increase pulse size.
 - Faster firing preserves shot energy and missile ammunition charges. THEL damage/cycling strengthens the entire sustained beam and increases energy draw proportionately. Laser/Pulser burst spacing and missile launch spacing scale with firing mastery.
 - Shields cost 0.1 energy per absorbed hull point and fail without enough available power. Armor applies before shielding. Independent reductions combine on remaining damage rather than adding toward immunity: 40% global armor plus 20% tower armor gives 52% reduction.
 - New hull capacity preserves the existing health percentage. Larger storage/drone reserves create no free energy; increased drone capacity must recharge normally. Repairs still consume one carried energy per restored hull point.
@@ -42,10 +42,12 @@ The inspector displays configured output, cycle/burst/salvo intervals, hull, ran
 
 ## Independent mastery experience
 
-The third progression currency is Mastery XP: player-attributed ship kills award 10 XP each; completed paid construction and upgrades award 0.1 XP per mineral actually paid; restoring tracked battle/objective damage awards 0.1 XP per hull point. Free starting structures, canceled construction, intercepted missiles, mining, overkill and untracked maintenance grant no mastery reward. One point arrives at 100 XP, then subsequent levels require 150, 200, 250 XP, and so on.
+The third progression currency is Mastery XP: player-attributed ship kills award 20 XP each; completed paid construction and upgrades award 0.2 XP per mineral actually paid; restoring tracked battle/objective damage awards 0.2 XP per hull point. Free starting structures, canceled construction, intercepted missiles, mining, overkill and untracked maintenance grant no mastery reward. One point arrives at 100 XP, then subsequent levels require 150, 200, 250 XP, and so on.
 
 Mastery points can be assigned to any of the nine classes. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. All modern Free play and Challenge modes award rewards; Classic awards none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
 
 Migration retains old mastery ranks, grants exactly enough mastery XP to fund them, and returns their former cost to the Command point budget. Subsequent normalization is idempotent. Existing operations start tracking mastery now; historical activity is not guessed.
 
 Tower mastery’s Powered shields still provide energy-funded percentage absorption. The new mineral-purchased rechargeable module is a separate reserve, unlocked through Capacitive armor research. Armor acts first, the module reserve absorbs the remaining hit, and percentage shields apply to any damage spilling through. Shield-reserve damage earns no repair XP. [Rechargeable modules](RECHARGEABLE_SHIELDS.md).
+
+Global Armor removes 3% of remaining damage per rank: `1 − 0.97^rank`. Tower Armor removes 2%: `1 − 0.98^rank`. At fifty ranks in both, combined reduction is approximately 92.1%, preserving finite incoming damage. New Command and Mastery XP earnings are doubled; banked history is unchanged.

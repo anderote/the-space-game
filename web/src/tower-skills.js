@@ -1,15 +1,18 @@
+import { MAX_SKILL_RANK, TOWER_ARMOR_STEP } from "./progression-balance.js";
 // XP specializations improve a building class, independently of mineral tiers.
 const skill = (id, name, perRank, effect, extra = {}) => ({
   id,
   name,
   perRank,
   effect,
-  max: 20,
+  max: MAX_SKILL_RANK,
   unit: "%",
   ...extra,
 });
 const hull = skill("hull", "Health", 5, "+5% maximum hull");
-const armor = skill("armor", "Armor", 1, "Reduce remaining hull damage by 1%");
+const armor = skill("armor", "Armor", 2, "Reduce remaining hull damage by 2%", {
+  diminishing: true,
+});
 const shields = skill(
   "shields",
   "Powered shields",
@@ -39,7 +42,7 @@ export const TOWER_TYPES = [
     skills: [
       reach,
       skill("ports", "Connection ports", 1, "+1 network connection", {
-        max: 6,
+        max: MAX_SKILL_RANK,
         unit: "connections",
       }),
       ...defenses,
@@ -186,7 +189,7 @@ export function applyTowerStats(s, type, level, rules) {
   const key = type === "laser" && level > 1 ? "pulser" : type;
   const r = rules.towers?.[key] || {};
   s.hp *= 1 + (r.hull || 0) * 0.05;
-  s.armor = 1 - (1 - rules.armor) * (1 - (r.armor || 0) * 0.01);
+  s.armor = 1 - (1 - rules.armor) * (1 - TOWER_ARMOR_STEP) ** (r.armor || 0);
   s.shield = 1 - (1 - rules.shield) * (1 - (r.shields || 0) * 0.01);
   s.link *= 1 + (r.link || 0) * 0.03;
   if (type === "relay") s.maxLinks += r.ports || 0;

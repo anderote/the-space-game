@@ -171,17 +171,17 @@ test("asteroid rim placement follows the visible depleted rock", () => {
   assert.equal(s.placement("miner", 100, 0).ok, false);
 });
 
-test("new fields contain 50% more ore, with no refill when restoring a save", () => {
+test("new fields contain twice the previous ore, with no refill when restoring a save", () => {
   const s = new Simulation(CAMPAIGN[0]);
   assert.deepEqual(
     s.asteroids.slice(0, 3).map((a) => a.ore),
-    [1650, 2100, 2850],
+    [3300, 4200, 5700],
   );
   for (const a of s.asteroids.slice(3))
-    assert.equal(a.ore, Math.round(500 + a.radius * 37) * 1.5);
+    assert.equal(a.ore, Math.round(500 + a.radius * 37) * 3);
   const classic = new Simulation(CLASSIC[0]);
   for (const a of classic.asteroids)
-    assert.equal(a.ore, Math.round(a.radius * 52) * 1.5);
+    assert.equal(a.ore, Math.round(a.radius * 52) * 3);
   // Model an older, partially mined field, not just a new save.
   s.asteroids[0].maxOre = 1100;
   s.asteroids[0].ore = 42;

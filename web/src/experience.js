@@ -1,19 +1,21 @@
+import { MAX_SKILL_RANK, BASE_ARMOR_STEP } from "./progression-balance.js";
 // Command experience is separate from the Intel technology economy.
 import {
   normalizeTowerRanks,
   towerPoints,
   TOWER_BY_ID,
 } from "./tower-skills.js";
-export const XP_RATES = { mining: 0.2, combat: 0.05, repair: 0.1 };
+export const XP_RATES = { mining: 0.4, combat: 0.1, repair: 0.2 };
 export const BASE_STATS = [
   {
     id: "armor",
     name: "Armor",
     icon: "battery",
-    effect: "2% less incoming hull damage",
-    perRank: 2,
+    effect: "3% less remaining incoming hull damage",
+    perRank: 3,
+    diminishing: true,
     unit: "% damage reduction",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "fabrication",
@@ -22,7 +24,7 @@ export const BASE_STATS = [
     effect: "+5% construction, mining and solar cycle speed",
     perRank: 5,
     unit: "% clock speed",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "harvest",
@@ -31,7 +33,7 @@ export const BASE_STATS = [
     effect: "+5% minerals per mining cycle",
     perRank: 5,
     unit: "% extraction",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "firepower",
@@ -40,7 +42,7 @@ export const BASE_STATS = [
     effect: "+3% damage for all player weapons",
     perRank: 3,
     unit: "% weapon damage",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "repair",
@@ -49,7 +51,7 @@ export const BASE_STATS = [
     effect: "+5% drone repair throughput",
     perRank: 5,
     unit: "% repair speed",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "power",
@@ -58,7 +60,7 @@ export const BASE_STATS = [
     effect: "+5% solar generation",
     perRank: 5,
     unit: "% generation",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
   {
     id: "economy",
@@ -67,7 +69,7 @@ export const BASE_STATS = [
     effect: "1% cheaper buildings and upgrades",
     perRank: 1,
     unit: "% construction discount",
-    max: 20,
+    max: MAX_SKILL_RANK,
   },
 ];
 const safe = (n) => (Number.isFinite(n) ? Math.min(1e12, Math.max(0, n)) : 0);
@@ -131,7 +133,7 @@ export function masteryBudget(progress) {
     needed: threshold(level + 1) - threshold(level),
   };
 }
-export const MASTERY_RATES = { kill: 10, construction: 0.1, repair: 0.1 };
+export const MASTERY_RATES = { kill: 20, construction: 0.2, repair: 0.2 };
 
 export function buyBaseStat(progress, id) {
   const stat = BASE_STATS.find((s) => s.id === id);
@@ -161,7 +163,7 @@ export function buyTowerSkill(progress, type, id) {
 }
 export function applyBaseStats(rules, values) {
   const ranks = normalizeRanks(values);
-  rules.armor = (ranks.armor || 0) * 0.02;
+  rules.armor = 1 - (1 - BASE_ARMOR_STEP) ** (ranks.armor || 0);
   const clock = 1 + (ranks.fabrication || 0) * 0.05;
   rules.buildSpeed *= clock;
   rules.miningSpeed = clock;

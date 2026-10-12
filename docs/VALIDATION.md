@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **160 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **175 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -103,3 +103,11 @@ Screenshot: [Tower mastery](screenshots/tower-mastery.jpg), captured from the is
 ## Limits
 
 This is not a complete campaign playthrough, long-duration endless stress benchmark, Safari/Firefox certification, or original-Flash runtime comparison. Original source fidelity and remaining differences are documented in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Balance values for new research and authored missions remain initial tuning.
+
+## Adaptive grid, multi-mining and fifty-rank progression
+
+- 175 tests pass; production build passes. New integration coverage checks disconnected branches and stalled blueprints, cable obstacles/ports, retry budgeting, save restoration, distinct mining targets, per-beam energy, finite deposits, doubled reward accounting, fifty-rank budgets and finite armor stacking.
+- Dedicated browser QA on port 5179 recycled a relay, observed its miner disconnected, purchased Adaptive grid for 6 Intel after Field couplers, and observed immediate reconnection. Base and tower panels show rank 50, doubled earning rules and strengthened armor. Player origin 5178 was untouched.
+- Screenshots: [Adaptive grid](screenshots/adaptive-grid.jpg), [Fifty-rank base stats](screenshots/progression-fifty.jpg).
+
+- Asteroid browser QA selected the seed-2 starter deposit and verified 3,300 initial minerals, 3,224 remaining and 76 extracted. This caught and fixed a missing inspector render binding. Multi-target yield and energy limits are covered by simulation integration tests. [Ore inspector](screenshots/asteroid-inspector.jpg).

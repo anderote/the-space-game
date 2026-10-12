@@ -21,7 +21,7 @@ for (const mission of [
     assert.equal(bankIntel(p, s), 3);
     const reward = bankExperience(p, s);
     assert.ok(reward.xp > 0);
-    assert.equal(reward.mastery, 11);
+    assert.equal(reward.mastery, 22);
     const restored = new Simulation(mission, "normal", s.snapshot());
     assert.equal(bankIntel(p, restored), 0);
     assert.equal(bankExperience(p, restored).xp, 0);
