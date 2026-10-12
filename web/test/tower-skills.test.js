@@ -198,7 +198,7 @@ test("old Build speed ranks become Clock speed without losing points", () => {
 });
 
 test("every tower class exposes meaningful skills and finite max-rank stats", () => {
-  assert.equal(TOWER_TYPES.length, 10);
+  assert.equal(TOWER_TYPES.length, 12);
   const towers = Object.fromEntries(
     TOWER_TYPES.map((t) => [
       t.id,
@@ -211,7 +211,13 @@ test("every tower class exposes meaningful skills and finite max-rank stats", ()
     assert.ok(t.skills.some((skill) => skill.id === "shields"));
     const b = add(
       s,
-      t.id === "pulser" ? "laser" : t.id === "missile_round" ? "missile" : t.id,
+      t.id === "pulser"
+        ? "laser"
+        : t.id === "missile_round"
+          ? "missile"
+          : t.id === "fighter_craft"
+            ? "hangar"
+            : t.id,
       0,
       0,
       t.id === "pulser" ? 2 : 1,
@@ -387,7 +393,7 @@ test("Classic ignores Clock, discounts and every tower specialization", () => {
   assert.deepEqual(s.towerRanks, {});
 });
 
-test("progression UI exposes Clock, discounts and ten independently selectable tower and ordnance classes", () => {
+test("progression UI exposes Clock, discounts and twelve independently selectable tower and unit classes", () => {
   const p = freshProgress();
   p.experience.xp = 1000;
   const base = researchView(p, "solar_cells", () => "", { page: "stats" });
@@ -400,7 +406,7 @@ test("progression UI exposes Clock, discounts and ten independently selectable t
   assert.match(tower, /Tower mastery/);
   assert.match(tower, /Improve Fire rate · 1 point/);
   assert.match(tower, /Improve Powered shields · 1 point/);
-  assert.equal((tower.match(/data-tower-select=/g) || []).length, 10);
+  assert.equal((tower.match(/data-tower-select=/g) || []).length, 12);
 });
 
 test("missile firing mastery launches more salvos and still charges five minerals per missile", () => {

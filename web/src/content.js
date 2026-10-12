@@ -10,8 +10,62 @@ export const BUILD_ORDER = [
   "repair",
   "laser",
   "missile",
+  "hangar",
 ];
 export const BUILDINGS = {
+  hangar: {
+    name: "Fighter hangar",
+    key: "8",
+    cost: 350,
+    hp: 650,
+    radius: 21,
+    link: 90,
+    maxLinks: 1,
+    capacity: 24,
+    range: 340,
+    levels: 4,
+    fighterSlots: 2,
+    launchInterval: 5,
+    serviceRate: 10,
+    color: "#8fc8ef",
+    upgradeCosts: [350, 600, 900],
+    stats: [
+      {
+        hp: 650,
+        capacity: 24,
+        range: 340,
+        fighterSlots: 2,
+        launchInterval: 5,
+        serviceRate: 10,
+      },
+      {
+        hp: 900,
+        capacity: 32,
+        range: 390,
+        fighterSlots: 3,
+        launchInterval: 4.5,
+        serviceRate: 13,
+      },
+      {
+        hp: 1200,
+        capacity: 40,
+        range: 440,
+        fighterSlots: 4,
+        launchInterval: 4,
+        serviceRate: 16,
+      },
+      {
+        hp: 1600,
+        capacity: 50,
+        range: 500,
+        fighterSlots: 6,
+        launchInterval: 3.5,
+        serviceRate: 20,
+      },
+    ],
+    description:
+      "Launch autonomous fighters to intercept raids. Four tiers house 2 / 3 / 4 / 6 craft. Each new fighter costs 20 minerals plus its carried energy; survivors return to repair, rearm and refuel.",
+  },
   relay: {
     name: "Energy relay",
     key: "1",
@@ -615,4 +669,4 @@ export const UPGRADES = [
 
 applyOriginalStats(BUILDINGS, ENEMIES);
 extendStructureUpgrades(BUILDINGS);
-export const CLASSIC = makeClassic(BUILD_ORDER);
+export const CLASSIC = makeClassic(BUILD_ORDER.filter((t) => t !== "hangar"));

@@ -4,7 +4,7 @@
 
 ## Automated
 
-- `npm test`: **192 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
+- `npm test`: **199 passed, 0 failed**. Tests cover resource conservation, isolated graph components, incomplete-relay gating, source ordering, local buffers, construction, burst/interception behavior, missiles, Ringers, mothership escorts, suicide fuse, repair, classic schedules, mode objectives, deterministic frame-rate behavior, snapshot restoration, progression and research effects.
 - `npm run build`: passed with Vite 7.3.7. JavaScript bundle ~705 kB / 194 kB gzip; CSS ~33 kB / 7.7 kB gzip. Vite reports its advisory >500 kB chunk warning. No build errors.
 - `npm install` audit: 0 vulnerabilities at implementation time.
 - `git diff --check`: passed.
@@ -129,3 +129,9 @@ This is not a complete campaign playthrough, long-duration endless stress benchm
 
 - 192 tests pass. New tests cover launcher/payload stacking, all six configured effects, max-rank fuel/hull/shield values, actual larger-radius splash damage, exact ammunition and shield-energy spending, interception absorption, in-flight no-refill behavior, saved projectiles, mastery budget/persistence and Classic exclusions.
 - Isolated browser QA opened Missile ordnance, verified all six rank-50 tracks, bought Fuel reserves and Missile shields for one mastery point each, and observed the available budget fall from two to zero. Intel remained 69 and the separate Command point remained available. No console warnings/errors. [Missile ordnance panel](screenshots/missile-ordnance.jpg).
+
+## Fighter hangars and aircraft mastery
+
+- 199 tests pass. New fighter integration coverage verifies paid manufacture and conserved carried energy, launch cadence/berths, real movement and enemy damage/XP, construction/range/resource gating, return/docking, exactly paid repair/rearm/fuel/shields, enemy air attacks, finite fuel, home loss/recycling, four tiers, independent mastery budgets, immutable existing-aircraft configuration, deterministic save/resume and Classic equipment exclusions.
+
+- Dedicated browser QA built a hangar through the eighth palette card, verified its level-two upgrade preview and completed upgrade, then observed **1 in flight / 1 docked** during a twenty-ship wave. The live inspector tracked sortie counts. Purchased Fighter craft Damage and Fighter hangar Squadron capacity, each consuming one of two available mastery points; Intel and Command points stayed unchanged. No console warnings/errors. Screenshots: [Hangar](screenshots/fighter-hangar.jpg), [Aircraft mastery](screenshots/fighter-mastery.jpg).

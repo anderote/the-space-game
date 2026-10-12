@@ -42,7 +42,7 @@ const add = (s, t, x, y, level = 1) => {
   return b;
 };
 test("original build palette and prices", () => {
-  assert.deepEqual(BUILD_ORDER, [
+  assert.deepEqual(BUILD_ORDER.slice(0, 7), [
     "relay",
     "miner",
     "solar",
@@ -52,7 +52,7 @@ test("original build palette and prices", () => {
     "missile",
   ]);
   assert.deepEqual(
-    BUILD_ORDER.map((t) => BUILDINGS[t].cost),
+    BUILD_ORDER.slice(0, 7).map((t) => BUILDINGS[t].cost),
     [20, 45, 200, 300, 300, 100, 400],
   );
 });

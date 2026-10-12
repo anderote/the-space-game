@@ -26,7 +26,7 @@ Every class has Health (+5% hull per rank), Armor (2% reduction of remaining hul
 | THEL beam | Damage; Beam cycling; Targeting range | +5% full beam damage; +3% beam throughput; +3% range |
 | Missile launcher | Damage; Fire rate; Targeting range | +5% damage; +3% salvo/launch-cycle speed; +3% range |
 
-There are nine building/weapon specializations plus Missile ordnance, totaling 58 skill tracks. Every track has fifty ranks, including Connection ports. Basic laser points affect level-one lasers; Pulser points affect their upgraded branch. THEL has its own specialization. Converting a laser changes which specialization applies; the tree explains this distinction.
+There are ten building/weapon specializations plus Missile ordnance and Fighter craft, totaling 72 skill tracks. Every track has fifty ranks, including Connection ports. Basic laser points affect level-one lasers; Pulser points affect their upgraded branch. THEL has its own specialization. Converting a laser changes which specialization applies; the tree explains this distinction.
 
 ## Actual simulation effects
 
@@ -44,7 +44,7 @@ The inspector displays configured output, cycle/burst/salvo intervals, hull, ran
 
 The third progression currency is Mastery XP: player-attributed ship kills award 20 XP each; completed paid construction and upgrades award 0.2 XP per mineral actually paid; restoring tracked battle/objective damage awards 0.2 XP per hull point. Free starting structures, canceled construction, intercepted missiles, mining, overkill and untracked maintenance grant no mastery reward. One point arrives at 100 XP, then subsequent levels require 150, 200, 250 XP, and so on.
 
-Mastery points can be assigned to any of the ten specializations. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. All modern Free play and Challenge modes award rewards; Classic awards none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
+Mastery points can be assigned to any of the twelve specializations. Command XP remains reserved for global base stats, and Intel remains reserved for technology. All three persist between operations and after losses. All modern Free play and Challenge modes award rewards; Classic awards none. Construction completion consumes its pending reward once; snapshot counters bank only positive uncredited deltas alongside the profile.
 
 Migration retains old mastery ranks, grants exactly enough mastery XP to fund them, and returns their former cost to the Command point budget. Subsequent normalization is idempotent. Existing operations start tracking mastery now; historical activity is not guessed.
 
@@ -66,3 +66,7 @@ A separate ammunition specialization sits beside Missile launcher in Tower maste
 | Missile shields | Reserve equal to 2% of projectile hull | Reserve equal to 100% of upgraded hull |
 
 Damage and acquisition range multiply the launcher specialization and research bonuses. Radius changes real explosion falloff, not only its visual. Fuel affects expiry and hunting time while inertia/turn limits remain. Shields are a finite reserve charged at launch, absorb point defense first, and cost 0.2 extra energy per shield HP. They never recharge in flight. Mineral ammunition cost stays five. New hull, fuel and shielding attach to the projectile snapshot at launch; live purchases do not repair or refill shots already traveling. The launcher inspector reports configured fuel, hull, shielding, blast radius and launch energy. Shielded missile trails appear cyan until the reserve is spent. Classic excludes persistent ordnance modifiers.
+
+## Fighter hangars and aircraft
+
+Fighter hangar specializes berth count, launch cycling, servicing and building defenses. Fighter craft specializes damage, firing, gun range, speed, fuel, hull, armor and finite shields. The eight-key hangar has four physical tiers; mastery has fifty ranks per track. Aircraft consume launch resources and carried shot energy, return for paid dock servicing, and retain their manufacture-time configuration through live purchases. [Full behavior and accounting](FIGHTER_HANGARS.md).

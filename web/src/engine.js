@@ -1,3 +1,4 @@
+import { updateFighters, damageFighter } from "./fighters.js";
 import {
   MODERN_FLEET_MULTIPLIER,
   interceptMissile,
@@ -125,6 +126,7 @@ export class Simulation {
     this.enemies = [];
     this.projectiles = [];
     this.drones = [];
+    this.fighters = [];
     this.effects = [];
     this.links = [];
     this.groups = [];
@@ -1139,6 +1141,11 @@ export class Simulation {
         }
         continue;
       }
+      if (b.type === "hangar" && b.energy < s.capacity)
+        b.energy += this.requestEnergy(
+          b,
+          Math.min(s.capacity - b.energy, 8 * dt),
+        );
       const capacity = shieldCapacity(b);
       b.shieldCharge = Math.max(0, Math.min(capacity, b.shieldCharge || 0));
       if (
@@ -1450,6 +1457,7 @@ export class Simulation {
     this.drones = this.drones.filter((d) => d.hp > 0);
     this.income +=
       (minedTick / Math.max(dt, 0.001) - this.income) * Math.min(1, dt * 0.35);
+    updateFighters(this, dt, stats);
     const incomingMissiles = this.projectiles.filter(
       (p) => p.friendly && p.life > 0,
     );
@@ -1503,6 +1511,15 @@ export class Simulation {
             nearest = range;
           }
         }
+        if (["fighter", "swarm", "child"].includes(e.type))
+          for (const f of this.fighters) {
+            if (f.hp <= 0 || f.mode === "docked") continue;
+            const range = distance(e, f);
+            if (range < nearest) {
+              target = f;
+              nearest = range;
+            }
+          }
       }
       if (!target) continue;
       const dist = distance(e, target);
@@ -1597,7 +1614,12 @@ export class Simulation {
         if (p.friendly) this.effect("hit", p.x, p.y, { color: "#8c8a9b" });
         continue;
       }
-      const targets = p.friendly ? this.enemies : this.buildings;
+      const targets = p.friendly
+        ? this.enemies
+        : [
+            ...this.buildings,
+            ...this.fighters.filter((f) => f.hp > 0 && f.mode !== "docked"),
+          ];
       let target = targets.find((t) => t.id === p.targetId && t.hp > 0);
       if (!target && p.friendly) {
         let nearest = Infinity;
@@ -1775,6 +1797,10 @@ export class Simulation {
       this.finish("won");
   }
   damageBuilding(target, amount) {
+    if (target.isFighter) {
+      damageFighter(target, amount);
+      return;
+    }
     const protection = stats(target);
     if (target.type !== "station") amount *= 1 - protection.armor;
     if (target.construction >= 1) {
@@ -1880,6 +1906,7 @@ export class Simulation {
         enemies: this.enemies,
         projectiles: this.projectiles,
         drones: this.drones,
+        fighters: this.fighters,
         spawnQueue: this.spawnQueue || [],
         waveRotation: this.waveRotation,
         randomState: this.random.state(),
@@ -1917,6 +1944,7 @@ export class Simulation {
       "enemies",
       "projectiles",
       "drones",
+      "fighters",
       "links",
       "spawnQueue",
       "waveRotation",

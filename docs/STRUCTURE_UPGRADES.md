@@ -5,6 +5,7 @@ Browser-edition updates requested on 2026-10-11. The recovered original tiers re
 | Structure | Levels | Progression before research |
 | --- | ---: | --- |
 | Relay | 4 | 6 / 8 / 10 / 12 connections; 90 / 95 / 100 / 110 link range |
+| Fighter hangar | 4 | 2 / 3 / 4 / 6 berths; 340 / 390 / 440 / 500 intercept range |
 | Miner | 4 | 1 / 2 / 3 / 4 beams; 80 / 200 / 320 / 480 minerals per minute per beam |
 | Solar | 5 | 2 / 3 / 4 / 5 / 6 petals; 1.6 / 3.8 / 5.5 / 7.6 / 9.8 E/s |
 | Energy store | 4 | 200 / 600 / 1,200 / 2,000 energy |
@@ -35,3 +36,5 @@ All newly generated modern and Classic fields contain twice the previous ore (th
 `npm run benchmark` runs a reproducible 120-structure, 1,200-step simulation with 12,000 requests and reports actual model mesh counts plus a shared-cable workload. In the synthetic shared-cable workload, 1,680 overlapping path segments become 30 arcs. CPU timing varies with machine load. This benchmark does not measure GPU frame time or browser FPS; browser QA verifies the resulting visuals separately.
 
 Each mining beam targets a distinct asteroid and pays the normal tier energy cost. Insufficient energy limits active beams. Click asteroid hulls to inspect live remaining/initial ore, harvested quantity, miners in reach and current beams. Selection follows the visible shrinking rock radius.
+
+Fighter hangar tiers are a modern-only addition. [Manufacture, flight, dock service and mastery](FIGHTER_HANGARS.md).

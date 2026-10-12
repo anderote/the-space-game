@@ -475,6 +475,16 @@ export class SpaceRenderer {
       g.add(t);
       g.userData.turret = t;
       core(r * 0.23, 17);
+    } else if (b.type === "hangar") {
+      this.mesh(g, new THREE.BoxGeometry(32, 26, 7), m.hull, 0, 0, 9);
+      this.mesh(g, new THREE.BoxGeometry(18, 23, 2), m.dark, 0, 0, 14);
+      for (const side of [-1, 1]) {
+        this.mesh(g, new THREE.BoxGeometry(3, 22, 2), glow, side * 11, 0, 15);
+        this.mesh(g, new THREE.BoxGeometry(7, 28, 9), m.edge, side * 17, 0, 9);
+      }
+      for (let i = 0; i < b.level; i++)
+        this.mesh(g, new THREE.BoxGeometry(5, 2, 1), glow, 0, -7 + i * 5, 16);
+      core(3, 15);
     } else if (b.type === "missile") {
       for (const s of [-1, 1]) {
         this.mesh(g, new THREE.BoxGeometry(10, 16, 7), m.edge, s * 9, 0, 9);
@@ -501,7 +511,11 @@ export class SpaceRenderer {
         -r * 0.8,
         7,
       );
-    if (["relay", "solar", "battery", "repair", "missile"].includes(b.type))
+    if (
+      ["relay", "solar", "battery", "repair", "missile", "hangar"].includes(
+        b.type,
+      )
+    )
       this.batchStructure(g);
     g.scale.setScalar(d.visualScale || 1);
     g.position.set(b.x, b.y, 4);
@@ -938,6 +952,41 @@ export class SpaceRenderer {
         this.range(c, a, s.link * this.zoom, "#83bade", true);
       }
     }
+    for (const f of sim.fighters || []) {
+      if (f.mode === "docked" || f.hp <= 0) continue;
+      const a = p(f.x, f.y);
+      c.save();
+      c.translate(a.x, a.y);
+      c.rotate(-f.angle);
+      c.fillStyle = "#92ddd9";
+      c.strokeStyle = "#defbf5";
+      c.lineWidth = 1;
+      c.beginPath();
+      c.moveTo(8, 0);
+      c.lineTo(-5, -5);
+      c.lineTo(-2, 0);
+      c.lineTo(-5, 5);
+      c.closePath();
+      c.fill();
+      c.stroke();
+      c.strokeStyle = "#7bc8ff";
+      c.beginPath();
+      c.moveTo(-4, 0);
+      c.lineTo(-10, 0);
+      c.stroke();
+      if (f.shieldCharge > 0) {
+        c.strokeStyle = "#85d9ff";
+        c.globalAlpha = 0.5;
+        c.beginPath();
+        c.arc(0, 0, 9, 0, TAU);
+        c.stroke();
+      }
+      c.restore();
+      if (f.hp < f.maxHp) {
+        c.fillStyle = "#87ebcc";
+        c.fillRect(a.x - 8, a.y + 9, 16 * Math.max(0, f.hp / f.maxHp), 2);
+      }
+    }
     for (const d of sim.drones || []) {
       const a = p(d.x, d.y);
       c.fillStyle = "#a7f3c9";
@@ -1208,6 +1257,12 @@ export class SpaceRenderer {
       const p = point(e);
       c.fillStyle = "#f28575";
       c.fillRect(p.x - 1, p.y - 1, 2.5, 2.5);
+    }
+    for (const f of sim.fighters || []) {
+      if (f.mode === "docked" || f.hp <= 0) continue;
+      const craft = point(f);
+      c.fillStyle = "#8ee8da";
+      c.fillRect(craft.x-1,craft.y-1,2,2);
     }
     const incoming = sim.nextWavePreview();
     if (incoming)

@@ -198,6 +198,51 @@ export const TOWER_TYPES = [
     ],
   },
 ];
+TOWER_TYPES.push(
+  {
+    id: "hangar",
+    name: "Fighter hangar",
+    icon: "hangar",
+    color: "#8fc8ef",
+    skills: [
+      skill("slots", "Squadron capacity", 1, "+1 fighter berth", {
+        unit: "fighters",
+      }),
+      skill("launch", "Launch cadence", 3, "+3% launch cycling speed"),
+      skill(
+        "service",
+        "Dock servicing",
+        5,
+        "+5% dock repair and replenishment rate",
+      ),
+      ...defenses,
+    ],
+  },
+  {
+    id: "fighter_craft",
+    name: "Fighter craft",
+    icon: "hangar",
+    color: "#86ead1",
+    skills: [
+      ...weapons.slice(0, 2),
+      skill("range", "Gun range", 3, "+3% fighter weapon range"),
+      skill("speed", "Flight speed", 3, "+3% flight speed"),
+      skill("fuel", "Flight endurance", 5, "+5% fighter fuel lifetime"),
+      skill("hull", "Fighter hull", 5, "+5% fighter hull"),
+      armor,
+      skill(
+        "shields",
+        "Fighter shields",
+        2,
+        "Carry shields equal to 2% of fighter hull",
+        {
+          detail:
+            "Shields recharge at the hangar using energy, never during flight.",
+        },
+      ),
+    ],
+  },
+);
 export const TOWER_BY_ID = Object.fromEntries(
   TOWER_TYPES.map((t) => [t.id, t]),
 );
@@ -232,6 +277,11 @@ export function applyTowerStats(s, type, level, rules) {
   s.shield = 1 - (1 - rules.shield) * (1 - (r.shields || 0) * 0.01);
   s.link *= 1 + (r.link || 0) * 0.03;
   if (type === "relay") s.maxLinks += r.ports || 0;
+  if (type === "hangar") {
+    s.fighterSlots += r.slots || 0;
+    s.launchInterval /= 1 + (r.launch || 0) * 0.03;
+    s.serviceRate *= 1 + (r.service || 0) * 0.05;
+  }
   s.range *= 1 + (r.range || 0) * 0.03;
   s.fireRate = 1 + (r.fireRate || 0) * 0.03;
   s.interval /= s.fireRate;
